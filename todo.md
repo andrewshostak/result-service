@@ -1,0 +1,19 @@
+### List of improvements
+- hide secrets from `app.yaml` & commit `app.yaml` with hidden secrets (or example.app.yaml)
+- configure CI
+- fix concurrent map reads/writes
+- graceful shutdown
+- make gin and zerolog friends
+- make gin and gorm friends
+- get two aliases on match creation endpoint concurrently
+- notify subscribers concurrently
+- create match and football api fixture in transaction
+- fix broken gorm errors checks
+- update football api fixture and match in transaction
+- add response bodies from API calls to error messages
+- add unit tests for the project
+- add linter
+- use generics for football api client responses
+- make sure docker-compose works and commit changes
+- make it work with multiple instances
+- errs.go: use one type ItemNotFoundError instead of AliasNotFoundError MatchNotFoundError SubscriptionNotFoundError
