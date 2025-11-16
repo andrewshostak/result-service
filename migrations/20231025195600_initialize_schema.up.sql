@@ -10,7 +10,7 @@ create table if not exists football_api_teams (
     foreign key (team_id) references teams (id) on update cascade on delete restrict
 );
 
-create type result_status as enum ('not_scheduled', 'scheduled', 'scheduling_error', 'error', 'successful');
+create type result_status as enum ('not_scheduled', 'scheduled', 'scheduling_error', 'received', 'api_error', 'cancelled');
 
 create table if not exists matches (
     id bigserial primary key,
@@ -30,7 +30,7 @@ create table if not exists aliases (
     foreign key (team_id) references teams (id) on update cascade on delete restrict
 );
 
-create type subscription_status as enum ('pending', 'error', 'successful');
+create type subscription_status as enum ('pending', 'scheduling_error', 'successful', 'subscriber_error');
 
 create table if not exists subscriptions (
     id bigserial primary key,
@@ -40,6 +40,7 @@ create table if not exists subscriptions (
     created_at timestamp not null,
     status subscription_status not null default 'pending',
     notified_at timestamp,
+    error text,
     foreign key (match_id) references matches (id) on update cascade on delete cascade
 );
 
@@ -48,6 +49,13 @@ create table if not exists football_api_fixtures
     id bigserial primary key,
     match_id bigserial,
     data jsonb not null,
+    foreign key (match_id) references matches (id) on update cascade on delete cascade
+);
+
+create table if not exists result_tasks
+(
+    name text primary key,
+    match_id bigserial,
     foreign key (match_id) references matches (id) on update cascade on delete cascade
 );
 

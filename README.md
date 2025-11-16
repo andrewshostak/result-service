@@ -64,7 +64,7 @@ erDiagram
         Int team_id FK
     }
     
-    Task {
+    ResultTask {
         String name PK
         Int match_id FK
     }
@@ -74,7 +74,7 @@ erDiagram
     Match ||--|| FootballAPIFixture : has
     Match ||--o{ Subscription : has
     Team ||--|| FootballAPITeam : has
-    Match ||--|| Task : has
+    Match ||--|| ResultTask : has
 ```
 
 Table names are pluralized. The tables `teams`, `aliases`, `football_api_teams` are pre-filled with the data of `prognoz-api` and `football-api`.
