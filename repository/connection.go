@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/andrewshostak/result-service/config"
-	"github.com/golang-migrate/migrate/v4"
-	migratepg "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -40,25 +38,6 @@ func EstablishDatabaseConnection(cfg config.Config) *gorm.DB {
 		Logger: customLogger,
 	})
 	if err != nil {
-		panic(err)
-	}
-
-	sqlDb, err := db.DB()
-	if err != nil {
-		panic(err)
-	}
-
-	// free version of elephantsql has connections limit
-	sqlDb.SetMaxOpenConns(2)
-
-	driver, err := migratepg.WithInstance(sqlDb, &migratepg.Config{})
-	m, err := migrate.NewWithDatabaseInstance("file://./migrations", cfg.PG.Database, driver)
-	if err != nil {
-		panic(err)
-	}
-
-	err = m.Up()
-	if err != nil && err != migrate.ErrNoChange {
 		panic(err)
 	}
 
