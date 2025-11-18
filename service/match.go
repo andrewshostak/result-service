@@ -20,7 +20,6 @@ type MatchService struct {
 	matchRepository              MatchRepository
 	footballAPIFixtureRepository FootballAPIFixtureRepository
 	footballAPIClient            FootballAPIClient
-	taskScheduler                TaskScheduler
 	logger                       Logger
 	pollingMaxRetries            uint
 	pollingInterval              time.Duration
@@ -32,7 +31,6 @@ func NewMatchService(
 	matchRepository MatchRepository,
 	footballAPIFixtureRepository FootballAPIFixtureRepository,
 	footballAPIClient FootballAPIClient,
-	taskScheduler TaskScheduler,
 	logger Logger,
 	pollingMaxRetries uint,
 	pollingInterval time.Duration,
@@ -43,7 +41,6 @@ func NewMatchService(
 		matchRepository:              matchRepository,
 		footballAPIFixtureRepository: footballAPIFixtureRepository,
 		footballAPIClient:            footballAPIClient,
-		taskScheduler:                taskScheduler,
 		logger:                       logger,
 		pollingMaxRetries:            pollingMaxRetries,
 		pollingInterval:              pollingInterval,
@@ -235,18 +232,6 @@ func (s *MatchService) scheduleMatchResultAcquiring(params matchResultTaskParams
 
 	enrichLogWithMatchDetails(s.logger.Info(), fields).Msg("scheduling a task to acquire match result")
 
-	i := 1
-	ch := make(chan resultTaskChan)
-	search := client.FixtureSearch{Timezone: time.UTC.String(), ID: &params.fixture.ID}
-
-	key := getTaskKey(params.match.ID, params.fixture.ID)
-	err := s.taskScheduler.Schedule(key, s.getTaskFunc(i, ch, search, fields), s.pollingInterval, params.match.StartsAt.Add(s.pollingFirstAttemptDelay))
-	if err != nil {
-		return fmt.Errorf("failed to schedule a task for match id %d: %w", fields.matchID, err)
-	}
-
-	go s.handleTaskResult(context.Background(), ch, params.fixture.ID, params.match.ID, fields)
-
 	return nil
 }
 
@@ -316,8 +301,6 @@ func (s *MatchService) handleTaskResult(
 	matchDetails matchLogFields,
 ) {
 	result := <-ch
-	key := getTaskKey(matchID, fixtureID)
-	s.taskScheduler.Cancel(key)
 
 	enrichLogWithMatchDetails(s.logger.Info(), matchDetails).Msg("scheduled task cancelled")
 

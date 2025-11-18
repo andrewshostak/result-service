@@ -91,6 +91,10 @@ func run() (*migrate.Migrate, *zerolog.Logger) {
 	}
 
 	driver, err := migratepg.WithInstance(sqlDb, &migratepg.Config{})
+	if err != nil {
+		panic(err)
+	}
+
 	m, err := migrate.NewWithDatabaseInstance("file://./migrations", cfg.PG.Database, driver)
 	if err != nil {
 		panic(err)

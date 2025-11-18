@@ -1,22 +1,18 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
 	"github.com/andrewshostak/result-service/client"
 	"github.com/andrewshostak/result-service/config"
 	"github.com/andrewshostak/result-service/handler"
-	"github.com/andrewshostak/result-service/initializer"
 	loggerinternal "github.com/andrewshostak/result-service/logger"
 	"github.com/andrewshostak/result-service/middleware"
 	"github.com/andrewshostak/result-service/repository"
-	"github.com/andrewshostak/result-service/scheduler"
 	"github.com/andrewshostak/result-service/service"
 	"github.com/gin-gonic/gin"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/procyon-projects/chrono"
 	"github.com/spf13/cobra"
 )
 
@@ -41,7 +37,6 @@ func startServer(_ *cobra.Command, _ []string) {
 
 	db := repository.EstablishDatabaseConnection(cfg)
 	httpClient := http.Client{}
-	chronoTaskScheduler := chrono.NewDefaultTaskScheduler()
 
 	r.GET("/_ah/start", func(c *gin.Context) {
 		c.Status(http.StatusOK)
@@ -52,28 +47,24 @@ func startServer(_ *cobra.Command, _ []string) {
 	v1 := r.Group("/v1")
 
 	footballAPIClient := client.NewFootballAPIClient(&httpClient, logger, cfg.ExternalAPI.FootballAPIBaseURL, cfg.ExternalAPI.RapidAPIKey)
-	notifierClient := client.NewNotifierClient(&httpClient, logger)
+	_ = client.NewNotifierClient(&httpClient, logger)
 
 	aliasRepository := repository.NewAliasRepository(db)
 	matchRepository := repository.NewMatchRepository(db)
 	footballAPIFixtureRepository := repository.NewFootballAPIFixtureRepository(db)
 	subscriptionRepository := repository.NewSubscriptionRepository(db)
 
-	taskScheduler := scheduler.NewTaskScheduler(chronoTaskScheduler)
-
 	matchService := service.NewMatchService(
 		aliasRepository,
 		matchRepository,
 		footballAPIFixtureRepository,
 		footballAPIClient,
-		taskScheduler,
 		logger,
 		cfg.Result.PollingMaxRetries,
 		cfg.Result.PollingInterval,
 		cfg.Result.PollingFirstAttemptDelay,
 	)
-	subscriptionService := service.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, taskScheduler, logger)
-	notifierService := service.NewNotifierService(subscriptionRepository, notifierClient, logger)
+	subscriptionService := service.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, logger)
 	aliasService := service.NewAliasService(aliasRepository, logger)
 
 	matchHandler := handler.NewMatchHandler(matchService)
@@ -83,15 +74,6 @@ func startServer(_ *cobra.Command, _ []string) {
 	v1.POST("/subscriptions", subscriptionHandler.Create)
 	v1.DELETE("/subscriptions", subscriptionHandler.Delete)
 	v1.GET("/aliases", aliasHandler.Search)
-
-	ctx := context.Background()
-	matchResultScheduleInitializer := initializer.NewMatchResultScheduleInitializer(matchService, logger)
-	if err := matchResultScheduleInitializer.ReSchedule(ctx); err != nil {
-		panic(err)
-	}
-
-	notifierInitializer := initializer.NewNotifierInitializer(notifierService)
-	notifierInitializer.Start()
 
 	_ = r.Run(fmt.Sprintf(":%s", cfg.App.Port))
 }

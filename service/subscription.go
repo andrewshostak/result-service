@@ -14,7 +14,6 @@ type SubscriptionService struct {
 	subscriptionRepository SubscriptionRepository
 	matchRepository        MatchRepository
 	aliasRepository        AliasRepository
-	taskScheduler          TaskScheduler
 	logger                 Logger
 }
 
@@ -22,14 +21,12 @@ func NewSubscriptionService(
 	subscriptionRepository SubscriptionRepository,
 	matchRepository MatchRepository,
 	aliasRepository AliasRepository,
-	taskScheduler TaskScheduler,
 	logger Logger,
 ) *SubscriptionService {
 	return &SubscriptionService{
 		subscriptionRepository: subscriptionRepository,
 		matchRepository:        matchRepository,
 		aliasRepository:        aliasRepository,
-		taskScheduler:          taskScheduler,
 		logger:                 logger,
 	}
 }
@@ -122,8 +119,6 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 		s.logger.Error().Uint("match_id", match.ID).Msg("failed to cancel scheduled task: match relation football api fixtures is not found")
 		return nil
 	}
-
-	s.taskScheduler.Cancel(fmt.Sprintf("%d-%d", match.ID, match.FootballApiFixtures[0].ID))
 
 	return nil
 }

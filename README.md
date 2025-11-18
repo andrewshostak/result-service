@@ -255,9 +255,10 @@ To back-fill aliases data a separate command is created. The command description
 
 ### Implementation TODO
 - [X] Connect to supabase from datagrip
-- [ ] Update database migrations: include tasks table & new statuses 
-  - [ ] Add a command to run migrations
-  - [ ] Run migrations on supabase from locally-running command
+- [X] Update database migrations: include tasks table & new statuses 
+- [X] Add a command to run migrations
+- [X] Run migrations on supabase from locally-running command
+- [X] Remove scheduler related code
 - [ ] Configure google cloud: create project, cloud run service, two queues.
 - [ ] Create client methods to interact with google cloud tasks API
   - [ ] Create a new task

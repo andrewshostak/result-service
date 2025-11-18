@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"time"
 
 	"github.com/andrewshostak/result-service/client"
 	"github.com/andrewshostak/result-service/repository"
@@ -45,11 +44,6 @@ type SubscriptionRepository interface {
 	List(ctx context.Context, matchID uint) ([]repository.Subscription, error)
 	ListUnNotified(ctx context.Context) ([]repository.Subscription, error)
 	Update(ctx context.Context, id uint, subscription repository.Subscription) error
-}
-
-type TaskScheduler interface {
-	Schedule(key string, task func(ctx context.Context), period time.Duration, startTime time.Time) error
-	Cancel(key string)
 }
 
 type SeasonHelper interface {

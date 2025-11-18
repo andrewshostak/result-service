@@ -20,7 +20,6 @@ func TestMatchService_List(t *testing.T) {
 	matchRepository := mocks.NewMatchRepository(t)
 	footballAPIFixtureRepository := mocks.NewFootballAPIFixtureRepository(t)
 	footballAPIClient := mocks.NewFootballAPIClient(t)
-	taskScheduler := mocks.NewTaskScheduler(t)
 	logger := mocks.NewLogger(t)
 
 	pollingMaxRetries := uint(5)
@@ -32,7 +31,6 @@ func TestMatchService_List(t *testing.T) {
 		matchRepository,
 		footballAPIFixtureRepository,
 		footballAPIClient,
-		taskScheduler,
 		logger,
 		pollingMaxRetries,
 		pollingInterval,
