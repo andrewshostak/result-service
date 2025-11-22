@@ -1,0 +1,36 @@
+version: "3"
+services:
+  server:
+    build: .
+    ports:
+      - "8080:8080"
+    restart: on-failure
+    depends_on:
+      - database
+    networks:
+      - service-network
+    env_file:
+      - ./dev.env
+    environment:
+      PG_HOST: database
+    volumes:
+      - ./migrations:/app/migrations
+    command:
+      ./bin/server
+  database:
+    image: postgres:15.4
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    networks:
+      - service-network
+    volumes:
+      - result-database:/var/lib/postgresql/data
+networks:
+  service-network:
+    driver: bridge
+volumes:
+  result-database:
