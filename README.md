@@ -259,7 +259,10 @@ To back-fill aliases data a separate command is created. The command description
 - [X] Add a command to run migrations
 - [X] Run migrations on supabase from locally-running command
 - [X] Remove scheduler related code
-- [ ] Configure google cloud: create project, cloud run service, two queues.
+- [X] Configure google cloud run: create project, region, cloud run service
+- [X] Deploy service to cloud run
+- [X] Configure cloud run settings
+- [ ] Configure google cloud tasks: region, two queues
 - [ ] Create client methods to interact with google cloud tasks API
   - [ ] Create a new task
   - [ ] Remove existing task
