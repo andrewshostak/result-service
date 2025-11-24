@@ -4,13 +4,14 @@ import (
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/hex"
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 const authorization = "Authorization"
 
-func Authorization(hashedAPIKeys []string, secret string) gin.HandlerFunc {
+func APIKeyAuth(hashedAPIKeys []string, secret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		apiKey := c.GetHeader(authorization)
 

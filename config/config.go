@@ -40,8 +40,9 @@ type PG struct {
 }
 
 type GoogleCloud struct {
-	ProjectID string `env:"GOOGLE_CLOUD_PROJECT_ID,required"`
-	Region    string `env:"GOOGLE_CLOUD_REGION,required"`
+	ProjectID    string `env:"GOOGLE_CLOUD_PROJECT_ID,required"`
+	Region       string `env:"GOOGLE_CLOUD_REGION,required"`
+	TasksBaseURL string `env:"GOOGLE_CLOUD_BASE_URL,required"` // Base URL to be passed as 'audience' param when creating a cloud task. Then cloud tasks will call this URL.
 }
 
 func Parse() Config {
