@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
+	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
 	"github.com/andrewshostak/result-service/client"
 	"github.com/andrewshostak/result-service/config"
 	"github.com/andrewshostak/result-service/handler"
@@ -38,9 +40,13 @@ func startServer(_ *cobra.Command, _ []string) {
 	db := repository.EstablishDatabaseConnection(cfg)
 	httpClient := http.Client{}
 
-	r.GET("/_ah/start", func(c *gin.Context) {
-		c.Status(http.StatusOK)
-	})
+	ctx := context.Background()
+	cloudTasksClient, err := cloudtasks.NewClient(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	defer cloudTasksClient.Close()
 
 	r.Use(middleware.Authorization(cfg.App.HashedAPIKeys, cfg.App.SecretKey))
 
@@ -48,6 +54,7 @@ func startServer(_ *cobra.Command, _ []string) {
 
 	footballAPIClient := client.NewFootballAPIClient(&httpClient, logger, cfg.ExternalAPI.FootballAPIBaseURL, cfg.ExternalAPI.RapidAPIKey)
 	_ = client.NewNotifierClient(&httpClient, logger)
+	_ = client.NewClient(cfg.GoogleCloud, cloudTasksClient)
 
 	aliasRepository := repository.NewAliasRepository(db)
 	matchRepository := repository.NewMatchRepository(db)

@@ -1,0 +1,13 @@
+-- build image from Dockerfile
+gcloud builds submit --tag gcr.io/prognoz-478721/result-service:latest
+
+-- deploy cloud service
+gcloud run services replace service.yaml --region europe-west3
+
+-- enable cloud tasks for the project
+gcloud services enable cloudtasks.googleapis.com
+
+-- create queues
+gcloud tasks queues create check-result --location=europe-west3
+gcloud tasks queues create notify-subscriber --location=europe-west3
+

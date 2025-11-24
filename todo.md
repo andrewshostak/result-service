@@ -1,4 +1,5 @@
-### List of improvements
+### List of improvements after first release
+- configure timeout (should be less than or equal to GCP configured timeout)
 - hide secrets from `app.yaml` & commit `app.yaml` with hidden secrets (or example.app.yaml)
 - configure CI
 - fix concurrent map reads/writes

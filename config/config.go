@@ -11,6 +11,7 @@ type Config struct {
 	ExternalAPI ExternalAPI
 	Result      ResultPolling
 	PG          PG
+	GoogleCloud GoogleCloud
 }
 
 type App struct {
@@ -36,6 +37,11 @@ type PG struct {
 	Password string `env:"PG_PASSWORD,required"`
 	Port     string `env:"PG_PORT" envDefault:"5432"`
 	Database string `env:"PG_DATABASE" envDefault:"postgres"`
+}
+
+type GoogleCloud struct {
+	ProjectID string `env:"GOOGLE_CLOUD_PROJECT_ID,required"`
+	Region    string `env:"GOOGLE_CLOUD_REGION,required"`
 }
 
 func Parse() Config {
