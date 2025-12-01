@@ -15,7 +15,8 @@ type Server struct {
 }
 
 type BackfillAliases struct {
-	PG PG
+	PG          PG
+	ExternalAPI ExternalAPI
 }
 
 type Migrate struct {
@@ -53,20 +54,11 @@ type GoogleCloud struct {
 	TasksBaseURL string `env:"GOOGLE_CLOUD_BASE_URL,required"` // Base URL to be passed as 'audience' param when creating a cloud task. Then cloud tasks will call this URL.
 }
 
-func (s *Server) Parse() {
-	if err := env.Parse(s); err != nil {
+func Parse[T any]() T {
+	config := new(T)
+	if err := env.Parse(config); err != nil {
 		panic(err)
 	}
-}
 
-func (s *BackfillAliases) Parse() {
-	if err := env.Parse(s); err != nil {
-		panic(err)
-	}
-}
-
-func (s *Migrate) Parse() {
-	if err := env.Parse(s); err != nil {
-		panic(err)
-	}
+	return *config
 }

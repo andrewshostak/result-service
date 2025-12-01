@@ -54,7 +54,7 @@ func NewMatchService(
 func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (uint, error) {
 	now := time.Now()
 	if request.StartsAt.Before(now) {
-		return 0, fmt.Errorf("match starting time must be in the future")
+		return 0, errors.New("match starting time must be in the future")
 	}
 
 	aliasHome, err := s.findAlias(ctx, request.AliasHome)

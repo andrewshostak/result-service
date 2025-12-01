@@ -38,8 +38,7 @@ func run(cmd *cobra.Command, _ []string) {
 		panic(errors.New("season flag cannot be empty"))
 	}
 
-	cfg := config.BackfillAliases{}
-	cfg.Parse()
+	cfg := config.Parse[config.BackfillAliases]()
 
 	logger := loggerinternal.SetupLogger()
 

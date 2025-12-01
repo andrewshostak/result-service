@@ -261,7 +261,7 @@ To back-fill aliases data a separate command is created. The command description
 - [X] Configure cloud run settings
 - [X] Configure google cloud tasks: region, two queues
 - [X] Modify existing POST /matches
-- [ ] Modify existing POST /subscriptions
+- [X] Modify existing POST /subscriptions
 - [ ] Create client methods to interact with google cloud tasks API
   - [ ] Create a new task
   - [ ] Remove existing task

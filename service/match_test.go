@@ -15,11 +15,58 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestMatchService_Create(t *testing.T) {
+	aliasRepository := mocks.NewAliasRepository(t)
+	matchRepository := mocks.NewMatchRepository(t)
+	footballAPIFixtureRepository := mocks.NewFootballAPIFixtureRepository(t)
+	footballAPIClient := mocks.NewFootballAPIClient(t)
+	logger := mocks.NewLogger(t)
+	taskClient := mocks.NewTaskClient(t)
+
+	pollingMaxRetries := uint(5)
+	pollingInterval := 15 * time.Minute
+	pollingFirstAttemptDelay := 115 * time.Minute
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name        string
+		input       service.CreateMatchRequest
+		result      uint
+		expectedErr error
+	}{
+		{
+			name:        "it returns an error when match starting date is in the past",
+			input:       service.CreateMatchRequest{StartsAt: time.Now().Add(-1 * time.Hour)},
+			expectedErr: errors.New("match starting time must be in the future"),
+		},
+	}
+
+	for _, tt := range tests {
+		ms := service.NewMatchService(
+			aliasRepository,
+			matchRepository,
+			footballAPIFixtureRepository,
+			footballAPIClient,
+			taskClient,
+			logger,
+			pollingMaxRetries,
+			pollingInterval,
+			pollingFirstAttemptDelay,
+		)
+
+		actual, err := ms.Create(ctx, tt.input)
+		assert.Equal(t, tt.result, actual)
+		assert.Equal(t, tt.expectedErr, err)
+	}
+}
+
 func TestMatchService_List(t *testing.T) {
 	aliasRepository := mocks.NewAliasRepository(t)
 	matchRepository := mocks.NewMatchRepository(t)
 	footballAPIFixtureRepository := mocks.NewFootballAPIFixtureRepository(t)
 	footballAPIClient := mocks.NewFootballAPIClient(t)
+	taskClient := mocks.NewTaskClient(t)
 	logger := mocks.NewLogger(t)
 
 	pollingMaxRetries := uint(5)
@@ -31,6 +78,7 @@ func TestMatchService_List(t *testing.T) {
 		matchRepository,
 		footballAPIFixtureRepository,
 		footballAPIClient,
+		taskClient,
 		logger,
 		pollingMaxRetries,
 		pollingInterval,

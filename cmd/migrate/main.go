@@ -79,8 +79,7 @@ func down() error {
 }
 
 func run() (*migrate.Migrate, *zerolog.Logger) {
-	cfg := config.Migrate{}
-	cfg.Parse()
+	cfg := config.Parse[config.Migrate]()
 
 	logger := loggerinternal.SetupLogger()
 

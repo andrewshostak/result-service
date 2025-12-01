@@ -122,6 +122,36 @@ func (_m *MatchRepository) One(ctx context.Context, search repository.Match) (*r
 	return r0, r1
 }
 
+// Save provides a mock function with given fields: ctx, id, match
+func (_m *MatchRepository) Save(ctx context.Context, id *uint, match repository.Match) (*repository.Match, error) {
+	ret := _m.Called(ctx, id, match)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Save")
+	}
+
+	var r0 *repository.Match
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *uint, repository.Match) (*repository.Match, error)); ok {
+		return rf(ctx, id, match)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *uint, repository.Match) *repository.Match); ok {
+		r0 = rf(ctx, id, match)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*repository.Match)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *uint, repository.Match) error); ok {
+		r1 = rf(ctx, id, match)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Update provides a mock function with given fields: ctx, id, resultStatus
 func (_m *MatchRepository) Update(ctx context.Context, id uint, resultStatus repository.ResultStatus) (*repository.Match, error) {
 	ret := _m.Called(ctx, id, resultStatus)

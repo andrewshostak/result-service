@@ -44,6 +44,36 @@ func (_m *FootballAPIFixtureRepository) Create(ctx context.Context, fixture repo
 	return r0, r1
 }
 
+// Save provides a mock function with given fields: ctx, fixture, data
+func (_m *FootballAPIFixtureRepository) Save(ctx context.Context, fixture repository.FootballApiFixture, data repository.Data) (*repository.FootballApiFixture, error) {
+	ret := _m.Called(ctx, fixture, data)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Save")
+	}
+
+	var r0 *repository.FootballApiFixture
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, repository.FootballApiFixture, repository.Data) (*repository.FootballApiFixture, error)); ok {
+		return rf(ctx, fixture, data)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, repository.FootballApiFixture, repository.Data) *repository.FootballApiFixture); ok {
+		r0 = rf(ctx, fixture, data)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*repository.FootballApiFixture)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, repository.FootballApiFixture, repository.Data) error); ok {
+		r1 = rf(ctx, fixture, data)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Update provides a mock function with given fields: ctx, id, data
 func (_m *FootballAPIFixtureRepository) Update(ctx context.Context, id uint, data repository.Data) (*repository.FootballApiFixture, error) {
 	ret := _m.Called(ctx, id, data)

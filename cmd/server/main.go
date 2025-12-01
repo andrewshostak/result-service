@@ -31,8 +31,7 @@ func main() {
 }
 
 func startServer(_ *cobra.Command, _ []string) {
-	cfg := config.Server{}
-	cfg.Parse()
+	cfg := config.Parse[config.Server]()
 
 	logger := loggerinternal.SetupLogger()
 
