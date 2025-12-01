@@ -16,7 +16,6 @@ import (
 )
 
 func TestMatchService_Create(t *testing.T) {
-	aliasRepository := mocks.NewAliasRepository(t)
 	matchRepository := mocks.NewMatchRepository(t)
 	footballAPIFixtureRepository := mocks.NewFootballAPIFixtureRepository(t)
 	footballAPIClient := mocks.NewFootballAPIClient(t)
@@ -28,21 +27,42 @@ func TestMatchService_Create(t *testing.T) {
 	pollingFirstAttemptDelay := 115 * time.Minute
 
 	ctx := context.Background()
+	aliasHome := gofakeit.Name()
 
 	tests := []struct {
-		name        string
-		input       service.CreateMatchRequest
-		result      uint
-		expectedErr error
+		name            string
+		input           service.CreateMatchRequest
+		aliasRepository func(t *testing.T) *mocks.AliasRepository
+		result          uint
+		expectedErr     error
 	}{
 		{
 			name:        "it returns an error when match starting date is in the past",
 			input:       service.CreateMatchRequest{StartsAt: time.Now().Add(-1 * time.Hour)},
 			expectedErr: errors.New("match starting time must be in the future"),
 		},
+		{
+			name: "it returns an error when home team alias does not exist",
+			input: service.CreateMatchRequest{
+				StartsAt:  time.Now().Add(24 * time.Hour),
+				AliasHome: aliasHome,
+			},
+			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
+				t.Helper()
+				m := mocks.NewAliasRepository(t)
+				m.On("Find", ctx, aliasHome).Return(nil, errors.New("not found")).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to find home team alias: %w", fmt.Errorf("failed to find team alias: %w", errors.New("not found"))),
+		},
 	}
 
 	for _, tt := range tests {
+		var aliasRepository *mocks.AliasRepository
+		if tt.aliasRepository != nil {
+			aliasRepository = tt.aliasRepository(t)
+		}
+
 		ms := service.NewMatchService(
 			aliasRepository,
 			matchRepository,
@@ -57,7 +77,7 @@ func TestMatchService_Create(t *testing.T) {
 
 		actual, err := ms.Create(ctx, tt.input)
 		assert.Equal(t, tt.result, actual)
-		assert.Equal(t, tt.expectedErr, err)
+		assert.EqualError(t, err, tt.expectedErr.Error())
 	}
 }
 

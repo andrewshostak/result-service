@@ -260,11 +260,15 @@ To back-fill aliases data a separate command is created. The command description
 - [X] Deploy service to cloud run
 - [X] Configure cloud run settings
 - [X] Configure google cloud tasks: region, two queues
+- [X] Start service locally with launching cloud task client
 - [X] Modify existing POST /matches
 - [X] Modify existing POST /subscriptions
-- [ ] Create client methods to interact with google cloud tasks API
-  - [ ] Create a new task
-  - [ ] Remove existing task
-- [X] Start service locally with launching cloud task client
+- [ ] Implement client methods to interact with google cloud tasks API
+    - [ ] Create a new check-result task
+    - [ ] Create a new notify-subscriber task
+    - [ ] Remove check-result task
+- [ ] Verify match creation flow works
+- [ ] Modify existing DELETE /subscriptions
+- [ ] Verify subscription deletion flow works
 - [ ] Create a new endpoint to be called by cloud task for checking match result
 - [ ] Create a new endpoint to be called by cloud task for notifying subscriber
