@@ -13,14 +13,14 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-func EstablishDatabaseConnection(cfg config.Config) *gorm.DB {
+func EstablishDatabaseConnection(cfg config.PG) *gorm.DB {
 	connectionParams := fmt.Sprintf(
 		"host=%s user=%s password=%s port=%s database=%s sslmode=disable",
-		cfg.PG.Host,
-		cfg.PG.User,
-		cfg.PG.Password,
-		cfg.PG.Port,
-		cfg.PG.Database,
+		cfg.Host,
+		cfg.User,
+		cfg.Password,
+		cfg.Port,
+		cfg.Database,
 	)
 
 	customLogger := logger.New(

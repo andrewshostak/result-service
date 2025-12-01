@@ -6,12 +6,20 @@ import (
 	"github.com/caarlos0/env/v9"
 )
 
-type Config struct {
+type Server struct {
 	App         App
 	ExternalAPI ExternalAPI
 	Result      ResultPolling
 	PG          PG
 	GoogleCloud GoogleCloud
+}
+
+type BackfillAliases struct {
+	PG PG
+}
+
+type Migrate struct {
+	PG PG
 }
 
 type App struct {
@@ -45,11 +53,20 @@ type GoogleCloud struct {
 	TasksBaseURL string `env:"GOOGLE_CLOUD_BASE_URL,required"` // Base URL to be passed as 'audience' param when creating a cloud task. Then cloud tasks will call this URL.
 }
 
-func Parse() Config {
-	config := Config{}
-	if err := env.Parse(&config); err != nil {
+func (s *Server) Parse() {
+	if err := env.Parse(s); err != nil {
 		panic(err)
 	}
+}
 
-	return config
+func (s *BackfillAliases) Parse() {
+	if err := env.Parse(s); err != nil {
+		panic(err)
+	}
+}
+
+func (s *Migrate) Parse() {
+	if err := env.Parse(s); err != nil {
+		panic(err)
+	}
 }

@@ -38,13 +38,14 @@ func run(cmd *cobra.Command, _ []string) {
 		panic(errors.New("season flag cannot be empty"))
 	}
 
-	cfg := config.Parse()
+	cfg := config.BackfillAliases{}
+	cfg.Parse()
 
 	logger := loggerinternal.SetupLogger()
 
 	httpClient := http.Client{}
 
-	db := repository.EstablishDatabaseConnection(cfg)
+	db := repository.EstablishDatabaseConnection(cfg.PG)
 
 	aliasRepository := repository.NewAliasRepository(db)
 

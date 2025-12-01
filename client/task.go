@@ -23,7 +23,8 @@ func NewClient(config config.GoogleCloud, client *cloudtasks.Client) *TaskClient
 }
 
 func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, scheduleAt time.Time) error {
-	panic("implement me")
+	// TODO
+	return nil
 }
 
 func (c *TaskClient) ScheduleSubscriberNotification(ctx context.Context, subscriptionID uint) error {

@@ -31,13 +31,14 @@ func main() {
 }
 
 func startServer(_ *cobra.Command, _ []string) {
-	cfg := config.Parse()
+	cfg := config.Server{}
+	cfg.Parse()
 
 	logger := loggerinternal.SetupLogger()
 
 	r := gin.Default()
 
-	db := repository.EstablishDatabaseConnection(cfg)
+	db := repository.EstablishDatabaseConnection(cfg.PG)
 	httpClient := http.Client{}
 
 	ctx := context.Background()
@@ -76,8 +77,8 @@ func startServer(_ *cobra.Command, _ []string) {
 	aliasHandler := handler.NewAliasHandler(aliasService)
 
 	v1 := r.Group("/v1")
-	apiKey := v1.Use(middleware.APIKeyAuth(cfg.App.HashedAPIKeys, cfg.App.SecretKey))
-	googleAuth := v1.Use(middleware.ValidateGoogleAuth(cfg.GoogleCloud.TasksBaseURL))
+	apiKey := v1.Group("").Use(middleware.APIKeyAuth(cfg.App.HashedAPIKeys, cfg.App.SecretKey))
+	googleAuth := v1.Group("").Use(middleware.ValidateGoogleAuth(cfg.GoogleCloud.TasksBaseURL))
 
 	apiKey.POST("/matches", matchHandler.Create)
 	apiKey.POST("/subscriptions", subscriptionHandler.Create)

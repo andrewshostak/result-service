@@ -83,7 +83,7 @@ func (r *SubscriptionRepository) ListUnNotified(ctx context.Context) ([]Subscrip
 	result := r.db.WithContext(ctx).
 		Where("status = ?", PendingSub).
 		Joins("Match").
-		Where("result_status = ?", Successful).
+		Where("result_status = ?", Received).
 		Preload("Match.FootballApiFixtures").
 		Find(&subscriptions)
 

@@ -79,11 +79,12 @@ func down() error {
 }
 
 func run() (*migrate.Migrate, *zerolog.Logger) {
-	cfg := config.Parse()
+	cfg := config.Migrate{}
+	cfg.Parse()
 
 	logger := loggerinternal.SetupLogger()
 
-	db := repository.EstablishDatabaseConnection(cfg)
+	db := repository.EstablishDatabaseConnection(cfg.PG)
 
 	sqlDb, err := db.DB()
 	if err != nil {

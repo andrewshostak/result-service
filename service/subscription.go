@@ -37,7 +37,7 @@ func (s *SubscriptionService) Create(ctx context.Context, request CreateSubscrip
 		return fmt.Errorf("failed to get a match: %w", err)
 	}
 
-	if match.ResultStatus != repository.Scheduled {
+	if !s.isMatchScheduled(*match) {
 		return errors.New("match status is not scheduled")
 	}
 
@@ -121,4 +121,8 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 	}
 
 	return nil
+}
+
+func (s *SubscriptionService) isMatchScheduled(match repository.Match) bool {
+	return match.ResultStatus == repository.Scheduled
 }

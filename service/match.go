@@ -73,7 +73,7 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		AwayTeamID: aliasAway.TeamID,
 	})
 
-	if !errors.As(err, &errs.MatchNotFoundError{}) {
+	if err != nil && !errors.As(err, &errs.MatchNotFoundError{}) {
 		return 0, fmt.Errorf("unexpected error when getting a match: %w", err)
 	}
 
@@ -82,11 +82,8 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 	}
 
 	if s.returnError(match) {
-		return 0, fmt.Errorf("match already exists and has %s result status", match.ResultStatus)
+		return 0, fmt.Errorf("match already exists with result status: %s", match.ResultStatus)
 	}
-
-	s.logger.Info().Str("alias_home", request.AliasHome).Str("alias_away", request.AliasAway).
-		Msg("match is not found in the database. making an attempt to find it in external api")
 
 	date := request.StartsAt.UTC().Format(dateFormat)
 	season := uint(s.getSeason(request.StartsAt.UTC()))
@@ -115,25 +112,29 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		return 0, fmt.Errorf("unable to parse received from external api fixture date %s: %w", fixture.Fixture.Date, err)
 	}
 
-	toCreate := repository.Match{HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID, StartsAt: startsAt}
-	created, err := s.matchRepository.Save(ctx, toCreate)
+	toSave := repository.Match{HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID, StartsAt: startsAt, ResultStatus: repository.NotScheduled}
+	var matchID *uint
+	if match != nil {
+		matchID = &match.ID
+	}
+	saved, err := s.matchRepository.Save(ctx, matchID, toSave)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create match with team ids %d and %d starting at %s: %w", aliasHome.TeamID, aliasAway.TeamID, startsAt, err)
 	}
 
-	s.logger.Info().Uint("match_id", created.ID).Msg("match saved")
+	s.logger.Info().Uint("match_id", saved.ID).Msg("match saved")
 
 	createdFixture, err := s.footballAPIFixtureRepository.Save(ctx, repository.FootballApiFixture{
 		ID:      fixture.Fixture.ID,
-		MatchID: created.ID,
+		MatchID: saved.ID,
 	}, toRepositoryFootballAPIFixtureData(fixture))
 	if err != nil {
-		return 0, fmt.Errorf("failed to create football api fixture with match id %d: %w", created.ID, err)
+		return 0, fmt.Errorf("failed to create football api fixture with match id %d: %w", saved.ID, err)
 	}
 
-	s.logger.Info().Uint("football_api_fixture_id", createdFixture.ID).Uint("match_id", created.ID).Msg("fixture saved")
+	s.logger.Info().Uint("football_api_fixture_id", createdFixture.ID).Uint("match_id", saved.ID).Msg("fixture saved")
 
-	mappedMatch, err := fromRepositoryMatch(*created)
+	mappedMatch, err := fromRepositoryMatch(*saved)
 	if err != nil {
 		return 0, fmt.Errorf("failed to map from repository match: %w", err)
 	}
@@ -154,12 +155,12 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		Str("alias_away", aliasAway.Alias).
 		Msg("match result acquiring scheduled")
 
-	_, err = s.matchRepository.Update(ctx, created.ID, repository.Scheduled)
+	_, err = s.matchRepository.Update(ctx, saved.ID, repository.Scheduled)
 	if err != nil {
 		return 0, fmt.Errorf("failed to set match status to %s: %w", repository.Scheduled, err)
 	}
 
-	return created.ID, nil
+	return saved.ID, nil
 }
 
 func (s *MatchService) List(ctx context.Context, status string) ([]Match, error) {

@@ -93,13 +93,18 @@ func (r *MatchRepository) One(ctx context.Context, search Match) (*Match, error)
 	return &match, nil
 }
 
-func (r *MatchRepository) Save(ctx context.Context, match Match) (*Match, error) {
-	result := r.db.WithContext(ctx).Save(&match)
+func (r *MatchRepository) Save(ctx context.Context, id *uint, match Match) (*Match, error) {
+	toSave := match
+	if id != nil {
+		toSave.ID = *id
+	}
+
+	result := r.db.WithContext(ctx).Save(&toSave)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 
-	return &match, nil
+	return &toSave, nil
 }
 
 func (r *MatchRepository) Update(ctx context.Context, id uint, resultStatus ResultStatus) (*Match, error) {
