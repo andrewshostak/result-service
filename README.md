@@ -131,7 +131,7 @@ API->>ResultService: Sends a request to create a match
 Activate ResultService
 ResultService->>ResultService: Gets team ids by aliases from the DB
 ResultService->>ResultService: Gets match by team ids and starting time from the DB
-alt match is found and result status is in scheduled/received
+alt match is found and result status is scheduled
     ResultService-->>API: Returns match response
 end
 ResultService->>+FootballAPI: Sends a request with season, timezone, date, team id
@@ -263,6 +263,7 @@ To back-fill aliases data a separate command is created. The command description
 - [X] Start service locally with launching cloud task client
 - [X] Modify existing POST /matches
 - [X] Modify existing POST /subscriptions
+- [ ] Add created_at / updated_at columns
 - [ ] Implement client methods to interact with google cloud tasks API
     - [ ] Create a new check-result task
     - [ ] Create a new notify-subscriber task
