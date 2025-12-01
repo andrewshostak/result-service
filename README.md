@@ -83,12 +83,12 @@ Table names are pluralized. The tables `teams`, `aliases`, `football_api_teams` 
 
 | `result_status`    | Description                                                                                                                                                                                |
 |--------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `not_scheduled`    | Match is created, but a task is not yet scheduled.                                                                                                                                         |
+| `not_scheduled`    | Match is created, but fixture creation or task scheduling fails                                                                                                                            |
 | `scheduled`        | Match is created and a task is scheduled. If there was an attempt to get a result but a match was not ended the status `scheduled` remains unchanged.                                      |
-| `scheduling_error` | Match is created, but an attempt to create a task was unsuccessful.                                                                                                                        |
+| `scheduling_error` | An attempt to reschedule task was unsuccessful.                                                                                                                                            |
 | `received`         | Match result is received.                                                                                                                                                                  |
-| `api_error`        | Request to football-api was unsuccessful.                                                                                                                                                  |
-| `cancelled`        | Means the next status from football-api is received: "Match Suspended", "Match Postponed", "Match Cancelled", "Match Abandoned", "Technical Loss", "WalkOver". No new task is rescheduled. |
+| `api_error`        | Request to football-api to get match result was unsuccessful.                                                                                                                              |
+| `cancelled`        | One of the next statuses from football-api received: "Match Suspended", "Match Postponed", "Match Cancelled", "Match Abandoned", "Technical Loss", "WalkOver". No new task is rescheduled. |
 
 #### Description of possible subscription `subscription_status` values:
 
@@ -145,9 +145,6 @@ ResultService->>ResultService: Updates match status to scheduled
 ResultService-->>API: Returns match response
 Deactivate ResultService
 ```
-
-Open questions:
-- what if match is found
 
 ### Subscribe on result receiving
 
@@ -262,12 +259,12 @@ To back-fill aliases data a separate command is created. The command description
 - [X] Configure google cloud run: create project, region, cloud run service
 - [X] Deploy service to cloud run
 - [X] Configure cloud run settings
-- [ ] Configure google cloud tasks: region, two queues
+- [X] Configure google cloud tasks: region, two queues
+- [X] Modify existing POST /matches
+- [ ] Modify existing POST /subscriptions
 - [ ] Create client methods to interact with google cloud tasks API
   - [ ] Create a new task
   - [ ] Remove existing task
-- [ ] Start service locally with launching cloud task client
+- [X] Start service locally with launching cloud task client
 - [ ] Create a new endpoint to be called by cloud task for checking match result
 - [ ] Create a new endpoint to be called by cloud task for notifying subscriber
-- [ ] Modify existing POST /matches
-- [ ] Modify existing POST /subscriptions

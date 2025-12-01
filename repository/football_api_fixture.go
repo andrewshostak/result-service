@@ -31,6 +31,21 @@ func (r *FootballAPIFixtureRepository) Create(ctx context.Context, fixture Footb
 	return &fixture, nil
 }
 
+func (r *FootballAPIFixtureRepository) Save(ctx context.Context, fixture FootballApiFixture, data Data) (*FootballApiFixture, error) {
+	dataAsJson, err := toJsonB(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create jsonb data: %w", err)
+	}
+
+	fixture.Data = *dataAsJson
+	result := r.db.WithContext(ctx).Save(&fixture)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &fixture, nil
+}
+
 func (r *FootballAPIFixtureRepository) Update(ctx context.Context, id uint, data Data) (*FootballApiFixture, error) {
 	dataAsJson, err := toJsonB(data)
 	if err != nil {

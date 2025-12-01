@@ -63,8 +63,9 @@ const (
 	NotScheduled    ResultStatus = "not_scheduled"
 	Scheduled       ResultStatus = "scheduled"
 	SchedulingError ResultStatus = "scheduling_error"
-	Error           ResultStatus = "error"
-	Successful      ResultStatus = "successful"
+	Received        ResultStatus = "received"
+	APIError        ResultStatus = "api_error"
+	Cancelled       ResultStatus = "cancelled"
 )
 
 type SubscriptionStatus string

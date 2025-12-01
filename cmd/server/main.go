@@ -50,7 +50,7 @@ func startServer(_ *cobra.Command, _ []string) {
 
 	footballAPIClient := client.NewFootballAPIClient(&httpClient, logger, cfg.ExternalAPI.FootballAPIBaseURL, cfg.ExternalAPI.RapidAPIKey)
 	_ = client.NewNotifierClient(&httpClient, logger)
-	_ = client.NewClient(cfg.GoogleCloud, cloudTasksClient)
+	taskClient := client.NewClient(cfg.GoogleCloud, cloudTasksClient)
 
 	aliasRepository := repository.NewAliasRepository(db)
 	matchRepository := repository.NewMatchRepository(db)
@@ -62,6 +62,7 @@ func startServer(_ *cobra.Command, _ []string) {
 		matchRepository,
 		footballAPIFixtureRepository,
 		footballAPIClient,
+		taskClient,
 		logger,
 		cfg.Result.PollingMaxRetries,
 		cfg.Result.PollingInterval,

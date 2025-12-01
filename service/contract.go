@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/andrewshostak/result-service/client"
 	"github.com/andrewshostak/result-service/repository"
@@ -16,6 +17,7 @@ type AliasRepository interface {
 
 type MatchRepository interface {
 	Create(ctx context.Context, match repository.Match) (*repository.Match, error)
+	Save(ctx context.Context, match repository.Match) (*repository.Match, error)
 	Delete(ctx context.Context, id uint) error
 	List(ctx context.Context, resultStatus repository.ResultStatus) ([]repository.Match, error)
 	One(ctx context.Context, search repository.Match) (*repository.Match, error)
@@ -24,6 +26,7 @@ type MatchRepository interface {
 
 type FootballAPIFixtureRepository interface {
 	Create(ctx context.Context, fixture repository.FootballApiFixture, data repository.Data) (*repository.FootballApiFixture, error)
+	Save(ctx context.Context, fixture repository.FootballApiFixture, data repository.Data) (*repository.FootballApiFixture, error)
 	Update(ctx context.Context, id uint, data repository.Data) (*repository.FootballApiFixture, error)
 }
 
@@ -31,6 +34,10 @@ type FootballAPIClient interface {
 	SearchFixtures(ctx context.Context, search client.FixtureSearch) (*client.FixturesResponse, error)
 	SearchLeagues(ctx context.Context, season uint) (*client.LeaguesResponse, error)
 	SearchTeams(ctx context.Context, search client.TeamsSearch) (*client.TeamsResponse, error)
+}
+
+type TaskClient interface {
+	ScheduleResultCheck(ctx context.Context, matchID uint, scheduleAt time.Time) error
 }
 
 type NotifierClient interface {
