@@ -19,7 +19,7 @@ type MatchService struct {
 	aliasRepository              AliasRepository
 	matchRepository              MatchRepository
 	footballAPIFixtureRepository FootballAPIFixtureRepository
-	resultTaskRepository         ResultTaskRepository
+	checkResultTaskRepository    CheckResultTaskRepository
 	footballAPIClient            FootballAPIClient
 	taskClient                   TaskClient
 	logger                       Logger
@@ -32,7 +32,7 @@ func NewMatchService(
 	aliasRepository AliasRepository,
 	matchRepository MatchRepository,
 	footballAPIFixtureRepository FootballAPIFixtureRepository,
-	resultTaskRepository ResultTaskRepository,
+	checkResultTaskRepository CheckResultTaskRepository,
 	footballAPIClient FootballAPIClient,
 	taskClient TaskClient,
 	logger Logger,
@@ -44,7 +44,7 @@ func NewMatchService(
 		aliasRepository:              aliasRepository,
 		matchRepository:              matchRepository,
 		footballAPIFixtureRepository: footballAPIFixtureRepository,
-		resultTaskRepository:         resultTaskRepository,
+		checkResultTaskRepository:    checkResultTaskRepository,
 		footballAPIClient:            footballAPIClient,
 		taskClient:                   taskClient,
 		logger:                       logger,
@@ -55,8 +55,7 @@ func NewMatchService(
 }
 
 func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (uint, error) {
-	now := time.Now()
-	if request.StartsAt.Before(now) {
+	if request.StartsAt.Before(time.Now()) {
 		return 0, errors.New("match starting time must be in the future")
 	}
 
@@ -75,7 +74,6 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		HomeTeamID: aliasHome.TeamID,
 		AwayTeamID: aliasAway.TeamID,
 	})
-
 	if err != nil && !errors.As(err, &errs.MatchNotFoundError{}) {
 		return 0, fmt.Errorf("unexpected error when getting a match: %w", err)
 	}
@@ -105,7 +103,6 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 	}
 
 	fixture := fromClientFootballAPIFixture(response.Response[0])
-
 	if s.isFixtureEnded(fixture) {
 		return 0, fmt.Errorf("%s: %w", fmt.Sprintf("status of the fixture with external id %d is %s", fixture.Fixture.ID, stateMatchFinished), errs.ErrIncorrectFixtureStatus)
 	}
@@ -150,13 +147,15 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 	// time.Now().Add(1 * time.Minute) // TODO
 	scheduleTime := mappedMatch.StartsAt.Add(s.pollingFirstAttemptDelay)
 	taskName, err := s.taskClient.ScheduleResultCheck(ctx, mappedMatch.ID, scheduleTime)
-	if err != nil {
+	if err != nil && !errors.As(err, &errs.ClientTaskAlreadyExistsError{}) {
 		return 0, fmt.Errorf("failed to schedule result check task: %w", err)
 	}
 
-	_, err = s.resultTaskRepository.Create(ctx, *taskName, mappedMatch.ID)
-	if err != nil && !errors.As(err, &errs.ResultTaskAlreadyExistsError{}) {
-		return 0, fmt.Errorf("failed to create result-check task: %w", err)
+	if taskName != nil {
+		_, err = s.checkResultTaskRepository.Create(ctx, *taskName, mappedMatch.ID)
+		if err != nil && !errors.As(err, &errs.CheckResultTaskAlreadyExistsError{}) {
+			return 0, fmt.Errorf("failed to create result-check task: %w", err)
+		}
 	}
 
 	s.logger.Info().

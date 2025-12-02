@@ -30,8 +30,8 @@ type FootballAPIFixtureRepository interface {
 	Update(ctx context.Context, id uint, data repository.Data) (*repository.FootballApiFixture, error)
 }
 
-type ResultTaskRepository interface {
-	Create(ctx context.Context, name string, matchID uint) (*repository.ResultTask, error)
+type CheckResultTaskRepository interface {
+	Create(ctx context.Context, name string, matchID uint) (*repository.CheckResultTask, error)
 }
 
 type FootballAPIClient interface {

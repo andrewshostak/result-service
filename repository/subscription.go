@@ -23,7 +23,7 @@ func (r *SubscriptionRepository) Create(ctx context.Context, subscription Subscr
 		if errors.Is(result.Error, gorm.ErrForeignKeyViolated) {
 			return nil, fmt.Errorf("match id does not exist: %w", errs.WrongMatchIDError{Message: result.Error.Error()})
 		}
-		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
+		if isDuplicateError(result.Error) {
 			return nil, fmt.Errorf("subscription already exists: %w", errs.SubscriptionAlreadyExistsError{Message: result.Error.Error()})
 		}
 

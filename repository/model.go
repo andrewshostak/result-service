@@ -57,7 +57,7 @@ type Subscription struct {
 	Match *Match `gorm:"foreignKey:MatchID"`
 }
 
-type ResultTask struct {
+type CheckResultTask struct {
 	Name    string `gorm:"column:name;primaryKey"`
 	MatchID uint   `gorm:"column:match_id"`
 

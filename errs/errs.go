@@ -48,11 +48,19 @@ func (e SubscriptionAlreadyExistsError) Error() string {
 	return e.Message
 }
 
-type ResultTaskAlreadyExistsError struct {
+type CheckResultTaskAlreadyExistsError struct {
 	Message string
 }
 
-func (e ResultTaskAlreadyExistsError) Error() string {
+func (e CheckResultTaskAlreadyExistsError) Error() string {
+	return e.Message
+}
+
+type ClientTaskAlreadyExistsError struct {
+	Message string
+}
+
+func (e ClientTaskAlreadyExistsError) Error() string {
 	return e.Message
 }
 

@@ -56,13 +56,13 @@ func startServer(_ *cobra.Command, _ []string) {
 	matchRepository := repository.NewMatchRepository(db)
 	footballAPIFixtureRepository := repository.NewFootballAPIFixtureRepository(db)
 	subscriptionRepository := repository.NewSubscriptionRepository(db)
-	resultTaskRepository := repository.NewResultTaskRepository(db)
+	checkResultTaskRepository := repository.NewCheckResultTaskRepository(db)
 
 	matchService := service.NewMatchService(
 		aliasRepository,
 		matchRepository,
 		footballAPIFixtureRepository,
-		resultTaskRepository,
+		checkResultTaskRepository,
 		footballAPIClient,
 		taskClient,
 		logger,

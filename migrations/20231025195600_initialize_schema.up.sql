@@ -47,15 +47,15 @@ create table if not exists subscriptions (
 create table if not exists football_api_fixtures
 (
     id bigserial primary key,
-    match_id bigserial,
+    match_id bigserial unique,
     data jsonb not null,
     foreign key (match_id) references matches (id) on update cascade on delete cascade
 );
 
-create table if not exists result_tasks
+create table if not exists check_result_tasks
 (
     name text primary key,
-    match_id bigserial,
+    match_id bigserial unique,
     foreign key (match_id) references matches (id) on update cascade on delete cascade
 );
 

@@ -64,7 +64,7 @@ erDiagram
         Int team_id FK
     }
     
-    ResultTask {
+    CheckResultTask {
         String name PK
         Int match_id FK
     }
@@ -74,7 +74,7 @@ erDiagram
     Match ||--|| FootballAPIFixture : has
     Match ||--o{ Subscription : has
     Team ||--|| FootballAPITeam : has
-    Match ||--|| ResultTask : has
+    Match ||--|| CheckResultTask : has
 ```
 
 Table names are pluralized. The tables `teams`, `aliases`, `football_api_teams` are pre-filled with the data of `prognoz-api` and `football-api`.
@@ -141,6 +141,7 @@ ResultService->>CloudTasks: Creates a task to check result with schedule-time (s
 Activate CloudTasks
 CloudTasks-->>ResultService: Returns task id
 Deactivate CloudTasks
+ResultService->>ResultService: Saves check result task to the DB
 ResultService->>ResultService: Updates match status to scheduled
 ResultService-->>API: Returns match response
 Deactivate ResultService

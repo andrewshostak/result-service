@@ -18,7 +18,7 @@ import (
 func TestMatchService_Create(t *testing.T) {
 	matchRepository := mocks.NewMatchRepository(t)
 	footballAPIFixtureRepository := mocks.NewFootballAPIFixtureRepository(t)
-	resultTaskRepository := mocks.NewResultTaskRepository(t)
+	checkResultTaskRepository := mocks.NewCheckResultTaskRepository(t)
 	footballAPIClient := mocks.NewFootballAPIClient(t)
 	logger := mocks.NewLogger(t)
 	taskClient := mocks.NewTaskClient(t)
@@ -84,7 +84,7 @@ func TestMatchService_Create(t *testing.T) {
 			aliasRepository,
 			matchRepository,
 			footballAPIFixtureRepository,
-			resultTaskRepository,
+			checkResultTaskRepository,
 			footballAPIClient,
 			taskClient,
 			logger,
@@ -103,7 +103,7 @@ func TestMatchService_List(t *testing.T) {
 	aliasRepository := mocks.NewAliasRepository(t)
 	matchRepository := mocks.NewMatchRepository(t)
 	footballAPIFixtureRepository := mocks.NewFootballAPIFixtureRepository(t)
-	resultTaskRepository := mocks.NewResultTaskRepository(t)
+	checkResultTaskRepository := mocks.NewCheckResultTaskRepository(t)
 	footballAPIClient := mocks.NewFootballAPIClient(t)
 	taskClient := mocks.NewTaskClient(t)
 	logger := mocks.NewLogger(t)
@@ -116,7 +116,7 @@ func TestMatchService_List(t *testing.T) {
 		aliasRepository,
 		matchRepository,
 		footballAPIFixtureRepository,
-		resultTaskRepository,
+		checkResultTaskRepository,
 		footballAPIClient,
 		taskClient,
 		logger,
