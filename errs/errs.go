@@ -48,6 +48,14 @@ func (e SubscriptionAlreadyExistsError) Error() string {
 	return e.Message
 }
 
+type ResultTaskAlreadyExistsError struct {
+	Message string
+}
+
+func (e ResultTaskAlreadyExistsError) Error() string {
+	return e.Message
+}
+
 type WrongMatchIDError struct {
 	Message string
 }

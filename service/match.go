@@ -19,6 +19,7 @@ type MatchService struct {
 	aliasRepository              AliasRepository
 	matchRepository              MatchRepository
 	footballAPIFixtureRepository FootballAPIFixtureRepository
+	resultTaskRepository         ResultTaskRepository
 	footballAPIClient            FootballAPIClient
 	taskClient                   TaskClient
 	logger                       Logger
@@ -31,6 +32,7 @@ func NewMatchService(
 	aliasRepository AliasRepository,
 	matchRepository MatchRepository,
 	footballAPIFixtureRepository FootballAPIFixtureRepository,
+	resultTaskRepository ResultTaskRepository,
 	footballAPIClient FootballAPIClient,
 	taskClient TaskClient,
 	logger Logger,
@@ -42,6 +44,7 @@ func NewMatchService(
 		aliasRepository:              aliasRepository,
 		matchRepository:              matchRepository,
 		footballAPIFixtureRepository: footballAPIFixtureRepository,
+		resultTaskRepository:         resultTaskRepository,
 		footballAPIClient:            footballAPIClient,
 		taskClient:                   taskClient,
 		logger:                       logger,
@@ -144,8 +147,16 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		return 0, fmt.Errorf("failed to map from repository api fixture: %w", err)
 	}
 
-	if err := s.taskClient.ScheduleResultCheck(ctx, mappedMatch.ID, mappedMatch.StartsAt.Add(s.pollingFirstAttemptDelay)); err != nil {
+	// time.Now().Add(1 * time.Minute) // TODO
+	scheduleTime := mappedMatch.StartsAt.Add(s.pollingFirstAttemptDelay)
+	taskName, err := s.taskClient.ScheduleResultCheck(ctx, mappedMatch.ID, scheduleTime)
+	if err != nil {
 		return 0, fmt.Errorf("failed to schedule result check task: %w", err)
+	}
+
+	_, err = s.resultTaskRepository.Create(ctx, *taskName, mappedMatch.ID)
+	if err != nil && !errors.As(err, &errs.ResultTaskAlreadyExistsError{}) {
+		return 0, fmt.Errorf("failed to create result-check task: %w", err)
 	}
 
 	s.logger.Info().

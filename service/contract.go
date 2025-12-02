@@ -30,6 +30,10 @@ type FootballAPIFixtureRepository interface {
 	Update(ctx context.Context, id uint, data repository.Data) (*repository.FootballApiFixture, error)
 }
 
+type ResultTaskRepository interface {
+	Create(ctx context.Context, name string, matchID uint) (*repository.ResultTask, error)
+}
+
 type FootballAPIClient interface {
 	SearchFixtures(ctx context.Context, search client.FixtureSearch) (*client.FixturesResponse, error)
 	SearchLeagues(ctx context.Context, season uint) (*client.LeaguesResponse, error)
@@ -37,7 +41,7 @@ type FootballAPIClient interface {
 }
 
 type TaskClient interface {
-	ScheduleResultCheck(ctx context.Context, matchID uint, scheduleAt time.Time) error
+	ScheduleResultCheck(ctx context.Context, matchID uint, scheduleAt time.Time) (*string, error)
 }
 
 type NotifierClient interface {

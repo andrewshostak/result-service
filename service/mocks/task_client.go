@@ -16,21 +16,33 @@ type TaskClient struct {
 }
 
 // ScheduleResultCheck provides a mock function with given fields: ctx, matchID, scheduleAt
-func (_m *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, scheduleAt time.Time) error {
+func (_m *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, scheduleAt time.Time) (*string, error) {
 	ret := _m.Called(ctx, matchID, scheduleAt)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ScheduleResultCheck")
 	}
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint, time.Time) error); ok {
+	var r0 *string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint, time.Time) (*string, error)); ok {
+		return rf(ctx, matchID, scheduleAt)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint, time.Time) *string); ok {
 		r0 = rf(ctx, matchID, scheduleAt)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*string)
+		}
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(context.Context, uint, time.Time) error); ok {
+		r1 = rf(ctx, matchID, scheduleAt)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // NewTaskClient creates a new instance of TaskClient. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.

@@ -18,6 +18,7 @@ import (
 func TestMatchService_Create(t *testing.T) {
 	matchRepository := mocks.NewMatchRepository(t)
 	footballAPIFixtureRepository := mocks.NewFootballAPIFixtureRepository(t)
+	resultTaskRepository := mocks.NewResultTaskRepository(t)
 	footballAPIClient := mocks.NewFootballAPIClient(t)
 	logger := mocks.NewLogger(t)
 	taskClient := mocks.NewTaskClient(t)
@@ -27,7 +28,7 @@ func TestMatchService_Create(t *testing.T) {
 	pollingFirstAttemptDelay := 115 * time.Minute
 
 	ctx := context.Background()
-	aliasHome := gofakeit.Name()
+	aliasHome, aliasAway := gofakeit.Name(), gofakeit.Name()
 
 	tests := []struct {
 		name            string
@@ -55,6 +56,22 @@ func TestMatchService_Create(t *testing.T) {
 			},
 			expectedErr: fmt.Errorf("failed to find home team alias: %w", fmt.Errorf("failed to find team alias: %w", errors.New("not found"))),
 		},
+		{
+			name: "it returns an error when away team alias does not exist",
+			input: service.CreateMatchRequest{
+				StartsAt:  time.Now().Add(24 * time.Hour),
+				AliasHome: aliasHome,
+				AliasAway: aliasAway,
+			},
+			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
+				t.Helper()
+				m := mocks.NewAliasRepository(t)
+				m.On("Find", ctx, aliasHome).Return(&repository.Alias{ID: 1, TeamID: 1, Alias: aliasHome, FootballApiTeam: &repository.FootballApiTeam{}}, nil).Once()
+				m.On("Find", ctx, aliasAway).Return(nil, errors.New("not found")).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to find away team alias: %w", fmt.Errorf("failed to find team alias: %w", errors.New("not found"))),
+		},
 	}
 
 	for _, tt := range tests {
@@ -67,6 +84,7 @@ func TestMatchService_Create(t *testing.T) {
 			aliasRepository,
 			matchRepository,
 			footballAPIFixtureRepository,
+			resultTaskRepository,
 			footballAPIClient,
 			taskClient,
 			logger,
@@ -85,6 +103,7 @@ func TestMatchService_List(t *testing.T) {
 	aliasRepository := mocks.NewAliasRepository(t)
 	matchRepository := mocks.NewMatchRepository(t)
 	footballAPIFixtureRepository := mocks.NewFootballAPIFixtureRepository(t)
+	resultTaskRepository := mocks.NewResultTaskRepository(t)
 	footballAPIClient := mocks.NewFootballAPIClient(t)
 	taskClient := mocks.NewTaskClient(t)
 	logger := mocks.NewLogger(t)
@@ -97,6 +116,7 @@ func TestMatchService_List(t *testing.T) {
 		aliasRepository,
 		matchRepository,
 		footballAPIFixtureRepository,
+		resultTaskRepository,
 		footballAPIClient,
 		taskClient,
 		logger,
