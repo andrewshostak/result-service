@@ -125,8 +125,9 @@ func TestSubscriptionService_Create(t *testing.T) {
 
 			logger := mocks.NewLogger(t)
 			aliasRepository := mocks.NewAliasRepository(t)
+			taskClient := mocks.NewTaskClient(t)
 
-			ss := service.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, logger)
+			ss := service.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, taskClient, logger)
 
 			err := ss.Create(ctx, tt.input)
 			if tt.expectedErr != nil {
