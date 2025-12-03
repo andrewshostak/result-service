@@ -42,6 +42,7 @@ type FootballAPIClient interface {
 
 type TaskClient interface {
 	ScheduleResultCheck(ctx context.Context, matchID uint, scheduleAt time.Time) (*string, error)
+	DeleteResultCheckTask(ctx context.Context, taskName string) error
 }
 
 type NotifierClient interface {

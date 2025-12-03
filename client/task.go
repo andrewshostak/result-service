@@ -78,6 +78,17 @@ func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, sche
 	return &createdTask.Name, nil
 }
 
+func (c *TaskClient) DeleteResultCheckTask(ctx context.Context, taskName string) error {
+	req := &taskspb.DeleteTaskRequest{Name: taskName}
+	err := c.client.DeleteTask(ctx, req)
+
+	if err != nil {
+		return fmt.Errorf("failed to delete result-check task: %w", err)
+	}
+
+	return nil
+}
+
 func (c *TaskClient) ScheduleSubscriberNotification(ctx context.Context, subscriptionID uint) error {
 	panic("implement me")
 }

@@ -33,6 +33,7 @@ type Match struct {
 	ResultStatus ResultStatus `gorm:"column:result_status;default:not_scheduled"`
 
 	FootballApiFixtures []FootballApiFixture
+	CheckResultTask     *CheckResultTask
 	HomeTeam            *Team `gorm:"foreignKey:HomeTeamID"`
 	AwayTeam            *Team `gorm:"foreignKey:AwayTeamID"`
 }

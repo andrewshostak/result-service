@@ -23,9 +23,10 @@ type MatchService struct {
 	footballAPIClient            FootballAPIClient
 	taskClient                   TaskClient
 	logger                       Logger
-	pollingMaxRetries            uint
-	pollingInterval              time.Duration
-	pollingFirstAttemptDelay     time.Duration
+	// TODO: one config for all polling params
+	pollingMaxRetries        uint
+	pollingInterval          time.Duration
+	pollingFirstAttemptDelay time.Duration
 }
 
 func NewMatchService(

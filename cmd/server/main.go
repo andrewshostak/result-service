@@ -70,7 +70,7 @@ func startServer(_ *cobra.Command, _ []string) {
 		cfg.Result.PollingInterval,
 		cfg.Result.PollingFirstAttemptDelay,
 	)
-	subscriptionService := service.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, logger)
+	subscriptionService := service.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, taskClient, logger)
 	aliasService := service.NewAliasService(aliasRepository, logger)
 
 	matchHandler := handler.NewMatchHandler(matchService)

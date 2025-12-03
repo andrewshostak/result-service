@@ -60,7 +60,8 @@ func (r *MatchRepository) One(ctx context.Context, search Match) (*Match, error)
 	var match Match
 
 	query := r.db.WithContext(ctx).
-		Preload("FootballApiFixtures")
+		Preload("FootballApiFixtures").
+		Preload("CheckResultTask")
 
 	if search.ID != 0 {
 		query = query.Where(&Match{ID: search.ID})

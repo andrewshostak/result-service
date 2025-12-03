@@ -13,6 +13,7 @@ type SubscriptionService struct {
 	subscriptionRepository SubscriptionRepository
 	matchRepository        MatchRepository
 	aliasRepository        AliasRepository
+	taskClient             TaskClient
 	logger                 Logger
 }
 
@@ -20,12 +21,14 @@ func NewSubscriptionService(
 	subscriptionRepository SubscriptionRepository,
 	matchRepository MatchRepository,
 	aliasRepository AliasRepository,
+	taskClient TaskClient,
 	logger Logger,
 ) *SubscriptionService {
 	return &SubscriptionService{
 		subscriptionRepository: subscriptionRepository,
 		matchRepository:        matchRepository,
 		aliasRepository:        aliasRepository,
+		taskClient:             taskClient,
 		logger:                 logger,
 	}
 }
@@ -113,10 +116,17 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 
 	s.logger.Info().Uint("match_id", match.ID).Msg("match deleted")
 
-	if len(match.FootballApiFixtures) < 1 {
-		s.logger.Error().Uint("match_id", match.ID).Msg("failed to cancel scheduled task: match relation football api fixtures is not found")
+	if match.CheckResultTask == nil {
+		s.logger.Error().Uint("match_id", match.ID).Msg("failed to cancel scheduled task: match relation check result task is not found")
 		return nil
 	}
+
+	if err := s.taskClient.DeleteResultCheckTask(ctx, match.CheckResultTask.Name); err != nil {
+		s.logger.Error().Err(err).Uint("match_id", match.ID).Msg("failed to delete result-check task")
+		return nil
+	}
+
+	s.logger.Info().Uint("match_id", match.ID).Msg("result check task deleted")
 
 	return nil
 }
