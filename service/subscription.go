@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/andrewshostak/result-service/errs"
 	"github.com/andrewshostak/result-service/repository"
@@ -42,10 +41,9 @@ func (s *SubscriptionService) Create(ctx context.Context, request CreateSubscrip
 	}
 
 	_, err = s.subscriptionRepository.Create(ctx, repository.Subscription{
-		MatchID:   request.MatchID,
-		Key:       request.SecretKey,
-		CreatedAt: time.Now(),
-		Url:       request.URL,
+		MatchID: request.MatchID,
+		Key:     request.SecretKey,
+		Url:     request.URL,
 	})
 
 	if err != nil {

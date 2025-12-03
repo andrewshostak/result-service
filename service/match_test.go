@@ -75,27 +75,29 @@ func TestMatchService_Create(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		var aliasRepository *mocks.AliasRepository
-		if tt.aliasRepository != nil {
-			aliasRepository = tt.aliasRepository(t)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			var aliasRepository *mocks.AliasRepository
+			if tt.aliasRepository != nil {
+				aliasRepository = tt.aliasRepository(t)
+			}
 
-		ms := service.NewMatchService(
-			aliasRepository,
-			matchRepository,
-			footballAPIFixtureRepository,
-			checkResultTaskRepository,
-			footballAPIClient,
-			taskClient,
-			logger,
-			pollingMaxRetries,
-			pollingInterval,
-			pollingFirstAttemptDelay,
-		)
+			ms := service.NewMatchService(
+				aliasRepository,
+				matchRepository,
+				footballAPIFixtureRepository,
+				checkResultTaskRepository,
+				footballAPIClient,
+				taskClient,
+				logger,
+				pollingMaxRetries,
+				pollingInterval,
+				pollingFirstAttemptDelay,
+			)
 
-		actual, err := ms.Create(ctx, tt.input)
-		assert.Equal(t, tt.result, actual)
-		assert.EqualError(t, err, tt.expectedErr.Error())
+			actual, err := ms.Create(ctx, tt.input)
+			assert.Equal(t, tt.result, actual)
+			assert.EqualError(t, err, tt.expectedErr.Error())
+		})
 	}
 }
 
