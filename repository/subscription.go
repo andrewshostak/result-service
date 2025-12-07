@@ -78,13 +78,11 @@ func (r *SubscriptionRepository) List(ctx context.Context, matchID uint) ([]Subs
 	return subscriptions, nil
 }
 
-func (r *SubscriptionRepository) ListUnNotified(ctx context.Context) ([]Subscription, error) {
+func (r *SubscriptionRepository) ListPending(ctx context.Context, matchID uint) ([]Subscription, error) {
 	var subscriptions []Subscription
 	result := r.db.WithContext(ctx).
 		Where("status = ?", PendingSub).
-		Joins("Match").
-		Where("result_status = ?", Received).
-		Preload("Match.FootballApiFixtures").
+		Where("match_id = ?", matchID).
 		Find(&subscriptions)
 
 	if result.Error != nil {

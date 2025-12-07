@@ -54,8 +54,10 @@ create table if not exists football_api_fixtures
 
 create table if not exists check_result_tasks
 (
-    name text primary key,
+    id bigserial primary key,
     match_id bigserial unique,
+    name text unique,
+    attempt_number integer not null default 1,
     foreign key (match_id) references matches (id) on update cascade on delete cascade
 );
 

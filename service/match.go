@@ -146,8 +146,7 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 	}
 
 	// time.Now().Add(1 * time.Minute) // TODO
-	scheduleTime := mappedMatch.StartsAt.Add(s.pollingFirstAttemptDelay)
-	taskName, err := s.taskClient.ScheduleResultCheck(ctx, mappedMatch.ID, scheduleTime)
+	taskName, err := s.taskClient.ScheduleResultCheck(ctx, mappedMatch.ID, 1, mappedMatch.StartsAt.Add(s.pollingFirstAttemptDelay))
 	if err != nil && !errors.As(err, &errs.ClientTaskAlreadyExistsError{}) {
 		return 0, fmt.Errorf("failed to schedule result check task: %w", err)
 	}

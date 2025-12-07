@@ -30,6 +30,10 @@ type SearchAliasRequest struct {
 	Search string `form:"search" binding:"required"`
 }
 
+type TriggerResultCheckRequest struct {
+	MatchID uint `form:"match_id" binding:"required"`
+}
+
 func (cmr *CreateMatchRequest) ToDomain() service.CreateMatchRequest {
 	return service.CreateMatchRequest{
 		StartsAt:  cmr.StartsAt,

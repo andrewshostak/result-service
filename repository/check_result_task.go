@@ -32,6 +32,16 @@ func (r *CheckResultTaskRepository) Create(ctx context.Context, name string, mat
 	return &task, nil
 }
 
+func (r *CheckResultTaskRepository) Update(ctx context.Context, id uint, checkResultTask CheckResultTask) (*CheckResultTask, error) {
+	task := CheckResultTask{ID: id}
+	result := r.db.WithContext(ctx).Model(&task).Updates(checkResultTask)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &task, nil
+}
+
 func isDuplicateError(err error) bool {
 	if errors.Is(err, gorm.ErrDuplicatedKey) {
 		return true

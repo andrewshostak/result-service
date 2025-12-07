@@ -72,10 +72,21 @@ func startServer(_ *cobra.Command, _ []string) {
 	)
 	subscriptionService := service.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, taskClient, logger)
 	aliasService := service.NewAliasService(aliasRepository, logger)
+	resultCheckerService := service.NewResultCheckerService(
+		cfg.Result,
+		matchRepository,
+		footballAPIFixtureRepository,
+		subscriptionRepository,
+		checkResultTaskRepository,
+		taskClient,
+		footballAPIClient,
+		logger,
+	)
 
 	matchHandler := handler.NewMatchHandler(matchService)
 	subscriptionHandler := handler.NewSubscriptionHandler(subscriptionService)
 	aliasHandler := handler.NewAliasHandler(aliasService)
+	triggerHandler := handler.NewTriggerHandler(resultCheckerService)
 
 	v1 := r.Group("/v1")
 	apiKey := v1.Group("").Use(middleware.APIKeyAuth(cfg.App.HashedAPIKeys, cfg.App.SecretKey))
@@ -86,8 +97,8 @@ func startServer(_ *cobra.Command, _ []string) {
 	apiKey.DELETE("/subscriptions", subscriptionHandler.Delete)
 	apiKey.GET("/aliases", aliasHandler.Search)
 
-	googleAuth.POST("/triggers/result_check", func(c *gin.Context) {})
-	googleAuth.POST("/triggers/subscriber_notification", func(c *gin.Context) {})
+	googleAuth.POST("/triggers/result_check", triggerHandler.CheckResult)
+	googleAuth.POST("/triggers/subscriber_notification", triggerHandler.NotifySubscribers)
 
 	_ = r.Run(fmt.Sprintf(":%s", cfg.App.Port))
 }

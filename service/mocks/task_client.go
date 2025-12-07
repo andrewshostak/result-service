@@ -15,9 +15,27 @@ type TaskClient struct {
 	mock.Mock
 }
 
-// ScheduleResultCheck provides a mock function with given fields: ctx, matchID, scheduleAt
-func (_m *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, scheduleAt time.Time) (*string, error) {
-	ret := _m.Called(ctx, matchID, scheduleAt)
+// DeleteResultCheckTask provides a mock function with given fields: ctx, taskName
+func (_m *TaskClient) DeleteResultCheckTask(ctx context.Context, taskName string) error {
+	ret := _m.Called(ctx, taskName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteResultCheckTask")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, taskName)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ScheduleResultCheck provides a mock function with given fields: ctx, matchID, attempt, scheduleAt
+func (_m *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*string, error) {
+	ret := _m.Called(ctx, matchID, attempt, scheduleAt)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ScheduleResultCheck")
@@ -25,24 +43,42 @@ func (_m *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, sch
 
 	var r0 *string
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint, time.Time) (*string, error)); ok {
-		return rf(ctx, matchID, scheduleAt)
+	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, time.Time) (*string, error)); ok {
+		return rf(ctx, matchID, attempt, scheduleAt)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint, time.Time) *string); ok {
-		r0 = rf(ctx, matchID, scheduleAt)
+	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, time.Time) *string); ok {
+		r0 = rf(ctx, matchID, attempt, scheduleAt)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*string)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uint, time.Time) error); ok {
-		r1 = rf(ctx, matchID, scheduleAt)
+	if rf, ok := ret.Get(1).(func(context.Context, uint, uint, time.Time) error); ok {
+		r1 = rf(ctx, matchID, attempt, scheduleAt)
 	} else {
 		r1 = ret.Error(1)
 	}
 
 	return r0, r1
+}
+
+// ScheduleSubscriberNotification provides a mock function with given fields: ctx, subscriptionID
+func (_m *TaskClient) ScheduleSubscriberNotification(ctx context.Context, subscriptionID uint) error {
+	ret := _m.Called(ctx, subscriptionID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ScheduleSubscriberNotification")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint) error); ok {
+		r0 = rf(ctx, subscriptionID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // NewTaskClient creates a new instance of TaskClient. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.

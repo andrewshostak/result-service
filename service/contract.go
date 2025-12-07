@@ -32,6 +32,7 @@ type FootballAPIFixtureRepository interface {
 
 type CheckResultTaskRepository interface {
 	Create(ctx context.Context, name string, matchID uint) (*repository.CheckResultTask, error)
+	Update(ctx context.Context, id uint, checkResultTask repository.CheckResultTask) (*repository.CheckResultTask, error)
 }
 
 type FootballAPIClient interface {
@@ -41,7 +42,8 @@ type FootballAPIClient interface {
 }
 
 type TaskClient interface {
-	ScheduleResultCheck(ctx context.Context, matchID uint, scheduleAt time.Time) (*string, error)
+	ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*string, error)
+	ScheduleSubscriberNotification(ctx context.Context, subscriptionID uint) error
 	DeleteResultCheckTask(ctx context.Context, taskName string) error
 }
 
@@ -54,7 +56,7 @@ type SubscriptionRepository interface {
 	Delete(ctx context.Context, id uint) error
 	One(ctx context.Context, matchID uint, key string, baseURL string) (*repository.Subscription, error)
 	List(ctx context.Context, matchID uint) ([]repository.Subscription, error)
-	ListUnNotified(ctx context.Context) ([]repository.Subscription, error)
+	ListPending(ctx context.Context, matchID uint) ([]repository.Subscription, error)
 	Update(ctx context.Context, id uint, subscription repository.Subscription) error
 }
 

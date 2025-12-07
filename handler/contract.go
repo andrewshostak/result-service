@@ -18,3 +18,7 @@ type SubscriptionService interface {
 	Create(ctx context.Context, request service.CreateSubscriptionRequest) error
 	Delete(ctx context.Context, request service.DeleteSubscriptionRequest) error
 }
+
+type ResultCheckerService interface {
+	CheckResult(ctx context.Context, matchID uint) error
+}

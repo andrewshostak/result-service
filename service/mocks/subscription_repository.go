@@ -92,29 +92,29 @@ func (_m *SubscriptionRepository) List(ctx context.Context, matchID uint) ([]rep
 	return r0, r1
 }
 
-// ListUnNotified provides a mock function with given fields: ctx
-func (_m *SubscriptionRepository) ListUnNotified(ctx context.Context) ([]repository.Subscription, error) {
-	ret := _m.Called(ctx)
+// ListPending provides a mock function with given fields: ctx, matchID
+func (_m *SubscriptionRepository) ListPending(ctx context.Context, matchID uint) ([]repository.Subscription, error) {
+	ret := _m.Called(ctx, matchID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ListUnNotified")
+		panic("no return value specified for ListPending")
 	}
 
 	var r0 []repository.Subscription
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]repository.Subscription, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, uint) ([]repository.Subscription, error)); ok {
+		return rf(ctx, matchID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []repository.Subscription); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, uint) []repository.Subscription); ok {
+		r0 = rf(ctx, matchID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]repository.Subscription)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, uint) error); ok {
+		r1 = rf(ctx, matchID)
 	} else {
 		r1 = ret.Error(1)
 	}

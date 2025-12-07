@@ -44,6 +44,36 @@ func (_m *CheckResultTaskRepository) Create(ctx context.Context, name string, ma
 	return r0, r1
 }
 
+// Update provides a mock function with given fields: ctx, id, checkResultTask
+func (_m *CheckResultTaskRepository) Update(ctx context.Context, id uint, checkResultTask repository.CheckResultTask) (*repository.CheckResultTask, error) {
+	ret := _m.Called(ctx, id, checkResultTask)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 *repository.CheckResultTask
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint, repository.CheckResultTask) (*repository.CheckResultTask, error)); ok {
+		return rf(ctx, id, checkResultTask)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint, repository.CheckResultTask) *repository.CheckResultTask); ok {
+		r0 = rf(ctx, id, checkResultTask)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*repository.CheckResultTask)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint, repository.CheckResultTask) error); ok {
+		r1 = rf(ctx, id, checkResultTask)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // NewCheckResultTaskRepository creates a new instance of CheckResultTaskRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewCheckResultTaskRepository(t interface {

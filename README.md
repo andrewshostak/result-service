@@ -65,8 +65,10 @@ erDiagram
     }
     
     CheckResultTask {
-        String name PK
+        Int id PK
         Int match_id FK
+        String name UK
+        Int attempt_number
     }
     
     Team ||--o{ Alias : has 
@@ -264,13 +266,15 @@ To back-fill aliases data a separate command is created. The command description
 - [X] Start service locally with launching cloud task client
 - [X] Modify existing POST /matches
 - [X] Modify existing POST /subscriptions
-- [ ] Add created_at / updated_at columns
-- [ ] Implement client methods to interact with google cloud tasks API
-    - [ ] Create a new check-result task
-    - [ ] Create a new notify-subscriber task
-    - [ ] Remove check-result task
-- [ ] Verify match creation flow works
-- [ ] Modify existing DELETE /subscriptions
-- [ ] Verify subscription deletion flow works
-- [ ] Create a new endpoint to be called by cloud task for checking match result
+- [X] Implement client methods to interact with google cloud tasks API
+    - [X] Create a new check-result task
+    - [X] Create a new notify-subscriber task
+    - [X] Remove check-result task
+- [X] Verify match creation flow works
+- [X] Modify existing DELETE /subscriptions
+- [X] Verify subscription deletion flow works
+- [X] Create a new endpoint to be called by cloud task for checking match result
 - [ ] Create a new endpoint to be called by cloud task for notifying subscriber
+- [ ] Add created_at / updated_at columns
+
+// TODO: use case what happens if match sent starting time is different from match football api starting time

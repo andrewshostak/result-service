@@ -59,8 +59,10 @@ type Subscription struct {
 }
 
 type CheckResultTask struct {
-	Name    string `gorm:"column:name;primaryKey"`
-	MatchID uint   `gorm:"column:match_id"`
+	ID            uint   `gorm:"column:id;primaryKey"`
+	Name          string `gorm:"column:name;unique"`
+	MatchID       uint   `gorm:"column:match_id;unique"`
+	AttemptNumber uint   `gorm:"column:attempt_number;default:1"`
 
 	Match *Match `gorm:"foreignKey:MatchID"`
 }
@@ -79,9 +81,10 @@ const (
 type SubscriptionStatus string
 
 const (
-	PendingSub    SubscriptionStatus = "pending"
-	ErrorSub      SubscriptionStatus = "error"
-	SuccessfulSub SubscriptionStatus = "successful"
+	PendingSub           SubscriptionStatus = "pending"
+	SchedulingErrorSub   SubscriptionStatus = "scheduling_error"
+	SuccessfulSub        SubscriptionStatus = "successful"
+	SubscriptionErrorSub SubscriptionStatus = "subscription_error"
 )
 
 type Data struct {
