@@ -7,12 +7,14 @@ import (
 )
 
 type TriggerHandler struct {
-	checkResultService ResultCheckerService
+	checkResultService        ResultCheckerService
+	subscriberNotifierService SubscriberNotifierService
 }
 
-func NewTriggerHandler(checkResultService ResultCheckerService) *TriggerHandler {
+func NewTriggerHandler(checkResultService ResultCheckerService, subscriberNotifierService SubscriberNotifierService) *TriggerHandler {
 	return &TriggerHandler{
-		checkResultService: checkResultService,
+		checkResultService:        checkResultService,
+		subscriberNotifierService: subscriberNotifierService,
 	}
 }
 
@@ -34,6 +36,19 @@ func (h *TriggerHandler) CheckResult(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func (h *TriggerHandler) NotifySubscribers(c *gin.Context) {
-	// TODO
+func (h *TriggerHandler) NotifySubscriber(c *gin.Context) {
+	var params TriggerSubscriptionNotificationRequest
+	if err := c.ShouldBindJSON(&params); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.subscriberNotifierService.NotifySubscriber(c.Request.Context(), params.SubscriptionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

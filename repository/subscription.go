@@ -46,6 +46,19 @@ func (r *SubscriptionRepository) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
+func (r *SubscriptionRepository) Get(ctx context.Context, id uint) (*Subscription, error) {
+	var subscription Subscription
+	result := r.db.WithContext(ctx).
+		Where("id = ?", id).
+		First(&subscription)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &subscription, nil
+}
+
 func (r *SubscriptionRepository) One(ctx context.Context, matchID uint, key string, baseURL string) (*Subscription, error) {
 	var subscription Subscription
 	result := r.db.WithContext(ctx).

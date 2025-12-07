@@ -49,7 +49,7 @@ func startServer(_ *cobra.Command, _ []string) {
 	defer cloudTasksClient.Close()
 
 	footballAPIClient := client.NewFootballAPIClient(&httpClient, logger, cfg.ExternalAPI.FootballAPIBaseURL, cfg.ExternalAPI.RapidAPIKey)
-	_ = client.NewNotifierClient(&httpClient, logger)
+	notifierClient := client.NewNotifierClient(&httpClient, logger)
 	taskClient := client.NewClient(cfg.GoogleCloud, cloudTasksClient)
 
 	aliasRepository := repository.NewAliasRepository(db)
@@ -82,11 +82,12 @@ func startServer(_ *cobra.Command, _ []string) {
 		footballAPIClient,
 		logger,
 	)
+	subscriberNotifierService := service.NewSubscriberNotifierService(subscriptionRepository, matchRepository, notifierClient, logger)
 
 	matchHandler := handler.NewMatchHandler(matchService)
 	subscriptionHandler := handler.NewSubscriptionHandler(subscriptionService)
 	aliasHandler := handler.NewAliasHandler(aliasService)
-	triggerHandler := handler.NewTriggerHandler(resultCheckerService)
+	triggerHandler := handler.NewTriggerHandler(resultCheckerService, subscriberNotifierService)
 
 	v1 := r.Group("/v1")
 	apiKey := v1.Group("").Use(middleware.APIKeyAuth(cfg.App.HashedAPIKeys, cfg.App.SecretKey))
@@ -98,7 +99,7 @@ func startServer(_ *cobra.Command, _ []string) {
 	apiKey.GET("/aliases", aliasHandler.Search)
 
 	googleAuth.POST("/triggers/result_check", triggerHandler.CheckResult)
-	googleAuth.POST("/triggers/subscriber_notification", triggerHandler.NotifySubscribers)
+	googleAuth.POST("/triggers/subscriber_notification", triggerHandler.NotifySubscriber)
 
 	_ = r.Run(fmt.Sprintf(":%s", cfg.App.Port))
 }

@@ -55,6 +55,7 @@ type SubscriptionRepository interface {
 	Create(ctx context.Context, subscription repository.Subscription) (*repository.Subscription, error)
 	Delete(ctx context.Context, id uint) error
 	One(ctx context.Context, matchID uint, key string, baseURL string) (*repository.Subscription, error)
+	Get(ctx context.Context, id uint) (*repository.Subscription, error)
 	List(ctx context.Context, matchID uint) ([]repository.Subscription, error)
 	ListPending(ctx context.Context, matchID uint) ([]repository.Subscription, error)
 	Update(ctx context.Context, id uint, subscription repository.Subscription) error

@@ -81,10 +81,10 @@ const (
 type SubscriptionStatus string
 
 const (
-	PendingSub           SubscriptionStatus = "pending"
-	SchedulingErrorSub   SubscriptionStatus = "scheduling_error"
-	SuccessfulSub        SubscriptionStatus = "successful"
-	SubscriptionErrorSub SubscriptionStatus = "subscription_error"
+	PendingSub         SubscriptionStatus = "pending"
+	SchedulingErrorSub SubscriptionStatus = "scheduling_error"
+	SuccessfulSub      SubscriptionStatus = "successful"
+	SubscriberErrorSub SubscriptionStatus = "subscriber_error"
 )
 
 type Data struct {

@@ -22,3 +22,7 @@ type SubscriptionService interface {
 type ResultCheckerService interface {
 	CheckResult(ctx context.Context, matchID uint) error
 }
+
+type SubscriberNotifierService interface {
+	NotifySubscriber(ctx context.Context, subscriptionID uint) error
+}
