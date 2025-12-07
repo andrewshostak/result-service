@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/andrewshostak/result-service/config"
 	"github.com/andrewshostak/result-service/repository"
 	"github.com/andrewshostak/result-service/service"
 	"github.com/andrewshostak/result-service/service/mocks"
@@ -23,7 +24,6 @@ func TestMatchService_Create(t *testing.T) {
 	logger := mocks.NewLogger(t)
 	taskClient := mocks.NewTaskClient(t)
 
-	pollingMaxRetries := uint(5)
 	pollingInterval := 15 * time.Minute
 	pollingFirstAttemptDelay := 115 * time.Minute
 
@@ -82,6 +82,11 @@ func TestMatchService_Create(t *testing.T) {
 			}
 
 			ms := service.NewMatchService(
+				config.ResultCheck{
+					MaxRetries:        0,
+					Interval:          pollingInterval,
+					FirstAttemptDelay: pollingFirstAttemptDelay,
+				},
 				aliasRepository,
 				matchRepository,
 				footballAPIFixtureRepository,
@@ -89,9 +94,6 @@ func TestMatchService_Create(t *testing.T) {
 				footballAPIClient,
 				taskClient,
 				logger,
-				pollingMaxRetries,
-				pollingInterval,
-				pollingFirstAttemptDelay,
 			)
 
 			actual, err := ms.Create(ctx, tt.input)
@@ -110,11 +112,15 @@ func TestMatchService_List(t *testing.T) {
 	taskClient := mocks.NewTaskClient(t)
 	logger := mocks.NewLogger(t)
 
-	pollingMaxRetries := uint(5)
 	pollingInterval := 15 * time.Minute
 	pollingFirstAttemptDelay := 115 * time.Minute
 
 	ms := service.NewMatchService(
+		config.ResultCheck{
+			MaxRetries:        0,
+			Interval:          pollingInterval,
+			FirstAttemptDelay: pollingFirstAttemptDelay,
+		},
 		aliasRepository,
 		matchRepository,
 		footballAPIFixtureRepository,
@@ -122,9 +128,6 @@ func TestMatchService_List(t *testing.T) {
 		footballAPIClient,
 		taskClient,
 		logger,
-		pollingMaxRetries,
-		pollingInterval,
-		pollingFirstAttemptDelay,
 	)
 
 	ctx := context.Background()

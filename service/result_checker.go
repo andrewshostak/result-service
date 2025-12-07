@@ -16,7 +16,7 @@ var matchCancellResultStatuses = []string{"TBD", "NS", "PST", "CANC", "ABD", "AW
 var matchInPlayStatuses = []string{"LIVE", "1H", "HT", "2H", "ET", "BT", "P", "SUSP", "INT"}
 
 type ResultCheckerService struct {
-	config                       config.ResultPolling
+	config                       config.ResultCheck
 	matchRepository              MatchRepository
 	footballAPIFixtureRepository FootballAPIFixtureRepository
 	subscriptionRepository       SubscriptionRepository
@@ -27,7 +27,7 @@ type ResultCheckerService struct {
 }
 
 func NewResultCheckerService(
-	config config.ResultPolling,
+	config config.ResultCheck,
 	matchRepository MatchRepository,
 	footballAPIFixtureRepository FootballAPIFixtureRepository,
 	subscriptionRepository SubscriptionRepository,
@@ -116,9 +116,9 @@ func (s *ResultCheckerService) handleInPlayFixture(ctx context.Context, match re
 		return errors.New("match doesn't have a result check task")
 	}
 
-	scheduleAt := match.StartsAt.Add(s.config.PollingFirstAttemptDelay)
+	scheduleAt := match.StartsAt.Add(s.config.FirstAttemptDelay)
 	for i := uint(0); i <= match.CheckResultTask.AttemptNumber; i++ {
-		scheduleAt.Add(s.config.PollingInterval)
+		scheduleAt.Add(s.config.Interval)
 	}
 
 	name, err := s.taskClient.ScheduleResultCheck(ctx, match.ID, match.CheckResultTask.AttemptNumber, scheduleAt)

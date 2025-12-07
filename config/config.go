@@ -9,7 +9,7 @@ import (
 type Server struct {
 	App         App
 	ExternalAPI ExternalAPI
-	Result      ResultPolling
+	Result      ResultCheck
 	PG          PG
 	GoogleCloud GoogleCloud
 }
@@ -34,10 +34,10 @@ type ExternalAPI struct {
 	FootballAPIBaseURL string `env:"FOOTBALL_API_BASE_URL" envDefault:"https://api-football-v1.p.rapidapi.com"`
 }
 
-type ResultPolling struct {
-	PollingMaxRetries        uint          `env:"POLLING_MAX_RETRIES" envDefault:"5"`
-	PollingInterval          time.Duration `env:"POLLING_INTERVAL" envDefault:"15m"`
-	PollingFirstAttemptDelay time.Duration `env:"POLLING_FIRST_ATTEMPT_DELAY" envDefault:"115m"`
+type ResultCheck struct {
+	MaxRetries        uint          `env:"MAX_RETRIES" envDefault:"5"`
+	Interval          time.Duration `env:"INTERVAL" envDefault:"15m"`
+	FirstAttemptDelay time.Duration `env:"FIRST_ATTEMPT_DELAY" envDefault:"115m"`
 }
 
 type PG struct {

@@ -7,15 +7,16 @@ import (
 	"time"
 
 	"github.com/andrewshostak/result-service/client"
+	"github.com/andrewshostak/result-service/config"
 	"github.com/andrewshostak/result-service/errs"
 	"github.com/andrewshostak/result-service/repository"
-	"github.com/rs/zerolog"
 )
 
 const dateFormat = "2006-01-02"
 const stateMatchFinished = "Match Finished"
 
 type MatchService struct {
+	config                       config.ResultCheck
 	aliasRepository              AliasRepository
 	matchRepository              MatchRepository
 	footballAPIFixtureRepository FootballAPIFixtureRepository
@@ -23,13 +24,10 @@ type MatchService struct {
 	footballAPIClient            FootballAPIClient
 	taskClient                   TaskClient
 	logger                       Logger
-	// TODO: one config for all polling params
-	pollingMaxRetries        uint
-	pollingInterval          time.Duration
-	pollingFirstAttemptDelay time.Duration
 }
 
 func NewMatchService(
+	config config.ResultCheck,
 	aliasRepository AliasRepository,
 	matchRepository MatchRepository,
 	footballAPIFixtureRepository FootballAPIFixtureRepository,
@@ -37,11 +35,9 @@ func NewMatchService(
 	footballAPIClient FootballAPIClient,
 	taskClient TaskClient,
 	logger Logger,
-	pollingMaxRetries uint,
-	pollingInterval time.Duration,
-	pollingFirstAttemptDelay time.Duration,
 ) *MatchService {
 	return &MatchService{
+		config:                       config,
 		aliasRepository:              aliasRepository,
 		matchRepository:              matchRepository,
 		footballAPIFixtureRepository: footballAPIFixtureRepository,
@@ -49,9 +45,6 @@ func NewMatchService(
 		footballAPIClient:            footballAPIClient,
 		taskClient:                   taskClient,
 		logger:                       logger,
-		pollingMaxRetries:            pollingMaxRetries,
-		pollingInterval:              pollingInterval,
-		pollingFirstAttemptDelay:     pollingFirstAttemptDelay,
 	}
 }
 
@@ -146,7 +139,7 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 	}
 
 	// time.Now().Add(1 * time.Minute) // TODO
-	taskName, err := s.taskClient.ScheduleResultCheck(ctx, mappedMatch.ID, 1, mappedMatch.StartsAt.Add(s.pollingFirstAttemptDelay))
+	taskName, err := s.taskClient.ScheduleResultCheck(ctx, mappedMatch.ID, 1, mappedMatch.StartsAt.Add(s.config.FirstAttemptDelay))
 	if err != nil && !errors.As(err, &errs.ClientTaskAlreadyExistsError{}) {
 		return 0, fmt.Errorf("failed to schedule result check task: %w", err)
 	}
@@ -223,57 +216,6 @@ func (s *MatchService) getSeason(startsAt time.Time) int {
 	return startsAt.AddDate(-1, 0, 0).Year()
 }
 
-func (s *MatchService) getTaskFunc(i int, ch chan<- resultTaskChan, search client.FixtureSearch, matchDetails matchLogFields) func(c context.Context) {
-	return func(c context.Context) {
-		enrichLogWithMatchDetails(s.logger.Info(), matchDetails).Msg(fmt.Sprintf("making an attempt %d to get match result", i))
-
-		response, err := s.footballAPIClient.SearchFixtures(c, search)
-		if err != nil {
-			enrichLogWithMatchDetails(s.logger.Error(), matchDetails).Err(err).Msg("received error when searching fixtures for match. cancelling")
-			i++
-
-			if s.retriesLimitReached(i) {
-				s.writeError(matchDetails, ch)
-			}
-			return
-		}
-
-		if len(response.Response) < 1 {
-			enrichLogWithMatchDetails(s.logger.Error(), matchDetails).Msg("unexpected length of fixture search result")
-			i++
-
-			if s.retriesLimitReached(i) {
-				s.writeError(matchDetails, ch)
-			}
-			return
-		}
-
-		fixture := fromClientFootballAPIFixture(response.Response[0])
-
-		if fixture.Fixture.Status.Long != stateMatchFinished {
-			enrichLogWithMatchDetails(s.logger.Info(), matchDetails).Str("status", fixture.Fixture.Status.Long).
-				Msg("match status is not finished")
-			i++
-
-			if s.retriesLimitReached(i) {
-				s.writeError(matchDetails, ch)
-			}
-			return
-		}
-
-		enrichLogWithMatchDetails(s.logger.Info(), matchDetails).
-			Uint("home", fixture.Goals.Home).
-			Uint("away", fixture.Goals.Away).
-			Msg("match result received successfully. cancelling the task")
-		ch <- resultTaskChan{fixture: &fixture}
-		close(ch)
-	}
-}
-
-func (s *MatchService) retriesLimitReached(i int) bool {
-	return i > int(s.pollingMaxRetries)
-}
-
 func (s *MatchService) isFixtureEnded(fixtureData Data) bool {
 	return fixtureData.Fixture.Status.Long == stateMatchFinished
 }
@@ -293,41 +235,4 @@ func (s *MatchService) returnError(match *repository.Match) bool {
 	default:
 		return false
 	}
-}
-
-func (s *MatchService) writeError(matchDetails matchLogFields, ch chan<- resultTaskChan) {
-	errMessage := fmt.Sprintf("retries limit reached. cancelling")
-	enrichLogWithMatchDetails(s.logger.Error(), matchDetails).Uint("retries_limit", s.pollingMaxRetries).Msg(errMessage)
-	ch <- resultTaskChan{error: errors.New(errMessage)}
-}
-
-func getTaskKey(matchID uint, fixtureID uint) string {
-	return fmt.Sprintf("%d-%d", matchID, fixtureID)
-}
-
-func enrichLogWithMatchDetails(event *zerolog.Event, fields matchLogFields) *zerolog.Event {
-	return event.Uint("match_id", fields.matchID).
-		Str("alias_home", fields.aliasHome).
-		Str("alias_away", fields.aliasAway).
-		Str("starts_at", fields.startsAt.String())
-}
-
-type matchLogFields struct {
-	matchID   uint
-	aliasHome string
-	aliasAway string
-	startsAt  time.Time
-}
-
-type matchResultTaskParams struct {
-	match     Match
-	fixture   FootballAPIFixture
-	aliasHome Alias
-	aliasAway Alias
-	season    uint
-}
-
-type resultTaskChan struct {
-	fixture *Data
-	error   error
 }
