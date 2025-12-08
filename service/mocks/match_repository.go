@@ -63,7 +63,7 @@ func (_m *MatchRepository) Delete(ctx context.Context, id uint) error {
 }
 
 // List provides a mock function with given fields: ctx, resultStatus
-func (_m *MatchRepository) List(ctx context.Context, resultStatus repository.ResultStatus) ([]repository.Match, error) {
+func (_m *MatchRepository) List(ctx context.Context, resultStatus string) ([]repository.Match, error) {
 	ret := _m.Called(ctx, resultStatus)
 
 	if len(ret) == 0 {
@@ -72,10 +72,10 @@ func (_m *MatchRepository) List(ctx context.Context, resultStatus repository.Res
 
 	var r0 []repository.Match
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, repository.ResultStatus) ([]repository.Match, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string) ([]repository.Match, error)); ok {
 		return rf(ctx, resultStatus)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, repository.ResultStatus) []repository.Match); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string) []repository.Match); ok {
 		r0 = rf(ctx, resultStatus)
 	} else {
 		if ret.Get(0) != nil {
@@ -83,7 +83,7 @@ func (_m *MatchRepository) List(ctx context.Context, resultStatus repository.Res
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, repository.ResultStatus) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = rf(ctx, resultStatus)
 	} else {
 		r1 = ret.Error(1)
@@ -153,7 +153,7 @@ func (_m *MatchRepository) Save(ctx context.Context, id *uint, match repository.
 }
 
 // Update provides a mock function with given fields: ctx, id, resultStatus
-func (_m *MatchRepository) Update(ctx context.Context, id uint, resultStatus repository.ResultStatus) (*repository.Match, error) {
+func (_m *MatchRepository) Update(ctx context.Context, id uint, resultStatus string) (*repository.Match, error) {
 	ret := _m.Called(ctx, id, resultStatus)
 
 	if len(ret) == 0 {
@@ -162,10 +162,10 @@ func (_m *MatchRepository) Update(ctx context.Context, id uint, resultStatus rep
 
 	var r0 *repository.Match
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint, repository.ResultStatus) (*repository.Match, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uint, string) (*repository.Match, error)); ok {
 		return rf(ctx, id, resultStatus)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint, repository.ResultStatus) *repository.Match); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uint, string) *repository.Match); ok {
 		r0 = rf(ctx, id, resultStatus)
 	} else {
 		if ret.Get(0) != nil {
@@ -173,7 +173,7 @@ func (_m *MatchRepository) Update(ctx context.Context, id uint, resultStatus rep
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uint, repository.ResultStatus) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, uint, string) error); ok {
 		r1 = rf(ctx, id, resultStatus)
 	} else {
 		r1 = ret.Error(1)

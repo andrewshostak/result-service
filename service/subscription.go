@@ -34,9 +34,13 @@ func NewSubscriptionService(
 }
 
 func (s *SubscriptionService) Create(ctx context.Context, request CreateSubscriptionRequest) error {
-	match, err := s.matchRepository.One(ctx, repository.Match{ID: request.MatchID})
+	m, err := s.matchRepository.One(ctx, repository.Match{ID: request.MatchID})
 	if err != nil {
 		return fmt.Errorf("failed to get a match: %w", err)
+	}
+	match, err := fromRepositoryMatch(*m)
+	if err != nil {
+		return fmt.Errorf("failed to map from repository match: %w", err)
 	}
 
 	if !s.isMatchResultScheduled(*match) {
@@ -67,13 +71,17 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 		return fmt.Errorf("failed to find away team alias: %w", err)
 	}
 
-	match, err := s.matchRepository.One(ctx, repository.Match{
+	m, err := s.matchRepository.One(ctx, repository.Match{
 		StartsAt:   request.StartsAt.UTC(),
 		HomeTeamID: aliasHome.TeamID,
 		AwayTeamID: aliasAway.TeamID,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to find a match: %w", err)
+	}
+	match, err := fromRepositoryMatch(*m)
+	if err != nil {
+		return fmt.Errorf("failed to map from repository match: %w", err)
 	}
 
 	found, err := s.subscriptionRepository.One(ctx, match.ID, request.SecretKey, request.BaseURL)
@@ -131,6 +139,6 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 	return nil
 }
 
-func (s *SubscriptionService) isMatchResultScheduled(match repository.Match) bool {
-	return match.ResultStatus == repository.Scheduled
+func (s *SubscriptionService) isMatchResultScheduled(match Match) bool {
+	return match.ResultStatus == Scheduled
 }

@@ -40,7 +40,7 @@ func (r *MatchRepository) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
-func (r *MatchRepository) List(ctx context.Context, resultStatus ResultStatus) ([]Match, error) {
+func (r *MatchRepository) List(ctx context.Context, resultStatus string) ([]Match, error) {
 	var matches []Match
 	result := r.db.WithContext(ctx).
 		Where(&Match{ResultStatus: resultStatus}).
@@ -108,7 +108,7 @@ func (r *MatchRepository) Save(ctx context.Context, id *uint, match Match) (*Mat
 	return &toSave, nil
 }
 
-func (r *MatchRepository) Update(ctx context.Context, id uint, resultStatus ResultStatus) (*Match, error) {
+func (r *MatchRepository) Update(ctx context.Context, id uint, resultStatus string) (*Match, error) {
 	match := Match{ID: id}
 	result := r.db.WithContext(ctx).Model(&match).Updates(Match{ResultStatus: resultStatus})
 	if result.Error != nil {

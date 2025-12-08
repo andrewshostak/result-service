@@ -103,55 +103,6 @@ func TestMatchService_Create(t *testing.T) {
 	}
 }
 
-func TestMatchService_List(t *testing.T) {
-	aliasRepository := mocks.NewAliasRepository(t)
-	matchRepository := mocks.NewMatchRepository(t)
-	footballAPIFixtureRepository := mocks.NewFootballAPIFixtureRepository(t)
-	checkResultTaskRepository := mocks.NewCheckResultTaskRepository(t)
-	footballAPIClient := mocks.NewFootballAPIClient(t)
-	taskClient := mocks.NewTaskClient(t)
-	logger := mocks.NewLogger(t)
-
-	pollingInterval := 15 * time.Minute
-	pollingFirstAttemptDelay := 115 * time.Minute
-
-	ms := service.NewMatchService(
-		config.ResultCheck{
-			MaxRetries:        0,
-			Interval:          pollingInterval,
-			FirstAttemptDelay: pollingFirstAttemptDelay,
-		},
-		aliasRepository,
-		matchRepository,
-		footballAPIFixtureRepository,
-		checkResultTaskRepository,
-		footballAPIClient,
-		taskClient,
-		logger,
-	)
-
-	ctx := context.Background()
-	status := "scheduled"
-
-	t.Run("it should return wrapped error if list method returns error", func(t *testing.T) {
-		errRepo := errors.New(gofakeit.Sentence(2))
-		matchRepository.On("List", ctx, repository.ResultStatus(status)).Return(nil, errRepo).Once()
-
-		result, err := ms.List(ctx, status)
-		assert.EqualError(t, err, fmt.Sprintf("failed to list matches with %s result status: %s", status, errRepo.Error()))
-		assert.Nil(t, result)
-	})
-
-	t.Run("it should return mapped matches if list method returns matches", func(t *testing.T) {
-		repoList := []repository.Match{fakeRepositoryMatch(true, true), fakeRepositoryMatch(true, true)}
-		matchRepository.On("List", ctx, repository.ResultStatus(status)).Return(repoList, nil).Once()
-
-		result, err := ms.List(ctx, status)
-		assert.NoError(t, err)
-		assert.Equal(t, []service.Match{expectedMatch(repoList[0]), expectedMatch(repoList[1])}, result)
-	})
-}
-
 func fakeRepositoryMatch(teams bool, fixtures bool) repository.Match {
 	matchID := uint(gofakeit.Uint8())
 	homeTeamID := uint(gofakeit.Uint8())
@@ -177,7 +128,7 @@ func fakeRepositoryMatch(teams bool, fixtures bool) repository.Match {
 		HomeTeamID:          homeTeamID,
 		AwayTeamID:          awayTeamID,
 		StartsAt:            gofakeit.Date(),
-		ResultStatus:        repository.Scheduled,
+		ResultStatus:        string(service.Scheduled),
 		FootballApiFixtures: apiFixtures,
 		HomeTeam:            homeTeam,
 		AwayTeam:            awayTeam,

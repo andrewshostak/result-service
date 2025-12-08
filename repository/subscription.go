@@ -91,10 +91,10 @@ func (r *SubscriptionRepository) List(ctx context.Context, matchID uint) ([]Subs
 	return subscriptions, nil
 }
 
-func (r *SubscriptionRepository) ListPending(ctx context.Context, matchID uint) ([]Subscription, error) {
+func (r *SubscriptionRepository) ListByMatchAndStatus(ctx context.Context, matchID uint, status string) ([]Subscription, error) {
 	var subscriptions []Subscription
 	result := r.db.WithContext(ctx).
-		Where("status = ?", PendingSub).
+		Where("status = ?", status).
 		Where("match_id = ?", matchID).
 		Find(&subscriptions)
 

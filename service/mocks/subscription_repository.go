@@ -122,29 +122,29 @@ func (_m *SubscriptionRepository) List(ctx context.Context, matchID uint) ([]rep
 	return r0, r1
 }
 
-// ListPending provides a mock function with given fields: ctx, matchID
-func (_m *SubscriptionRepository) ListPending(ctx context.Context, matchID uint) ([]repository.Subscription, error) {
-	ret := _m.Called(ctx, matchID)
+// ListByMatchAndStatus provides a mock function with given fields: ctx, matchID, status
+func (_m *SubscriptionRepository) ListByMatchAndStatus(ctx context.Context, matchID uint, status string) ([]repository.Subscription, error) {
+	ret := _m.Called(ctx, matchID, status)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ListPending")
+		panic("no return value specified for ListByMatchAndStatus")
 	}
 
 	var r0 []repository.Subscription
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint) ([]repository.Subscription, error)); ok {
-		return rf(ctx, matchID)
+	if rf, ok := ret.Get(0).(func(context.Context, uint, string) ([]repository.Subscription, error)); ok {
+		return rf(ctx, matchID, status)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint) []repository.Subscription); ok {
-		r0 = rf(ctx, matchID)
+	if rf, ok := ret.Get(0).(func(context.Context, uint, string) []repository.Subscription); ok {
+		r0 = rf(ctx, matchID, status)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]repository.Subscription)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uint) error); ok {
-		r1 = rf(ctx, matchID)
+	if rf, ok := ret.Get(1).(func(context.Context, uint, string) error); ok {
+		r1 = rf(ctx, matchID, status)
 	} else {
 		r1 = ret.Error(1)
 	}

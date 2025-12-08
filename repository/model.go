@@ -26,11 +26,11 @@ type FootballApiTeam struct {
 }
 
 type Match struct {
-	ID           uint         `gorm:"column:id;primaryKey"`
-	HomeTeamID   uint         `gorm:"column:home_team_id"`
-	AwayTeamID   uint         `gorm:"column:away_team_id"`
-	StartsAt     time.Time    `gorm:"column:starts_at"`
-	ResultStatus ResultStatus `gorm:"column:result_status;default:not_scheduled"`
+	ID           uint      `gorm:"column:id;primaryKey"`
+	HomeTeamID   uint      `gorm:"column:home_team_id"`
+	AwayTeamID   uint      `gorm:"column:away_team_id"`
+	StartsAt     time.Time `gorm:"column:starts_at"`
+	ResultStatus string    `gorm:"column:result_status;default:not_scheduled"`
 
 	FootballApiFixtures []FootballApiFixture
 	CheckResultTask     *CheckResultTask
@@ -47,13 +47,13 @@ type FootballApiFixture struct {
 }
 
 type Subscription struct {
-	ID         uint               `gorm:"column:id;primaryKey"`
-	Url        string             `gorm:"column:url;unique"`
-	MatchID    uint               `gorm:"column:match_id"`
-	Key        string             `gorm:"column:key;unique"`
-	CreatedAt  time.Time          `gorm:"column:created_at"`
-	Status     SubscriptionStatus `gorm:"column:status;default:pending"`
-	NotifiedAt *time.Time         `gorm:"column:notified_at"`
+	ID         uint       `gorm:"column:id;primaryKey"`
+	Url        string     `gorm:"column:url;unique"`
+	MatchID    uint       `gorm:"column:match_id"`
+	Key        string     `gorm:"column:key;unique"`
+	CreatedAt  time.Time  `gorm:"column:created_at"`
+	Status     string     `gorm:"column:status;default:pending"`
+	NotifiedAt *time.Time `gorm:"column:notified_at"`
 
 	Match *Match `gorm:"foreignKey:MatchID"`
 }
@@ -66,26 +66,6 @@ type CheckResultTask struct {
 
 	Match *Match `gorm:"foreignKey:MatchID"`
 }
-
-type ResultStatus string
-
-const (
-	NotScheduled    ResultStatus = "not_scheduled"
-	Scheduled       ResultStatus = "scheduled"
-	SchedulingError ResultStatus = "scheduling_error"
-	Received        ResultStatus = "received"
-	APIError        ResultStatus = "api_error"
-	Cancelled       ResultStatus = "cancelled"
-)
-
-type SubscriptionStatus string
-
-const (
-	PendingSub         SubscriptionStatus = "pending"
-	SchedulingErrorSub SubscriptionStatus = "scheduling_error"
-	SuccessfulSub      SubscriptionStatus = "successful"
-	SubscriberErrorSub SubscriptionStatus = "subscriber_error"
-)
 
 type Data struct {
 	Fixture Fixture       `json:"fixture"`

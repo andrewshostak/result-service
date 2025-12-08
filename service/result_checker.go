@@ -49,19 +49,24 @@ func NewResultCheckerService(
 }
 
 func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) error {
-	match, err := s.matchRepository.One(ctx, repository.Match{ID: matchID})
+	m, err := s.matchRepository.One(ctx, repository.Match{ID: matchID})
 	if err != nil {
 		return fmt.Errorf("failed to get match by id: %w", err)
+	}
+
+	match, err := fromRepositoryMatch(*m)
+	if err != nil {
+		return fmt.Errorf("failed to map from repository match: %w", err)
 	}
 
 	if !s.isScheduled(match) {
 		s.logger.Error().
 			Uint("match_id", matchID).
-			Msg(fmt.Sprintf("expected result status to be %s, actual result status is %s", repository.Scheduled, match.ResultStatus))
+			Msg(fmt.Sprintf("expected result status to be %s, actual result status is %s", Scheduled, match.ResultStatus))
 		return nil
 	}
 
-	if match.FootballApiFixtures == nil || len(match.FootballApiFixtures) == 0 {
+	if len(match.FootballApiFixtures) == 0 {
 		s.logger.Error().
 			Uint("match_id", matchID).
 			Msg("no football api fixtures found for the match")
@@ -71,11 +76,15 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	response, err := s.footballAPIClient.SearchFixtures(ctx, client.FixtureSearch{ID: &match.FootballApiFixtures[0].ID})
 	if err != nil {
 		s.logger.Error().Uint("match_id", matchID).Err(err)
-		if errUpdate := s.updateMatchResultStatus(ctx, match.ID, repository.APIError); errUpdate != nil {
+		if errUpdate := s.updateMatchResultStatus(ctx, match.ID, APIError); errUpdate != nil {
 			s.logger.Error().Uint("match_id", matchID).Err(errUpdate)
 		}
 
 		return fmt.Errorf("failed to get fixture from football api: %w", err)
+	}
+
+	if len(response.Response) < 1 {
+		return fmt.Errorf("fixture with id %d not found", match.FootballApiFixtures[0].ID)
 	}
 
 	fixture := fromClientFootballAPIFixture(response.Response[0])
@@ -96,14 +105,14 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	}
 
 	if slices.Contains(matchFinishedStatuses, fixture.Fixture.Status.Short) {
-		return s.handleFinishedFixture(ctx, match.ID, fixture)
+		return s.handleFinishedFixture(ctx, match.ID)
 	}
 
 	return errors.New(fmt.Sprintf("unexpected fixture status received: %s - %s", fixture.Fixture.Status.Short, fixture.Fixture.Status.Long))
 }
 
 func (s *ResultCheckerService) handleCancelledFixture(ctx context.Context, matchID uint) error {
-	if err := s.updateMatchResultStatus(ctx, matchID, repository.Cancelled); err != nil {
+	if err := s.updateMatchResultStatus(ctx, matchID, Cancelled); err != nil {
 		s.logger.Error().Uint("match_id", matchID).Err(err)
 		return fmt.Errorf("failed to handle cancelled fixture: %w", err)
 	}
@@ -111,7 +120,7 @@ func (s *ResultCheckerService) handleCancelledFixture(ctx context.Context, match
 	return nil
 }
 
-func (s *ResultCheckerService) handleInPlayFixture(ctx context.Context, match repository.Match) error {
+func (s *ResultCheckerService) handleInPlayFixture(ctx context.Context, match Match) error {
 	if match.CheckResultTask == nil {
 		return errors.New("match doesn't have a result check task")
 	}
@@ -123,7 +132,7 @@ func (s *ResultCheckerService) handleInPlayFixture(ctx context.Context, match re
 
 	name, err := s.taskClient.ScheduleResultCheck(ctx, match.ID, match.CheckResultTask.AttemptNumber, scheduleAt)
 	if err != nil {
-		if errUpdate := s.updateMatchResultStatus(ctx, match.ID, repository.SchedulingError); errUpdate != nil {
+		if errUpdate := s.updateMatchResultStatus(ctx, match.ID, SchedulingError); errUpdate != nil {
 			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate)
 		}
 
@@ -140,14 +149,19 @@ func (s *ResultCheckerService) handleInPlayFixture(ctx context.Context, match re
 	return nil
 }
 
-func (s *ResultCheckerService) handleFinishedFixture(ctx context.Context, matchID uint, fixture Data) error {
-	if err := s.updateMatchResultStatus(ctx, matchID, repository.Received); err != nil {
+func (s *ResultCheckerService) handleFinishedFixture(ctx context.Context, matchID uint) error {
+	if err := s.updateMatchResultStatus(ctx, matchID, Received); err != nil {
 		return fmt.Errorf("failed to handle finished fixture: %w", err)
 	}
 
-	subscriptions, err := s.subscriptionRepository.ListPending(ctx, matchID)
+	subs, err := s.subscriptionRepository.ListByMatchAndStatus(ctx, matchID, string(PendingSub))
 	if err != nil {
 		return fmt.Errorf("failed to get subscriptions: %w", err)
+	}
+
+	subscriptions, err := fromRepositorySubscriptions(subs)
+	if err != nil {
+		return fmt.Errorf("failed to map from repository subscriptions: %w", err)
 	}
 
 	if len(subscriptions) == 0 {
@@ -157,9 +171,9 @@ func (s *ResultCheckerService) handleFinishedFixture(ctx context.Context, matchI
 	for _, subscription := range subscriptions {
 		err := s.taskClient.ScheduleSubscriberNotification(ctx, subscription.ID)
 		if err != nil {
-			errUpdate := s.subscriptionRepository.Update(ctx, subscription.ID, repository.Subscription{Status: repository.SchedulingErrorSub})
+			errUpdate := s.subscriptionRepository.Update(ctx, subscription.ID, repository.Subscription{Status: string(SchedulingErrorSub)})
 			if errUpdate != nil {
-				s.logger.Error().Err(errUpdate).Uint("subscription_id", subscription.ID).Msg(fmt.Sprintf("failed to update subscription status to: %s", repository.SchedulingErrorSub))
+				s.logger.Error().Err(errUpdate).Uint("subscription_id", subscription.ID).Msg(fmt.Sprintf("failed to update subscription status to: %s", string(SchedulingErrorSub)))
 			}
 
 			return fmt.Errorf("failed to schedule subscriber notification: %w", err)
@@ -169,14 +183,14 @@ func (s *ResultCheckerService) handleFinishedFixture(ctx context.Context, matchI
 	return nil
 }
 
-func (s *ResultCheckerService) updateMatchResultStatus(ctx context.Context, matchID uint, status repository.ResultStatus) error {
-	if _, errUpdate := s.matchRepository.Update(ctx, matchID, status); errUpdate != nil {
+func (s *ResultCheckerService) updateMatchResultStatus(ctx context.Context, matchID uint, status ResultStatus) error {
+	if _, errUpdate := s.matchRepository.Update(ctx, matchID, string(status)); errUpdate != nil {
 		return fmt.Errorf("failed to set result status to %s: %w", status, errUpdate)
 	}
 
 	return nil
 }
 
-func (s *ResultCheckerService) isScheduled(match *repository.Match) bool {
-	return match != nil && match.ResultStatus == repository.Scheduled
+func (s *ResultCheckerService) isScheduled(match *Match) bool {
+	return match != nil && match.ResultStatus == Scheduled
 }

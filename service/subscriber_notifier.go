@@ -56,17 +56,17 @@ func (s *SubscriberNotifierService) NotifySubscriber(ctx context.Context, subscr
 		Away: m.FootballApiFixtures[0].Away,
 	})
 	if err != nil {
-		errUpdate := s.subscriptionRepository.Update(ctx, subscription.ID, repository.Subscription{Status: repository.SubscriberErrorSub})
+		errUpdate := s.subscriptionRepository.Update(ctx, subscription.ID, repository.Subscription{Status: string(SubscriberErrorSub)})
 		if errUpdate != nil {
-			s.logger.Error().Err(errUpdate).Uint("subscription_id", subscription.ID).Msg(fmt.Sprintf("failed to update subscription status to: %s", repository.SubscriberErrorSub))
+			s.logger.Error().Err(errUpdate).Uint("subscription_id", subscription.ID).Msg(fmt.Sprintf("failed to update subscription status to: %s", string(SubscriberErrorSub)))
 		}
 
 		return fmt.Errorf("failed to notify subscriber: %w", err)
 	}
 
-	errUpdate := s.subscriptionRepository.Update(ctx, subscription.ID, repository.Subscription{Status: repository.SuccessfulSub})
+	errUpdate := s.subscriptionRepository.Update(ctx, subscription.ID, repository.Subscription{Status: string(SuccessfulSub)})
 	if errUpdate != nil {
-		s.logger.Error().Err(errUpdate).Uint("subscription_id", subscription.ID).Msg(fmt.Sprintf("failed to update subscription status to: %s", repository.SuccessfulSub))
+		s.logger.Error().Err(errUpdate).Uint("subscription_id", subscription.ID).Msg(fmt.Sprintf("failed to update subscription status to: %s", string(SuccessfulSub)))
 	}
 
 	return nil

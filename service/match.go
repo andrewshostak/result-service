@@ -63,13 +63,21 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		return 0, fmt.Errorf("failed to find away team alias: %w", err)
 	}
 
-	match, err := s.matchRepository.One(ctx, repository.Match{
+	m, err := s.matchRepository.One(ctx, repository.Match{
 		StartsAt:   request.StartsAt.UTC(),
 		HomeTeamID: aliasHome.TeamID,
 		AwayTeamID: aliasAway.TeamID,
 	})
 	if err != nil && !errors.As(err, &errs.MatchNotFoundError{}) {
 		return 0, fmt.Errorf("unexpected error when getting a match: %w", err)
+	}
+
+	var match *Match
+	if m != nil {
+		match, err = fromRepositoryMatch(*m)
+		if err != nil {
+			return 0, fmt.Errorf("failed to map from repository match: %w", err)
+		}
 	}
 
 	if s.isScheduled(match) {
@@ -106,7 +114,7 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		return 0, fmt.Errorf("unable to parse received from external api fixture date %s: %w", fixture.Fixture.Date, err)
 	}
 
-	toSave := repository.Match{HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID, StartsAt: startsAt, ResultStatus: repository.NotScheduled}
+	toSave := repository.Match{HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID, StartsAt: startsAt, ResultStatus: string(NotScheduled)}
 	var matchID *uint
 	if match != nil {
 		matchID = &match.ID
@@ -138,7 +146,6 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		return 0, fmt.Errorf("failed to map from repository api fixture: %w", err)
 	}
 
-	// time.Now().Add(1 * time.Minute) // TODO
 	taskName, err := s.taskClient.ScheduleResultCheck(ctx, mappedMatch.ID, 1, mappedMatch.StartsAt.Add(s.config.FirstAttemptDelay))
 	if err != nil && !errors.As(err, &errs.ClientTaskAlreadyExistsError{}) {
 		return 0, fmt.Errorf("failed to schedule result check task: %w", err)
@@ -158,37 +165,12 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		Str("alias_away", aliasAway.Alias).
 		Msg("match result acquiring scheduled")
 
-	_, err = s.matchRepository.Update(ctx, saved.ID, repository.Scheduled)
+	_, err = s.matchRepository.Update(ctx, saved.ID, string(Scheduled))
 	if err != nil {
-		return 0, fmt.Errorf("failed to set match status to %s: %w", repository.Scheduled, err)
+		return 0, fmt.Errorf("failed to set match status to %s: %w", Scheduled, err)
 	}
 
 	return saved.ID, nil
-}
-
-func (s *MatchService) List(ctx context.Context, status string) ([]Match, error) {
-	resultStatus := repository.ResultStatus(status)
-	matches, err := s.matchRepository.List(ctx, resultStatus)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list matches with %s result status: %w", resultStatus, err)
-	}
-
-	mapped, err := fromRepositoryMatches(matches)
-	if err != nil {
-		return nil, fmt.Errorf("failed to map from repository matches: %w", err)
-	}
-
-	return mapped, nil
-}
-
-func (s *MatchService) Update(ctx context.Context, id uint, status string) error {
-	resultStatus := repository.ResultStatus(status)
-	_, err := s.matchRepository.Update(ctx, id, resultStatus)
-	if err != nil {
-		return fmt.Errorf("failed to set match status to %s: %w", repository.Scheduled, err)
-	}
-
-	return nil
 }
 
 func (s *MatchService) findAlias(ctx context.Context, alias string) (*Alias, error) {
@@ -220,17 +202,17 @@ func (s *MatchService) isFixtureEnded(fixtureData Data) bool {
 	return fixtureData.Fixture.Status.Long == stateMatchFinished
 }
 
-func (s *MatchService) isScheduled(match *repository.Match) bool {
-	return match != nil && match.ResultStatus == repository.Scheduled
+func (s *MatchService) isScheduled(match *Match) bool {
+	return match != nil && match.ResultStatus == Scheduled
 }
 
-func (s *MatchService) returnError(match *repository.Match) bool {
+func (s *MatchService) returnError(match *Match) bool {
 	if match == nil {
 		return false
 	}
 
 	switch match.ResultStatus {
-	case repository.Received, repository.APIError, repository.SchedulingError, repository.Cancelled:
+	case Received, APIError, SchedulingError, Cancelled:
 		return true
 	default:
 		return false

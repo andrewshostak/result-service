@@ -19,9 +19,9 @@ type MatchRepository interface {
 	Create(ctx context.Context, match repository.Match) (*repository.Match, error)
 	Save(ctx context.Context, id *uint, match repository.Match) (*repository.Match, error)
 	Delete(ctx context.Context, id uint) error
-	List(ctx context.Context, resultStatus repository.ResultStatus) ([]repository.Match, error)
+	List(ctx context.Context, resultStatus string) ([]repository.Match, error)
 	One(ctx context.Context, search repository.Match) (*repository.Match, error)
-	Update(ctx context.Context, id uint, resultStatus repository.ResultStatus) (*repository.Match, error)
+	Update(ctx context.Context, id uint, resultStatus string) (*repository.Match, error)
 }
 
 type FootballAPIFixtureRepository interface {
@@ -57,7 +57,7 @@ type SubscriptionRepository interface {
 	One(ctx context.Context, matchID uint, key string, baseURL string) (*repository.Subscription, error)
 	Get(ctx context.Context, id uint) (*repository.Subscription, error)
 	List(ctx context.Context, matchID uint) ([]repository.Subscription, error)
-	ListPending(ctx context.Context, matchID uint) ([]repository.Subscription, error)
+	ListByMatchAndStatus(ctx context.Context, matchID uint, status string) ([]repository.Subscription, error)
 	Update(ctx context.Context, id uint, subscription repository.Subscription) error
 }
 

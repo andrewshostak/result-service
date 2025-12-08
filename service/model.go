@@ -28,13 +28,33 @@ type DeleteSubscriptionRequest struct {
 	SecretKey string
 }
 
+type ResultStatus string
+
+const (
+	NotScheduled    ResultStatus = "not_scheduled"
+	Scheduled       ResultStatus = "scheduled"
+	SchedulingError ResultStatus = "scheduling_error"
+	Received        ResultStatus = "received"
+	APIError        ResultStatus = "api_error"
+	Cancelled       ResultStatus = "cancelled"
+)
+
 type Match struct {
-	ID       uint
-	StartsAt time.Time
+	ID           uint
+	StartsAt     time.Time
+	ResultStatus ResultStatus
 
 	FootballApiFixtures []FootballAPIFixture
+	CheckResultTask     *CheckResultTask
 	HomeTeam            *Team
 	AwayTeam            *Team
+}
+
+type CheckResultTask struct {
+	ID            uint
+	MatchID       uint
+	Name          string
+	AttemptNumber uint
 }
 
 type Team struct {
@@ -61,13 +81,22 @@ type FootballAPIFixture struct {
 	Away uint
 }
 
+type SubscriptionStatus string
+
+const (
+	PendingSub         SubscriptionStatus = "pending"
+	SchedulingErrorSub SubscriptionStatus = "scheduling_error"
+	SuccessfulSub      SubscriptionStatus = "successful"
+	SubscriberErrorSub SubscriptionStatus = "subscriber_error"
+)
+
 type Subscription struct {
 	ID         uint
 	Url        string
 	MatchID    uint
 	Key        string
 	CreatedAt  time.Time
-	Status     string
+	Status     SubscriptionStatus
 	NotifiedAt *time.Time
 
 	Match *Match
@@ -215,10 +244,17 @@ func fromRepositoryMatch(m repository.Match) (*Match, error) {
 
 		awayTeam = &Team{ID: m.AwayTeam.ID, Aliases: aliases}
 	}
+
+	var checkResultTask CheckResultTask
+	if m.CheckResultTask != nil {
+		checkResultTask = fromRepositoryCheckResultTask(*m.CheckResultTask)
+	}
 	return &Match{
 		ID:                  m.ID,
 		StartsAt:            m.StartsAt,
+		ResultStatus:        ResultStatus(m.ResultStatus),
 		FootballApiFixtures: fixtures,
+		CheckResultTask:     &checkResultTask,
 		HomeTeam:            homeTeam,
 		AwayTeam:            awayTeam,
 	}, nil
@@ -276,7 +312,7 @@ func fromRepositorySubscription(s repository.Subscription) (*Subscription, error
 		MatchID:    s.MatchID,
 		Key:        s.Key,
 		CreatedAt:  s.CreatedAt,
-		Status:     string(s.Status),
+		Status:     SubscriptionStatus(s.Status),
 		NotifiedAt: s.NotifiedAt,
 		Match:      match,
 	}, nil
@@ -293,6 +329,15 @@ func fromRepositorySubscriptions(s []repository.Subscription) ([]Subscription, e
 	}
 
 	return subscriptions, nil
+}
+
+func fromRepositoryCheckResultTask(t repository.CheckResultTask) CheckResultTask {
+	return CheckResultTask{
+		ID:            t.ID,
+		MatchID:       t.MatchID,
+		Name:          t.Name,
+		AttemptNumber: t.AttemptNumber,
+	}
 }
 
 func toRepositoryFootballAPIFixtureData(data Data) repository.Data {
