@@ -17,7 +17,6 @@ import (
 )
 
 func TestMatchService_Create(t *testing.T) {
-	matchRepository := mocks.NewMatchRepository(t)
 	footballAPIFixtureRepository := mocks.NewFootballAPIFixtureRepository(t)
 	checkResultTaskRepository := mocks.NewCheckResultTaskRepository(t)
 	footballAPIClient := mocks.NewFootballAPIClient(t)
@@ -28,12 +27,14 @@ func TestMatchService_Create(t *testing.T) {
 	pollingFirstAttemptDelay := 115 * time.Minute
 
 	ctx := context.Background()
-	aliasHome, aliasAway := gofakeit.Name(), gofakeit.Name()
+	aliasHome, aliasAway := fakeRepositoryAlias(1), fakeRepositoryAlias(2)
+	startsAt := time.Now().Add(24 * time.Hour)
 
 	tests := []struct {
 		name            string
 		input           service.CreateMatchRequest
 		aliasRepository func(t *testing.T) *mocks.AliasRepository
+		matchRepository func(t *testing.T) *mocks.MatchRepository
 		result          uint
 		expectedErr     error
 	}{
@@ -45,13 +46,13 @@ func TestMatchService_Create(t *testing.T) {
 		{
 			name: "it returns an error when home team alias does not exist",
 			input: service.CreateMatchRequest{
-				StartsAt:  time.Now().Add(24 * time.Hour),
-				AliasHome: aliasHome,
+				StartsAt:  startsAt,
+				AliasHome: aliasHome.Alias,
 			},
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
 				m := mocks.NewAliasRepository(t)
-				m.On("Find", ctx, aliasHome).Return(nil, errors.New("not found")).Once()
+				m.On("Find", ctx, aliasHome.Alias).Return(nil, errors.New("not found")).Once()
 				return m
 			},
 			expectedErr: fmt.Errorf("failed to find home team alias: %w", fmt.Errorf("failed to find team alias: %w", errors.New("not found"))),
@@ -59,18 +60,58 @@ func TestMatchService_Create(t *testing.T) {
 		{
 			name: "it returns an error when away team alias does not exist",
 			input: service.CreateMatchRequest{
-				StartsAt:  time.Now().Add(24 * time.Hour),
-				AliasHome: aliasHome,
-				AliasAway: aliasAway,
+				StartsAt:  startsAt,
+				AliasHome: aliasHome.Alias,
+				AliasAway: aliasAway.Alias,
 			},
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
 				m := mocks.NewAliasRepository(t)
-				m.On("Find", ctx, aliasHome).Return(&repository.Alias{ID: 1, TeamID: 1, Alias: aliasHome, FootballApiTeam: &repository.FootballApiTeam{}}, nil).Once()
-				m.On("Find", ctx, aliasAway).Return(nil, errors.New("not found")).Once()
+				m.On("Find", ctx, aliasHome.Alias).Return(&aliasHome, nil).Once()
+				m.On("Find", ctx, aliasAway.Alias).Return(nil, errors.New("not found")).Once()
 				return m
 			},
 			expectedErr: fmt.Errorf("failed to find away team alias: %w", fmt.Errorf("failed to find team alias: %w", errors.New("not found"))),
+		},
+		{
+			name: "it returns an error when alias relation FootballApiTeam does not exist",
+			input: service.CreateMatchRequest{
+				StartsAt:  startsAt,
+				AliasHome: aliasHome.Alias,
+			},
+			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
+				t.Helper()
+				m := mocks.NewAliasRepository(t)
+				m.On("Find", ctx, aliasHome.Alias).Return(&repository.Alias{ID: 1, TeamID: 1, Alias: aliasHome.Alias}, nil).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to find home team alias: %w", errors.New(fmt.Sprintf("alias %s found, but there is no releated external(football api) team", aliasHome.Alias))),
+		},
+		{
+			name: "it returns error when unexpected error from match repository method returned",
+			input: service.CreateMatchRequest{
+				StartsAt:  startsAt,
+				AliasHome: aliasHome.Alias,
+				AliasAway: aliasAway.Alias,
+			},
+			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
+				t.Helper()
+				m := mocks.NewAliasRepository(t)
+				m.On("Find", ctx, aliasHome.Alias).Return(&aliasHome, nil).Once()
+				m.On("Find", ctx, aliasAway.Alias).Return(&aliasAway, nil).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, repository.Match{
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
+				}).Return(nil, errors.New("unexpected error")).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("unexpected error when getting a match: %w", errors.New("unexpected error")),
 		},
 	}
 
@@ -79,6 +120,11 @@ func TestMatchService_Create(t *testing.T) {
 			var aliasRepository *mocks.AliasRepository
 			if tt.aliasRepository != nil {
 				aliasRepository = tt.aliasRepository(t)
+			}
+
+			var matchRepository *mocks.MatchRepository
+			if tt.matchRepository != nil {
+				matchRepository = tt.matchRepository(t)
 			}
 
 			ms := service.NewMatchService(
@@ -154,7 +200,7 @@ func fakeRepositoryAlias(teamID uint) repository.Alias {
 		ID:              uint(gofakeit.Uint8()),
 		TeamID:          teamID,
 		Alias:           gofakeit.Name(),
-		FootballApiTeam: nil,
+		FootballApiTeam: &repository.FootballApiTeam{},
 	}
 }
 

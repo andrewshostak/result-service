@@ -50,7 +50,7 @@ func TestSubscriptionService_Create(t *testing.T) {
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, repository.Match{ID: matchID}).Return(&repository.Match{
 					ID:           matchID,
-					ResultStatus: repository.Received,
+					ResultStatus: string(service.Received),
 				}, nil).Once()
 				return m
 			},
@@ -64,7 +64,7 @@ func TestSubscriptionService_Create(t *testing.T) {
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, repository.Match{ID: matchID}).Return(&repository.Match{
 					ID:           matchID,
-					ResultStatus: repository.Scheduled,
+					ResultStatus: string(service.Scheduled),
 				}, nil).Once()
 				return m
 			},
@@ -88,7 +88,7 @@ func TestSubscriptionService_Create(t *testing.T) {
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, repository.Match{ID: matchID}).Return(&repository.Match{
 					ID:           matchID,
-					ResultStatus: repository.Scheduled,
+					ResultStatus: string(service.Scheduled),
 				}, nil).Once()
 				return m
 			},
