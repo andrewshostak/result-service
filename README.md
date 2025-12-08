@@ -274,7 +274,10 @@ To back-fill aliases data a separate command is created. The command description
 - [X] Modify existing DELETE /subscriptions
 - [X] Verify subscription deletion flow works
 - [X] Create a new endpoint to be called by cloud task for checking match result
-- [ ] Create a new endpoint to be called by cloud task for notifying subscriber
+- [X] Create a new endpoint to be called by cloud task for notifying subscriber
+- [ ] Migrate to api-football dashboard
+- [ ] Include signed requests & validate google-auth middleware
+- [ ] Find a solution for same-time results (i.e. do not process tasks concurrently)
 - [ ] Add created_at / updated_at columns
 
 // TODO: use case what happens if match sent starting time is different from match football api starting time
