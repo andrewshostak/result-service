@@ -84,6 +84,9 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	}
 
 	if len(response.Response) < 1 {
+		if errUpdate := s.updateMatchResultStatus(ctx, match.ID, APIError); errUpdate != nil {
+			s.logger.Error().Uint("match_id", matchID).Err(errors.New("fixture not found"))
+		}
 		return fmt.Errorf("fixture with id %d not found", match.FootballApiFixtures[0].ID)
 	}
 

@@ -31,11 +31,11 @@ type SearchAliasRequest struct {
 }
 
 type TriggerResultCheckRequest struct {
-	MatchID uint `form:"match_id" binding:"required"`
+	MatchID uint `json:"match_id" binding:"required"`
 }
 
 type TriggerSubscriptionNotificationRequest struct {
-	SubscriptionID uint `form:"subscription_id" binding:"required"`
+	SubscriptionID uint `json:"subscription_id" binding:"required"`
 }
 
 func (cmr *CreateMatchRequest) ToDomain() service.CreateMatchRequest {
