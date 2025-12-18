@@ -50,7 +50,7 @@ create table if not exists external_matches
     match_id bigserial unique,
     home smallint,
     away smallint,
-    data jsonb not null,
+    status varchar(64),
     foreign key (match_id) references matches (id) on update cascade on delete cascade
 );
 

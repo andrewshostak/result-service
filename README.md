@@ -47,7 +47,7 @@ erDiagram
         Int match_id FK
         Int home_score
         Int away_score
-        Json data
+        String status
     }
     
     Subscription {
@@ -138,7 +138,7 @@ ResultService->>ResultService: Gets match by team ids and starting time from the
 alt match is found and result status is scheduled
     ResultService-->>API: Returns match response
 end
-ResultService->>+Fotmob: Sends a request with date & timezone
+ResultService->>+Fotmob: Sends a request with date
 Fotmob-->>-ResultService: Returns all matches for the date
 ResultService->>ResultService: Finds a match in the response by aliases and starting time
 ResultService->>ResultService: Saves match with status not_scheduled and external match to the DB
@@ -177,8 +177,9 @@ sequenceDiagram
     participant ResultService as result-service
     participant Fotmob as fotmob-api
     CloudTasks->>+ResultService: Sends a request to check match result
-    ResultService->>+Fotmob: Sends a request to get match details
-    Fotmob-->>-ResultService: Returns a match
+    ResultService->>+Fotmob: Sends a request with date
+    Fotmob-->>-ResultService: Returns all matches for the date
+    ResultService->>ResultService: Finds a match in the response by id
     ResultService->>ResultService: Updates external match data
     alt match is not yet ended
         ResultService->>CloudTasks: Creates a new task to check result with backoff
@@ -275,12 +276,11 @@ To back-fill aliases data a separate command is created. The command description
 - [X] Create a new endpoint to be called by cloud task for checking match result
 - [X] Create a new endpoint to be called by cloud task for notifying subscriber
 - [ ] Migrate to fotmob API
-  - [ ] Modify backfill aliases command
+  - [X] Modify backfill aliases command
     - [X] Create client method to call fotmob matches list (by date)
     - [X] Update command logic to accept date, update leagues, update mapping
   - [ ] Modify Match creation flow 
-    - [ ] Update football_api_fixtures table: rename to external_matches, add score_home, score_away
-    - [ ] Create client method to call fotmob match details (by id)
+    - [X] Update football_api_fixtures table: rename to external_matches, add score_home, score_away
     - [ ] Update match creation endpoint
     - [ ] Delete football_api_team table and its references
 - [ ] Include signed requests & validate google-auth middleware

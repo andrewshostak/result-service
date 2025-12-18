@@ -17,7 +17,7 @@ import (
 )
 
 func TestMatchService_Create(t *testing.T) {
-	footballAPIFixtureRepository := mocks.NewFootballAPIFixtureRepository(t)
+	footballAPIFixtureRepository := mocks.NewExternalMatchRepository(t)
 	checkResultTaskRepository := mocks.NewCheckResultTaskRepository(t)
 	footballAPIClient := mocks.NewFootballAPIClient(t)
 	logger := mocks.NewLogger(t)
@@ -95,7 +95,7 @@ func TestMatchService_Create(t *testing.T) {
 				m.On("Find", ctx, aliasHomeName).Return(&repository.Alias{ID: 1, TeamID: 1, Alias: aliasHomeName}, nil).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to find home team alias: %w", errors.New(fmt.Sprintf("alias %s found, but there is no releated external(football api) team", aliasHomeName))),
+			expectedErr: fmt.Errorf("failed to find home team alias: %w", errors.New(fmt.Sprintf("alias %s found, but there is no releated external team", aliasHomeName))),
 		},
 		{
 			name:  "it returns error when unexpected error from match repository method returned",
