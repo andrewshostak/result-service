@@ -18,7 +18,7 @@ var matchInPlayStatuses = []string{"LIVE", "1H", "HT", "2H", "ET", "BT", "P", "S
 type ResultCheckerService struct {
 	config                       config.ResultCheck
 	matchRepository              MatchRepository
-	footballAPIFixtureRepository FootballAPIFixtureRepository
+	footballAPIFixtureRepository ExternalMatchRepository
 	subscriptionRepository       SubscriptionRepository
 	checkResultTaskRepository    CheckResultTaskRepository
 	footballAPIClient            FootballAPIClient
@@ -29,7 +29,7 @@ type ResultCheckerService struct {
 func NewResultCheckerService(
 	config config.ResultCheck,
 	matchRepository MatchRepository,
-	footballAPIFixtureRepository FootballAPIFixtureRepository,
+	footballAPIFixtureRepository ExternalMatchRepository,
 	subscriptionRepository SubscriptionRepository,
 	checkResultTaskRepository CheckResultTaskRepository,
 	taskClient TaskClient,

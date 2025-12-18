@@ -24,10 +24,10 @@ type MatchRepository interface {
 	Update(ctx context.Context, id uint, resultStatus string) (*repository.Match, error)
 }
 
-type FootballAPIFixtureRepository interface {
-	Create(ctx context.Context, fixture repository.FootballApiFixture, data repository.Data) (*repository.FootballApiFixture, error)
-	Save(ctx context.Context, fixture repository.FootballApiFixture, data repository.Data) (*repository.FootballApiFixture, error)
-	Update(ctx context.Context, id uint, data repository.Data) (*repository.FootballApiFixture, error)
+type ExternalMatchRepository interface {
+	Create(ctx context.Context, match repository.ExternalMatch, data repository.Data) (*repository.ExternalMatch, error)
+	Save(ctx context.Context, match repository.ExternalMatch, data repository.Data) (*repository.ExternalMatch, error)
+	Update(ctx context.Context, id uint, data repository.Data) (*repository.ExternalMatch, error)
 }
 
 type CheckResultTaskRepository interface {

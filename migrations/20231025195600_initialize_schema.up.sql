@@ -44,11 +44,12 @@ create table if not exists subscriptions (
     foreign key (match_id) references matches (id) on update cascade on delete cascade
 );
 
--- TODO: rename, add columns
-create table if not exists football_api_fixtures
+create table if not exists external_matches
 (
     id bigserial primary key,
     match_id bigserial unique,
+    home smallint,
+    away smallint,
     data jsonb not null,
     foreign key (match_id) references matches (id) on update cascade on delete cascade
 );

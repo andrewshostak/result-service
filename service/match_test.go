@@ -233,11 +233,11 @@ func fakeRepositoryAlias(options ...Option[repository.Alias]) repository.Alias {
 	return alias
 }
 
-func fakeFootballAPIRepositoryFixture(matchID uint) repository.FootballApiFixture {
+func fakeExternalMatchRepository(matchID uint) repository.ExternalMatch {
 	data := pgtype.JSONB{}
-	_ = data.UnmarshalJSON([]byte(footballAPIFixtureRaw(4, 2)))
+	_ = data.UnmarshalJSON([]byte(externalMatchRaw(4, 2)))
 
-	return repository.FootballApiFixture{
+	return repository.ExternalMatch{
 		ID:      uint(gofakeit.Uint8()),
 		MatchID: matchID,
 		Data:    data,
@@ -287,11 +287,11 @@ func expectedMatch(repositoryMatch repository.Match) service.Match {
 		}
 	}
 
-	if repositoryMatch.FootballApiFixtures != nil {
-		fixtures = make([]service.FootballAPIFixture, 0, len(repositoryMatch.FootballApiFixtures))
-		for i := range repositoryMatch.FootballApiFixtures {
+	if repositoryMatch.ExternalMatches != nil {
+		fixtures = make([]service.FootballAPIFixture, 0, len(repositoryMatch.ExternalMatches))
+		for i := range repositoryMatch.ExternalMatches {
 			fixtures = append(fixtures, service.FootballAPIFixture{
-				ID:   repositoryMatch.FootballApiFixtures[i].ID,
+				ID:   repositoryMatch.ExternalMatches[i].ID,
 				Home: 4,
 				Away: 2,
 			})
@@ -307,7 +307,7 @@ func expectedMatch(repositoryMatch repository.Match) service.Match {
 	}
 }
 
-func footballAPIFixtureRaw(home, away uint) string {
+func externalMatchRaw(home, away uint) string {
 	return fmt.Sprintf(`{"goals": {"away": %d, "home": %d}, "teams": {"away": {"id": 35, "name": "Bournemouth"}, "home": {"id": 33, "name": "Manchester United"}}, "fixture": {"id": 1035330, "date": "2023-12-09T17:00:00+02:00", "status": {"long": "Match Finished", "short": "FT"}}}`, away, home)
 }
 

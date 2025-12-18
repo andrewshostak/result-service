@@ -54,7 +54,7 @@ func startServer(_ *cobra.Command, _ []string) {
 
 	aliasRepository := repository.NewAliasRepository(db)
 	matchRepository := repository.NewMatchRepository(db)
-	footballAPIFixtureRepository := repository.NewFootballAPIFixtureRepository(db)
+	externalMatchRepository := repository.NewExternalMatchRepository(db)
 	subscriptionRepository := repository.NewSubscriptionRepository(db)
 	checkResultTaskRepository := repository.NewCheckResultTaskRepository(db)
 
@@ -62,7 +62,7 @@ func startServer(_ *cobra.Command, _ []string) {
 		cfg.Result,
 		aliasRepository,
 		matchRepository,
-		footballAPIFixtureRepository,
+		externalMatchRepository,
 		checkResultTaskRepository,
 		footballAPIClient,
 		taskClient,
@@ -73,7 +73,7 @@ func startServer(_ *cobra.Command, _ []string) {
 	resultCheckerService := service.NewResultCheckerService(
 		cfg.Result,
 		matchRepository,
-		footballAPIFixtureRepository,
+		externalMatchRepository,
 		subscriptionRepository,
 		checkResultTaskRepository,
 		taskClient,

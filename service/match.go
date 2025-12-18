@@ -16,35 +16,35 @@ const dateFormat = "2006-01-02"
 const stateMatchFinished = "Match Finished"
 
 type MatchService struct {
-	config                       config.ResultCheck
-	aliasRepository              AliasRepository
-	matchRepository              MatchRepository
-	footballAPIFixtureRepository FootballAPIFixtureRepository
-	checkResultTaskRepository    CheckResultTaskRepository
-	footballAPIClient            FootballAPIClient
-	taskClient                   TaskClient
-	logger                       Logger
+	config                    config.ResultCheck
+	aliasRepository           AliasRepository
+	matchRepository           MatchRepository
+	externalMatchRepository   ExternalMatchRepository
+	checkResultTaskRepository CheckResultTaskRepository
+	footballAPIClient         FootballAPIClient
+	taskClient                TaskClient
+	logger                    Logger
 }
 
 func NewMatchService(
 	config config.ResultCheck,
 	aliasRepository AliasRepository,
 	matchRepository MatchRepository,
-	footballAPIFixtureRepository FootballAPIFixtureRepository,
+	externalMatchRepository ExternalMatchRepository,
 	checkResultTaskRepository CheckResultTaskRepository,
 	footballAPIClient FootballAPIClient,
 	taskClient TaskClient,
 	logger Logger,
 ) *MatchService {
 	return &MatchService{
-		config:                       config,
-		aliasRepository:              aliasRepository,
-		matchRepository:              matchRepository,
-		footballAPIFixtureRepository: footballAPIFixtureRepository,
-		checkResultTaskRepository:    checkResultTaskRepository,
-		footballAPIClient:            footballAPIClient,
-		taskClient:                   taskClient,
-		logger:                       logger,
+		config:                    config,
+		aliasRepository:           aliasRepository,
+		matchRepository:           matchRepository,
+		externalMatchRepository:   externalMatchRepository,
+		checkResultTaskRepository: checkResultTaskRepository,
+		footballAPIClient:         footballAPIClient,
+		taskClient:                taskClient,
+		logger:                    logger,
 	}
 }
 
@@ -127,7 +127,7 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 
 	s.logger.Info().Uint("match_id", saved.ID).Msg("match saved")
 
-	createdFixture, err := s.footballAPIFixtureRepository.Save(ctx, repository.FootballApiFixture{
+	createdFixture, err := s.externalMatchRepository.Save(ctx, repository.ExternalMatch{
 		ID:      fixture.Fixture.ID,
 		MatchID: saved.ID,
 	}, toRepositoryFootballAPIFixtureData(fixture))
@@ -142,7 +142,7 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		return 0, fmt.Errorf("failed to map from repository match: %w", err)
 	}
 
-	mappedFixture, err := fromRepositoryFootballAPIFixture(*createdFixture)
+	mappedExternalMatch, err := fromRepositoryExternalMatch(*createdFixture)
 	if err != nil {
 		return 0, fmt.Errorf("failed to map from repository api fixture: %w", err)
 	}
@@ -161,7 +161,7 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 
 	s.logger.Info().
 		Uint("match_id", mappedMatch.ID).
-		Uint("football_api_fixture_id", mappedFixture.ID).
+		Uint("football_api_fixture_id", mappedExternalMatch.ID).
 		Str("alias_home", aliasHome.Alias).
 		Str("alias_away", aliasAway.Alias).
 		Msg("match result acquiring scheduled")

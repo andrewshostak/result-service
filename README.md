@@ -75,9 +75,9 @@ erDiagram
     
     Team ||--o{ Alias : has 
     Team ||--o{ Match : has
-    Match ||--|| ExternalTeam : has
+    Match ||--|| ExternalMatch : has
     Match ||--o{ Subscription : has
-    Team ||--|| FootballAPITeam : has
+    Team ||--|| ExternalTeam : has
     Match ||--|| CheckResultTask : has
 ```
 

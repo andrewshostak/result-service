@@ -32,15 +32,17 @@ type Match struct {
 	StartsAt     time.Time `gorm:"column:starts_at"`
 	ResultStatus string    `gorm:"column:result_status;default:not_scheduled"`
 
-	FootballApiFixtures []FootballApiFixture
-	CheckResultTask     *CheckResultTask
-	HomeTeam            *Team `gorm:"foreignKey:HomeTeamID"`
-	AwayTeam            *Team `gorm:"foreignKey:AwayTeamID"`
+	ExternalMatches []ExternalMatch
+	CheckResultTask *CheckResultTask
+	HomeTeam        *Team `gorm:"foreignKey:HomeTeamID"`
+	AwayTeam        *Team `gorm:"foreignKey:AwayTeamID"`
 }
 
-type FootballApiFixture struct {
+type ExternalMatch struct {
 	ID      uint         `gorm:"column:id;primaryKey"`
 	MatchID uint         `gorm:"column:match_id"`
+	Home    int          `gorm:"column:home"`
+	Away    int          `gorm:"column:away"`
 	Data    pgtype.JSONB `gorm:"column:data"`
 
 	Match *Match `gorm:"foreignKey:MatchID"`
@@ -67,6 +69,7 @@ type CheckResultTask struct {
 	Match *Match `gorm:"foreignKey:MatchID"`
 }
 
+// TODO: remove football-api models
 type Data struct {
 	Fixture Fixture       `json:"fixture"`
 	Teams   TeamsExternal `json:"teams"`

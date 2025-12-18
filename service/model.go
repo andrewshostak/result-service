@@ -185,7 +185,7 @@ type Country struct {
 	Name string
 }
 
-func fromRepositoryFootballAPIFixture(f repository.FootballApiFixture) (*FootballAPIFixture, error) {
+func fromRepositoryExternalMatch(f repository.ExternalMatch) (*FootballAPIFixture, error) {
 	d := &Data{}
 	err := json.Unmarshal(f.Data.Bytes, d)
 	if err != nil {
@@ -301,9 +301,9 @@ func fromClientFotmobTeam(team client.TeamFotmob) ExternalTeam {
 }
 
 func fromRepositoryMatch(m repository.Match) (*Match, error) {
-	fixtures := make([]FootballAPIFixture, 0, len(m.FootballApiFixtures))
-	for _, fixture := range m.FootballApiFixtures {
-		repoApiFixture, err := fromRepositoryFootballAPIFixture(fixture)
+	fixtures := make([]FootballAPIFixture, 0, len(m.ExternalMatches))
+	for _, fixture := range m.ExternalMatches {
+		repoApiFixture, err := fromRepositoryExternalMatch(fixture)
 		if err != nil {
 			return nil, err
 		}

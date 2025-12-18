@@ -44,7 +44,7 @@ func (r *MatchRepository) List(ctx context.Context, resultStatus string) ([]Matc
 	var matches []Match
 	result := r.db.WithContext(ctx).
 		Where(&Match{ResultStatus: resultStatus}).
-		Preload("FootballApiFixtures").
+		Preload("ExternalMatches").
 		Preload("HomeTeam.Aliases").
 		Preload("AwayTeam.Aliases").
 		Find(&matches)
@@ -60,7 +60,7 @@ func (r *MatchRepository) One(ctx context.Context, search Match) (*Match, error)
 	var match Match
 
 	query := r.db.WithContext(ctx).
-		Preload("FootballApiFixtures").
+		Preload("ExternalMatches").
 		Preload("CheckResultTask")
 
 	if search.ID != 0 {

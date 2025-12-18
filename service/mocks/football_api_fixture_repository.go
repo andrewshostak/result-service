@@ -15,27 +15,27 @@ type FootballAPIFixtureRepository struct {
 }
 
 // Create provides a mock function with given fields: ctx, fixture, data
-func (_m *FootballAPIFixtureRepository) Create(ctx context.Context, fixture repository.FootballApiFixture, data repository.Data) (*repository.FootballApiFixture, error) {
+func (_m *FootballAPIFixtureRepository) Create(ctx context.Context, fixture repository.ExternalMatch, data repository.Data) (*repository.ExternalMatch, error) {
 	ret := _m.Called(ctx, fixture, data)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
-	var r0 *repository.FootballApiFixture
+	var r0 *repository.ExternalMatch
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, repository.FootballApiFixture, repository.Data) (*repository.FootballApiFixture, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, repository.ExternalMatch, repository.Data) (*repository.ExternalMatch, error)); ok {
 		return rf(ctx, fixture, data)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, repository.FootballApiFixture, repository.Data) *repository.FootballApiFixture); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, repository.ExternalMatch, repository.Data) *repository.ExternalMatch); ok {
 		r0 = rf(ctx, fixture, data)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*repository.FootballApiFixture)
+			r0 = ret.Get(0).(*repository.ExternalMatch)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, repository.FootballApiFixture, repository.Data) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, repository.ExternalMatch, repository.Data) error); ok {
 		r1 = rf(ctx, fixture, data)
 	} else {
 		r1 = ret.Error(1)
@@ -45,27 +45,27 @@ func (_m *FootballAPIFixtureRepository) Create(ctx context.Context, fixture repo
 }
 
 // Save provides a mock function with given fields: ctx, fixture, data
-func (_m *FootballAPIFixtureRepository) Save(ctx context.Context, fixture repository.FootballApiFixture, data repository.Data) (*repository.FootballApiFixture, error) {
+func (_m *FootballAPIFixtureRepository) Save(ctx context.Context, fixture repository.ExternalMatch, data repository.Data) (*repository.ExternalMatch, error) {
 	ret := _m.Called(ctx, fixture, data)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
-	var r0 *repository.FootballApiFixture
+	var r0 *repository.ExternalMatch
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, repository.FootballApiFixture, repository.Data) (*repository.FootballApiFixture, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, repository.ExternalMatch, repository.Data) (*repository.ExternalMatch, error)); ok {
 		return rf(ctx, fixture, data)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, repository.FootballApiFixture, repository.Data) *repository.FootballApiFixture); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, repository.ExternalMatch, repository.Data) *repository.ExternalMatch); ok {
 		r0 = rf(ctx, fixture, data)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*repository.FootballApiFixture)
+			r0 = ret.Get(0).(*repository.ExternalMatch)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, repository.FootballApiFixture, repository.Data) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, repository.ExternalMatch, repository.Data) error); ok {
 		r1 = rf(ctx, fixture, data)
 	} else {
 		r1 = ret.Error(1)
@@ -75,23 +75,23 @@ func (_m *FootballAPIFixtureRepository) Save(ctx context.Context, fixture reposi
 }
 
 // Update provides a mock function with given fields: ctx, id, data
-func (_m *FootballAPIFixtureRepository) Update(ctx context.Context, id uint, data repository.Data) (*repository.FootballApiFixture, error) {
+func (_m *FootballAPIFixtureRepository) Update(ctx context.Context, id uint, data repository.Data) (*repository.ExternalMatch, error) {
 	ret := _m.Called(ctx, id, data)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
-	var r0 *repository.FootballApiFixture
+	var r0 *repository.ExternalMatch
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint, repository.Data) (*repository.FootballApiFixture, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uint, repository.Data) (*repository.ExternalMatch, error)); ok {
 		return rf(ctx, id, data)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint, repository.Data) *repository.FootballApiFixture); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uint, repository.Data) *repository.ExternalMatch); ok {
 		r0 = rf(ctx, id, data)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*repository.FootballApiFixture)
+			r0 = ret.Get(0).(*repository.ExternalMatch)
 		}
 	}
 
