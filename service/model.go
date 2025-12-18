@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/andrewshostak/result-service/client"
@@ -73,6 +74,42 @@ type Alias struct {
 type FootballApiTeam struct {
 	ID     uint
 	TeamID uint
+}
+
+type ExternalMatchesResponse struct {
+	Leagues []ExternalLeague
+}
+
+type ExternalLeague struct {
+	CountryCode      string
+	Name             string
+	ParentLeagueName string
+	Matches          []ExternalMatch
+}
+
+type ExternalMatch struct {
+	ID     int
+	Time   time.Time
+	Home   ExternalTeam
+	Away   ExternalTeam
+	Status ExternalMatchStatus
+}
+
+type ExternalMatchStatus string
+
+const (
+	StatusMatchNotStarted ExternalMatchStatus = "not_started"
+	StatusMatchCancelled  ExternalMatchStatus = "cancelled"
+	StatusMatchInProgress ExternalMatchStatus = "in_progress"
+	StatusMatchFinished   ExternalMatchStatus = "finished"
+	StatusMatchUnknown    ExternalMatchStatus = "unknown"
+)
+
+type ExternalTeam struct {
+	ID       int
+	Score    int
+	Name     string
+	LongName string
 }
 
 type FootballAPIFixture struct {
@@ -189,30 +226,78 @@ func fromClientFootballAPIFixture(c client.Result) Data {
 	}
 }
 
-func fromClientFootballAPILeague(l client.LeagueResult) LeagueData {
-	return LeagueData{
-		League: League{
-			ID:   l.League.ID,
-			Name: l.League.Name,
-		},
-		Country: Country{Name: l.Country.Name},
+func fromClientFotmobResult(response client.MatchesResponse) ([]ExternalLeague, error) {
+	leagues := make([]ExternalLeague, 0, len(response.Leagues))
+	for _, v := range response.Leagues {
+		matches := make([]ExternalMatch, 0, len(v.Matches))
+
+		for _, match := range v.Matches {
+			m, err := fromClientFotmobMatch(match)
+			if err != nil {
+				return nil, fmt.Errorf("failed to map from client match: %w", err)
+			}
+
+			matches = append(matches, *m)
+		}
+
+		leagues = append(leagues, ExternalLeague{
+			CountryCode:      v.Ccode,
+			Name:             v.Name,
+			ParentLeagueName: v.ParentLeagueName,
+			Matches:          matches,
+		})
+	}
+
+	return leagues, nil
+}
+
+func fromClientFotmobMatch(match client.MatchFotmob) (*ExternalMatch, error) {
+	startsAt, err := time.Parse(time.RFC3339, match.Status.UTCTime)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse match starting time %s: %w", match.Status.UTCTime, err)
+	}
+
+	return &ExternalMatch{
+		ID:     match.ID,
+		Time:   startsAt,
+		Home:   fromClientFotmobTeam(match.Home),
+		Away:   fromClientFotmobTeam(match.Away),
+		Status: fromClientMatchStatus(match.StatusID),
+	}, nil
+}
+
+func fromClientMatchStatus(statusID int) ExternalMatchStatus {
+	switch statusID {
+	// 1 - Not started
+	case 1:
+		return StatusMatchNotStarted
+	// 5 - Postponed
+	// 17 - Abandoned
+	case 5, 17:
+		return StatusMatchCancelled
+	// 2 - Live 1st half
+	// 3 - Live 2nd half
+	// 10 - Half-Time
+	case 2, 3, 10:
+		return StatusMatchInProgress
+	// 6 - Full-Time
+	// 11 - After extra time
+	// 13 - Finished after Penalties
+	case 6, 11, 13:
+		return StatusMatchFinished
+	// 4, 7, 8, 9, 12, 14, 15, 16
+	default:
+		return StatusMatchUnknown
 	}
 }
 
-func fromClientFootballAPITeam(t client.TeamsResult) TeamExternal {
-	return TeamExternal{
-		ID:   t.Team.ID,
-		Name: t.Team.Name,
+func fromClientFotmobTeam(team client.TeamFotmob) ExternalTeam {
+	return ExternalTeam{
+		ID:       team.ID,
+		Score:    team.Score,
+		Name:     team.Name,
+		LongName: team.LongName,
 	}
-}
-
-func fromClientFootballAPITeams(t []client.TeamsResult) []TeamExternal {
-	mapped := make([]TeamExternal, 0, len(t))
-	for i := range t {
-		mapped = append(mapped, fromClientFootballAPITeam(t[i]))
-	}
-
-	return mapped
 }
 
 func fromRepositoryMatch(m repository.Match) (*Match, error) {
@@ -273,7 +358,7 @@ func fromRepositoryMatches(m []repository.Match) ([]Match, error) {
 	return matches, nil
 }
 
-func fromRepositoryFootballAPITeam(t repository.FootballApiTeam) FootballApiTeam {
+func fromRepositoryExternalTeam(t repository.ExternalTeam) FootballApiTeam {
 	return FootballApiTeam{
 		ID:     t.ID,
 		TeamID: t.TeamID,
@@ -283,8 +368,8 @@ func fromRepositoryFootballAPITeam(t repository.FootballApiTeam) FootballApiTeam
 func fromRepositoryAlias(a repository.Alias) Alias {
 	var footballAPITeam *FootballApiTeam
 
-	if a.FootballApiTeam != nil {
-		mapped := fromRepositoryFootballAPITeam(*a.FootballApiTeam)
+	if a.ExternalTeam != nil {
+		mapped := fromRepositoryExternalTeam(*a.ExternalTeam)
 		footballAPITeam = &mapped
 	}
 

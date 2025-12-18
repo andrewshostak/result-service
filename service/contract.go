@@ -41,6 +41,10 @@ type FootballAPIClient interface {
 	SearchTeams(ctx context.Context, search client.TeamsSearch) (*client.TeamsResponse, error)
 }
 
+type FotmobClient interface {
+	GetMatchesByDate(ctx context.Context, date time.Time) (*client.MatchesResponse, error)
+}
+
 type TaskClient interface {
 	ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*string, error)
 	ScheduleSubscriberNotification(ctx context.Context, subscriptionID uint) error

@@ -14,7 +14,7 @@ Feel free to use this service for your needs.
 (Integration with `prognoz` project as an example)
 
 - Football Result Service / `result-service` - This service.
-- Football Results API / `football-api` - The source of the football matches results: [documentation](https://www.api-football.com/documentation-v3).
+- External Results API (Fotmob) / `fotmob-api` - The source of the football matches results.
 - Prognoz API Server / `prognoz-api` - The service that wants to receive the results.
 - Google Cloud Tasks / `cloud-tasks` - The service that schedules tasks to check match results and notify subscribers.
 
@@ -42,9 +42,11 @@ erDiagram
         String result_status
     }
     
-    FootballAPIFixture {
+    ExternalMatch {
         Int id PK
         Int match_id FK
+        Int home_score
+        Int away_score
         Json data
     }
     
@@ -59,7 +61,7 @@ erDiagram
         String error
     }
     
-    FootballAPITeam {
+    ExternalTeam {
         Int id PK
         Int team_id FK
     }
@@ -73,24 +75,24 @@ erDiagram
     
     Team ||--o{ Alias : has 
     Team ||--o{ Match : has
-    Match ||--|| FootballAPIFixture : has
+    Match ||--|| ExternalTeam : has
     Match ||--o{ Subscription : has
     Team ||--|| FootballAPITeam : has
     Match ||--|| CheckResultTask : has
 ```
 
-Table names are pluralized. The tables `teams`, `aliases`, `football_api_teams` are pre-filled with the data of `prognoz-api` and `football-api`.
+Table names are pluralized. The tables `teams`, `aliases`, `external-teams` are pre-filled with the data of `fotmob-api`.
 
 #### Description of possible match `result_status` values:
 
-| `result_status`    | Description                                                                                                                                                                                |
-|--------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `not_scheduled`    | Match is created, but fixture creation or task scheduling fails                                                                                                                            |
-| `scheduled`        | Match is created and a task is scheduled. If there was an attempt to get a result but a match was not ended the status `scheduled` remains unchanged.                                      |
-| `scheduling_error` | An attempt to reschedule task was unsuccessful.                                                                                                                                            |
-| `received`         | Match result is received.                                                                                                                                                                  |
-| `api_error`        | Request to football-api to get match result was unsuccessful.                                                                                                                              |
-| `cancelled`        | One of the next statuses from football-api received: "Match Suspended", "Match Postponed", "Match Cancelled", "Match Abandoned", "Technical Loss", "WalkOver". No new task is rescheduled. |
+| `result_status`    | Description                                                                                                                                           |
+|--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `not_scheduled`    | Match is created, but fixture creation or task scheduling fails                                                                                       |
+| `scheduled`        | Match is created and a task is scheduled. If there was an attempt to get a result but a match was not ended the status `scheduled` remains unchanged. |
+| `scheduling_error` | An attempt to reschedule task was unsuccessful.                                                                                                       |
+| `received`         | Match result is received.                                                                                                                             |
+| `api_error`        | Request to fotmob-api to get match result was unsuccessful.                                                                                           |
+| `cancelled`        | Received a status from fotmob-api indicates that match was canceled. No new task is rescheduled.                                                      |
 
 #### Description of possible subscription `subscription_status` values:
 
@@ -127,7 +129,7 @@ flowchart TD
 sequenceDiagram
 participant API as prognoz-api
 participant ResultService as result-service
-participant FootballAPI as football-api
+participant Fotmob as fotmob-api
 participant CloudTasks as cloud-tasks
 API->>ResultService: Sends a request to create a match
 Activate ResultService
@@ -136,9 +138,10 @@ ResultService->>ResultService: Gets match by team ids and starting time from the
 alt match is found and result status is scheduled
     ResultService-->>API: Returns match response
 end
-ResultService->>+FootballAPI: Sends a request with season, timezone, date, team id
-FootballAPI-->>-ResultService: Returns fixture data
-ResultService->>ResultService: Saves match with status not_scheduled and fixture to the DB
+ResultService->>+Fotmob: Sends a request with date & timezone
+Fotmob-->>-ResultService: Returns all matches for the date
+ResultService->>ResultService: Finds a match in the response by aliases and starting time
+ResultService->>ResultService: Saves match with status not_scheduled and external match to the DB
 ResultService->>CloudTasks: Creates a task to check result with schedule-time (starting time + 115 minutes)
 Activate CloudTasks
 CloudTasks-->>ResultService: Returns task id
@@ -172,11 +175,11 @@ Deactivate ResultService
 sequenceDiagram
     participant CloudTasks as cloud-tasks
     participant ResultService as result-service
-    participant FootballAPI as football-api
+    participant Fotmob as fotmob-api
     CloudTasks->>+ResultService: Sends a request to check match result
-    ResultService->>+FootballAPI: Sends a request to get match details
-    FootballAPI-->>-ResultService: Returns a match
-    ResultService->>ResultService: Updates fixture data
+    ResultService->>+Fotmob: Sends a request to get match details
+    Fotmob-->>-ResultService: Returns a match
+    ResultService->>ResultService: Updates external match data
     alt match is not yet ended
         ResultService->>CloudTasks: Creates a new task to check result with backoff
         ResultService-->>CloudTasks: Returns success
@@ -238,20 +241,16 @@ Deactivate ResultService
 2) Secret-key is saved in `subscriptions` table for each subscription  
 3) When `result-service` calls subscription `url` it attaches secret-key to the request
 
-`result-service` => `football-api`
-1) An env variable `RAPID_API_KEY` is stored in env variables and attached to each request 
-
 ### Back-fill aliases data
 
 To back-fill aliases data a separate command is created. The command description:
-- Accepts season as a parameter
+- Accepts dates as a parameter
 - Command has predefined list of league and country names (for example: Premier League - Ukraine, La Liga - Spain, etc.)
-- Calls `football-api`s `leagues` endpoint with `season` param
-- Extracts appropriate league ids from the response of `league` endpoint
-- Concurrently calls `teams` endpoint with the `season` and `league` param
+- For each date param calls `fotmob-api`s `matches` endpoint
+- Extracts team names from the matches list
 - For each team the command does the next actions in database 
   - checks if `alias` already exists
-  - if not, creates a `team`, `alias`, `football_api_team` in transaction
+  - if not, creates a `team`, `alias`, `external_team` in transaction
 
 ### Implementation TODO
 - [X] Connect to supabase from datagrip
@@ -275,7 +274,15 @@ To back-fill aliases data a separate command is created. The command description
 - [X] Verify subscription deletion flow works
 - [X] Create a new endpoint to be called by cloud task for checking match result
 - [X] Create a new endpoint to be called by cloud task for notifying subscriber
-- [ ] Migrate to api-football dashboard
+- [ ] Migrate to fotmob API
+  - [ ] Modify backfill aliases command
+    - [X] Create client method to call fotmob matches list (by date)
+    - [X] Update command logic to accept date, update leagues, update mapping
+  - [ ] Modify Match creation flow 
+    - [ ] Update football_api_fixtures table: rename to external_matches, add score_home, score_away
+    - [ ] Create client method to call fotmob match details (by id)
+    - [ ] Update match creation endpoint
+    - [ ] Delete football_api_team table and its references
 - [ ] Include signed requests & validate google-auth middleware
 - [ ] Find a solution for same-time results (i.e. do not process tasks concurrently)
 - [ ] Add created_at / updated_at columns

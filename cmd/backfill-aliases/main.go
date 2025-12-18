@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/andrewshostak/result-service/client"
 	"github.com/andrewshostak/result-service/config"
@@ -21,7 +22,7 @@ func main() {
 		Run:   run,
 	}
 
-	rootCmd.Flags().Uint("season", 0, "query param in leagues endpoint of football-api")
+	rootCmd.Flags().StringSlice("dates", []string{"2025-12-11"}, "query param in leagues endpoint of football-api")
 
 	if err := rootCmd.Execute(); err != nil {
 		panic(err)
@@ -29,13 +30,22 @@ func main() {
 }
 
 func run(cmd *cobra.Command, _ []string) {
-	season, err := cmd.Flags().GetUint("season")
+	dates, err := cmd.Flags().GetStringSlice("dates")
 	if err != nil {
 		panic(err)
 	}
 
-	if season == 0 {
-		panic(errors.New("season flag cannot be empty"))
+	if len(dates) == 0 {
+		panic(errors.New("dates param cannot be empty"))
+	}
+
+	parsedDates := make([]time.Time, 0, len(dates))
+	for _, date := range dates {
+		parsed, err := time.Parse(time.DateOnly, date)
+		if err != nil {
+			panic(err)
+		}
+		parsedDates = append(parsedDates, parsed)
 	}
 
 	cfg := config.Parse[config.BackfillAliases]()
@@ -48,13 +58,13 @@ func run(cmd *cobra.Command, _ []string) {
 
 	aliasRepository := repository.NewAliasRepository(db)
 
-	footballAPIClient := client.NewFootballAPIClient(&httpClient, logger, cfg.ExternalAPI.FootballAPIBaseURL, cfg.ExternalAPI.RapidAPIKey)
+	fotmobClient := client.NewFotmobClient(&httpClient, logger, cfg.ExternalAPI.FotmobAPIBaseURL)
 
-	backfillAliasesService := service.NewBackfillAliasesService(aliasRepository, footballAPIClient, logger)
+	backfillAliasesService := service.NewBackfillAliasesService(aliasRepository, fotmobClient, logger)
 
 	ctx := context.Background()
 
-	err = backfillAliasesService.Backfill(ctx, season)
+	err = backfillAliasesService.Backfill(ctx, parsedDates)
 	if err != nil {
 		panic(err)
 	}

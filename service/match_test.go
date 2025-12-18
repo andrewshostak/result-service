@@ -222,10 +222,10 @@ func fakeRepositoryTeam(teamID uint, aliases bool) repository.Team {
 
 func fakeRepositoryAlias(options ...Option[repository.Alias]) repository.Alias {
 	alias := repository.Alias{
-		ID:              uint(gofakeit.Uint8()),
-		TeamID:          uint(gofakeit.Uint8()),
-		Alias:           gofakeit.Name(),
-		FootballApiTeam: &repository.FootballApiTeam{},
+		ID:           uint(gofakeit.Uint8()),
+		TeamID:       uint(gofakeit.Uint8()),
+		Alias:        gofakeit.Name(),
+		ExternalTeam: &repository.ExternalTeam{},
 	}
 
 	applyOptions(&alias, options...)

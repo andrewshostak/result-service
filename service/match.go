@@ -180,8 +180,8 @@ func (s *MatchService) findAlias(ctx context.Context, alias string) (*Alias, err
 		return nil, fmt.Errorf("failed to find team alias: %w", err)
 	}
 
-	if foundAlias.FootballApiTeam == nil {
-		return nil, errors.New(fmt.Sprintf("alias %s found, but there is no releated external(football api) team", alias))
+	if foundAlias.ExternalTeam == nil {
+		return nil, errors.New(fmt.Sprintf("alias %s found, but there is no releated external team", alias))
 	}
 
 	mapped := fromRepositoryAlias(*foundAlias)

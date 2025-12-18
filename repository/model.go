@@ -11,7 +11,7 @@ type Alias struct {
 	TeamID uint   `gorm:"column:team_id"`
 	Alias  string `gorm:"column:alias;unique"`
 
-	FootballApiTeam *FootballApiTeam `gorm:"foreignKey:TeamID;references:TeamID"`
+	ExternalTeam *ExternalTeam `gorm:"foreignKey:TeamID;references:TeamID"`
 }
 
 type Team struct {
@@ -20,7 +20,7 @@ type Team struct {
 	Aliases []Alias
 }
 
-type FootballApiTeam struct {
+type ExternalTeam struct {
 	ID     uint `gorm:"column:id;primaryKey"`
 	TeamID uint `gorm:"column:team_id"`
 }

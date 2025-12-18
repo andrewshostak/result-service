@@ -4,7 +4,7 @@ create table if not exists teams (
     id bigserial primary key
 );
 
-create table if not exists football_api_teams (
+create table if not exists external_teams (
     id bigserial primary key,
     team_id bigserial unique,
     foreign key (team_id) references teams (id) on update cascade on delete restrict
@@ -44,6 +44,7 @@ create table if not exists subscriptions (
     foreign key (match_id) references matches (id) on update cascade on delete cascade
 );
 
+-- TODO: rename, add columns
 create table if not exists football_api_fixtures
 (
     id bigserial primary key,
