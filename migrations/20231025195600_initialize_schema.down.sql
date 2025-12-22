@@ -9,5 +9,6 @@ drop table if exists external_teams;
 drop table if exists teams;
 drop type result_status;
 drop type subscription_status;
+drop type external_match_status;
 
 commit;
