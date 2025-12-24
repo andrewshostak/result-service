@@ -14,9 +14,9 @@ type CheckResultTaskRepository struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, name, matchID
-func (_m *CheckResultTaskRepository) Create(ctx context.Context, name string, matchID uint) (*repository.CheckResultTask, error) {
-	ret := _m.Called(ctx, name, matchID)
+// Create provides a mock function with given fields: ctx, checkResultTask
+func (_m *CheckResultTaskRepository) Create(ctx context.Context, checkResultTask repository.CheckResultTask) (*repository.CheckResultTask, error) {
+	ret := _m.Called(ctx, checkResultTask)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
@@ -24,19 +24,49 @@ func (_m *CheckResultTaskRepository) Create(ctx context.Context, name string, ma
 
 	var r0 *repository.CheckResultTask
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, uint) (*repository.CheckResultTask, error)); ok {
-		return rf(ctx, name, matchID)
+	if rf, ok := ret.Get(0).(func(context.Context, repository.CheckResultTask) (*repository.CheckResultTask, error)); ok {
+		return rf(ctx, checkResultTask)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, uint) *repository.CheckResultTask); ok {
-		r0 = rf(ctx, name, matchID)
+	if rf, ok := ret.Get(0).(func(context.Context, repository.CheckResultTask) *repository.CheckResultTask); ok {
+		r0 = rf(ctx, checkResultTask)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*repository.CheckResultTask)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, uint) error); ok {
-		r1 = rf(ctx, name, matchID)
+	if rf, ok := ret.Get(1).(func(context.Context, repository.CheckResultTask) error); ok {
+		r1 = rf(ctx, checkResultTask)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetByMatchID provides a mock function with given fields: ctx, matchID
+func (_m *CheckResultTaskRepository) GetByMatchID(ctx context.Context, matchID uint) (*repository.CheckResultTask, error) {
+	ret := _m.Called(ctx, matchID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByMatchID")
+	}
+
+	var r0 *repository.CheckResultTask
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint) (*repository.CheckResultTask, error)); ok {
+		return rf(ctx, matchID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint) *repository.CheckResultTask); ok {
+		r0 = rf(ctx, matchID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*repository.CheckResultTask)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint) error); ok {
+		r1 = rf(ctx, matchID)
 	} else {
 		r1 = ret.Error(1)
 	}

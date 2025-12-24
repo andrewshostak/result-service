@@ -67,7 +67,7 @@ func (s *BackfillAliasesService) getMatches(ctx context.Context, dates []time.Ti
 
 			mutex.Lock()
 
-			allLeagues, err := fromClientFotmobResult(*result)
+			allLeagues, err := fromClientFotmobLeagues(*result)
 			if err != nil {
 				mutex.Unlock()
 				s.logger.Error().Err(err).Int("iteration", i).Str("date", dateOnly).Msg("failed to map from client result")

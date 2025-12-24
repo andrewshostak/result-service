@@ -6,14 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/andrewshostak/result-service/client"
 	"github.com/andrewshostak/result-service/config"
 	"github.com/andrewshostak/result-service/errs"
 	"github.com/andrewshostak/result-service/repository"
 )
-
-const dateFormat = "2006-01-02"
-const stateMatchFinished = "Match Finished"
 
 type MatchService struct {
 	config                    config.ResultCheck
@@ -21,7 +17,7 @@ type MatchService struct {
 	matchRepository           MatchRepository
 	externalMatchRepository   ExternalMatchRepository
 	checkResultTaskRepository CheckResultTaskRepository
-	footballAPIClient         FootballAPIClient
+	fotmobClient              FotmobClient
 	taskClient                TaskClient
 	logger                    Logger
 }
@@ -32,7 +28,7 @@ func NewMatchService(
 	matchRepository MatchRepository,
 	externalMatchRepository ExternalMatchRepository,
 	checkResultTaskRepository CheckResultTaskRepository,
-	footballAPIClient FootballAPIClient,
+	fotmobClient FotmobClient,
 	taskClient TaskClient,
 	logger Logger,
 ) *MatchService {
@@ -42,7 +38,7 @@ func NewMatchService(
 		matchRepository:           matchRepository,
 		externalMatchRepository:   externalMatchRepository,
 		checkResultTaskRepository: checkResultTaskRepository,
-		footballAPIClient:         footballAPIClient,
+		fotmobClient:              fotmobClient,
 		taskClient:                taskClient,
 		logger:                    logger,
 	}
@@ -63,115 +59,102 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		return 0, fmt.Errorf("failed to find away team alias: %w", err)
 	}
 
-	m, err := s.matchRepository.One(ctx, repository.Match{
+	m, errMatch := s.matchRepository.One(ctx, repository.Match{
 		StartsAt:   request.StartsAt.UTC(),
 		HomeTeamID: aliasHome.TeamID,
 		AwayTeamID: aliasAway.TeamID,
 	})
-	if err != nil && !errors.As(err, &errs.MatchNotFoundError{}) {
-		return 0, fmt.Errorf("unexpected error when getting a match: %w", err)
+	if errMatch != nil && !errors.As(errMatch, &errs.MatchNotFoundError{}) {
+		return 0, fmt.Errorf("unexpected error when getting a match: %w", errMatch)
 	}
 
 	var match *Match
 	if m != nil {
-		match, err = fromRepositoryMatch(*m)
-		if err != nil {
-			return 0, fmt.Errorf("failed to map from repository match: %w", err)
+		match = fromRepositoryMatch(*m)
+
+		if s.isResultCheckScheduled(*match) {
+			return match.ID, nil
+		}
+
+		if !s.isResultCheckNotScheduled(*match) {
+			return 0, fmt.Errorf("match already exists with result status: %s", match.ResultStatus)
 		}
 	}
 
-	if s.isScheduled(match) {
-		return match.ID, nil
-	}
-
-	if s.returnError(match) {
-		return 0, fmt.Errorf("match already exists with result status: %s", match.ResultStatus)
-	}
-
-	date := request.StartsAt.UTC().Format(dateFormat)
-	season := uint(s.getSeason(request.StartsAt.UTC()))
-	timezone := time.UTC.String()
-	response, err := s.footballAPIClient.SearchFixtures(ctx, client.FixtureSearch{
-		Season:   &season,
-		Timezone: &timezone,
-		Date:     &date,
-		TeamID:   &aliasHome.FootballApiTeam.ID,
-	})
+	matchesByDate, err := s.fotmobClient.GetMatchesByDate(ctx, request.StartsAt.UTC())
 	if err != nil {
-		return 0, fmt.Errorf("unable to search fixtures in external api: %w", err)
+		return 0, fmt.Errorf("failed to get matches from external api: %w", err)
 	}
 
-	if len(response.Response) < 1 {
-		return 0, errs.UnexpectedNumberOfItemsError{Message: fmt.Sprintf("fixture starting at %s with team id %d is not found in external api", date, aliasHome.FootballApiTeam.ID)}
-	}
-
-	fixture := fromClientFootballAPIFixture(response.Response[0])
-	if s.isFixtureEnded(fixture) {
-		return 0, fmt.Errorf("%s: %w", fmt.Sprintf("status of the fixture with external id %d is %s", fixture.Fixture.ID, stateMatchFinished), errs.ErrIncorrectFixtureStatus)
-	}
-
-	startsAt, err := time.Parse(time.RFC3339, fixture.Fixture.Date)
+	leagues, err := fromClientFotmobLeagues(*matchesByDate)
 	if err != nil {
-		return 0, fmt.Errorf("unable to parse received from external api fixture date %s: %w", fixture.Fixture.Date, err)
+		return 0, fmt.Errorf("failed to map from external api matches: %w", err)
 	}
 
-	toSave := repository.Match{HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID, StartsAt: startsAt, ResultStatus: string(NotScheduled)}
+	externalMatch, err := s.findExternalMatch(aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, leagues)
+	if err != nil {
+		return 0, fmt.Errorf("match with home team id %d and away team id %d is not found: %w", aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, err)
+	}
+
+	if !s.isResultCheckSchedulingAllowed(*externalMatch) {
+		return 0, fmt.Errorf("result check scheduling is not allowed for this match, external match status is %s", externalMatch.Status)
+	}
+
 	var matchID *uint
 	if match != nil {
 		matchID = &match.ID
 	}
-	saved, err := s.matchRepository.Save(ctx, matchID, toSave)
+	matchToSave := toRepositoryMatch(aliasHome.TeamID, aliasAway.TeamID, externalMatch.Time, NotScheduled)
+	savedMatch, err := s.matchRepository.Save(ctx, matchID, matchToSave)
 	if err != nil {
-		return 0, fmt.Errorf("failed to create match with team ids %d and %d starting at %s: %w", aliasHome.TeamID, aliasAway.TeamID, startsAt, err)
+		return 0, fmt.Errorf("failed to save match with team ids %d and %d starting at %s: %w", aliasHome.TeamID, aliasAway.TeamID, externalMatch.Time, err)
 	}
 
-	s.logger.Info().Uint("match_id", saved.ID).Msg("match saved")
+	s.logger.Info().Uint("match_id", savedMatch.ID).Msg("match saved")
 
-	createdFixture, err := s.externalMatchRepository.Save(ctx, repository.ExternalMatch{
-		ID:      fixture.Fixture.ID,
-		MatchID: saved.ID,
-	}, toRepositoryFootballAPIFixtureData(fixture))
+	externalMatchID := uint(externalMatch.ID)
+	savedExternalMatch, err := s.externalMatchRepository.Save(ctx, &externalMatchID, toRepositoryExternalMatch(externalMatchID, *externalMatch))
 	if err != nil {
-		return 0, fmt.Errorf("failed to create football api fixture with match id %d: %w", saved.ID, err)
+		return 0, fmt.Errorf("failed to save external match with id %d and match id %d: %w", externalMatchID, savedMatch.ID, err)
 	}
 
-	s.logger.Info().Uint("football_api_fixture_id", createdFixture.ID).Uint("match_id", saved.ID).Msg("fixture saved")
+	s.logger.Info().Uint("match_id", savedMatch.ID).Msg("external match saved")
 
-	mappedMatch, err := fromRepositoryMatch(*saved)
-	if err != nil {
-		return 0, fmt.Errorf("failed to map from repository match: %w", err)
+	match = fromRepositoryMatch(*savedMatch)
+
+	checkResultTask, err := s.checkResultTaskRepository.GetByMatchID(ctx, match.ID)
+	if err != nil && !errors.As(err, &errs.CheckResultNotFoundError{}) {
+		return 0, fmt.Errorf("failed to get check result task: %w", err)
 	}
 
-	mappedExternalMatch, err := fromRepositoryExternalMatch(*createdFixture)
-	if err != nil {
-		return 0, fmt.Errorf("failed to map from repository api fixture: %w", err)
+	if checkResultTask != nil {
+		return match.ID, nil
 	}
 
-	taskName, err := s.taskClient.ScheduleResultCheck(ctx, mappedMatch.ID, 1, mappedMatch.StartsAt.Add(s.config.FirstAttemptDelay))
-	if err != nil && !errors.As(err, &errs.ClientTaskAlreadyExistsError{}) {
+	task, err := s.taskClient.ScheduleResultCheck(ctx, match.ID, 1, match.StartsAt.Add(s.config.FirstAttemptDelay))
+	if err != nil {
 		return 0, fmt.Errorf("failed to schedule result check task: %w", err)
 	}
 
-	if taskName != nil {
-		_, err = s.checkResultTaskRepository.Create(ctx, *taskName, mappedMatch.ID)
-		if err != nil && !errors.As(err, &errs.CheckResultTaskAlreadyExistsError{}) {
-			return 0, fmt.Errorf("failed to create result-check task: %w", err)
-		}
+	scheduledTask := fromClientTask(*task)
+	_, err = s.checkResultTaskRepository.Create(ctx, toRepositoryCheckResultTask(match.ID, scheduledTask))
+	if err != nil && !errors.As(err, &errs.CheckResultTaskAlreadyExistsError{}) {
+		return 0, fmt.Errorf("failed to create result-check task: %w", err)
 	}
 
 	s.logger.Info().
-		Uint("match_id", mappedMatch.ID).
-		Uint("football_api_fixture_id", mappedExternalMatch.ID).
+		Uint("match_id", match.ID).
+		Uint("external_match_id", savedExternalMatch.ID).
 		Str("alias_home", aliasHome.Alias).
 		Str("alias_away", aliasAway.Alias).
 		Msg("match result acquiring scheduled")
 
-	_, err = s.matchRepository.Update(ctx, saved.ID, string(Scheduled))
+	_, err = s.matchRepository.Update(ctx, savedMatch.ID, string(Scheduled))
 	if err != nil {
 		return 0, fmt.Errorf("failed to set match status to %s: %w", Scheduled, err)
 	}
 
-	return saved.ID, nil
+	return savedMatch.ID, nil
 }
 
 func (s *MatchService) findAlias(ctx context.Context, alias string) (*Alias, error) {
@@ -181,41 +164,33 @@ func (s *MatchService) findAlias(ctx context.Context, alias string) (*Alias, err
 	}
 
 	if foundAlias.ExternalTeam == nil {
-		return nil, errors.New(fmt.Sprintf("alias %s found, but there is no releated external team", alias))
+		return nil, errors.New(fmt.Sprintf("alias %s doesn't have external team relation", alias))
 	}
 
 	mapped := fromRepositoryAlias(*foundAlias)
 	return &mapped, nil
 }
 
-// getSeason returns current year if current time is after June 3, otherwise previous year
-func (s *MatchService) getSeason(startsAt time.Time) int {
-	seasonBound := time.Date(startsAt.Year(), 6, 3, 0, 0, 0, 0, time.UTC)
-
-	if startsAt.After(seasonBound) {
-		return startsAt.Year()
+func (s *MatchService) findExternalMatch(externalHomeTeamID, externalAwayTeamID uint, leagues []ExternalLeague) (*ExternalMatch, error) {
+	for _, matches := range leagues {
+		for _, match := range matches.Matches {
+			if match.Home.ID == int(externalHomeTeamID) && match.Away.ID == int(externalAwayTeamID) {
+				return &match, nil
+			}
+		}
 	}
 
-	return startsAt.AddDate(-1, 0, 0).Year()
+	return nil, errors.New("match not found in external")
 }
 
-func (s *MatchService) isFixtureEnded(fixtureData Data) bool {
-	return fixtureData.Fixture.Status.Long == stateMatchFinished
+func (s *MatchService) isResultCheckSchedulingAllowed(externalMatch ExternalMatch) bool {
+	return externalMatch.Status != StatusMatchNotStarted && externalMatch.Status != StatusMatchInProgress
 }
 
-func (s *MatchService) isScheduled(match *Match) bool {
-	return match != nil && match.ResultStatus == Scheduled
+func (s *MatchService) isResultCheckScheduled(match Match) bool {
+	return match.ResultStatus == Scheduled
 }
 
-func (s *MatchService) returnError(match *Match) bool {
-	if match == nil {
-		return false
-	}
-
-	switch match.ResultStatus {
-	case Received, APIError, SchedulingError, Cancelled:
-		return true
-	default:
-		return false
-	}
+func (s *MatchService) isResultCheckNotScheduled(match Match) bool {
+	return match.ResultStatus == NotScheduled
 }

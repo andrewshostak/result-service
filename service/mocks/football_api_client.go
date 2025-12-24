@@ -45,36 +45,6 @@ func (_m *FootballAPIClient) SearchFixtures(ctx context.Context, search client.F
 	return r0, r1
 }
 
-// SearchLeagues provides a mock function with given fields: ctx, season
-func (_m *FootballAPIClient) SearchLeagues(ctx context.Context, season uint) (*client.LeaguesResponse, error) {
-	ret := _m.Called(ctx, season)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SearchLeagues")
-	}
-
-	var r0 *client.LeaguesResponse
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint) (*client.LeaguesResponse, error)); ok {
-		return rf(ctx, season)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint) *client.LeaguesResponse); ok {
-		r0 = rf(ctx, season)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*client.LeaguesResponse)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, uint) error); ok {
-		r1 = rf(ctx, season)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // SearchTeams provides a mock function with given fields: ctx, search
 func (_m *FootballAPIClient) SearchTeams(ctx context.Context, search client.TeamsSearch) (*client.TeamsResponse, error) {
 	ret := _m.Called(ctx, search)

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -29,6 +28,18 @@ type DeleteSubscriptionRequest struct {
 	SecretKey string
 }
 
+type Team struct {
+	ID uint
+
+	Aliases []Alias
+}
+
+// TODO: find a better name instead of DB suffix
+type ExternalTeamDB struct {
+	ID     uint
+	TeamID uint
+}
+
 type ResultStatus string
 
 const (
@@ -45,77 +56,17 @@ type Match struct {
 	StartsAt     time.Time
 	ResultStatus ResultStatus
 
-	FootballApiFixtures []FootballAPIFixture
-	CheckResultTask     *CheckResultTask
-	HomeTeam            *Team
-	AwayTeam            *Team
-}
-
-type CheckResultTask struct {
-	ID            uint
-	MatchID       uint
-	Name          string
-	AttemptNumber uint
-}
-
-type Team struct {
-	ID uint
-
-	Aliases []Alias
+	ExternalMatch   *ExternalMatchDB
+	CheckResultTask *CheckResultTask
+	HomeTeam        *Team
+	AwayTeam        *Team
 }
 
 type Alias struct {
 	Alias  string
 	TeamID uint
 
-	FootballApiTeam *FootballApiTeam
-}
-
-type FootballApiTeam struct {
-	ID     uint
-	TeamID uint
-}
-
-type ExternalMatchesResponse struct {
-	Leagues []ExternalLeague
-}
-
-type ExternalLeague struct {
-	CountryCode      string
-	Name             string
-	ParentLeagueName string
-	Matches          []ExternalMatch
-}
-
-type ExternalMatch struct {
-	ID     int
-	Time   time.Time
-	Home   ExternalTeam
-	Away   ExternalTeam
-	Status ExternalMatchStatus
-}
-
-type ExternalMatchStatus string
-
-const (
-	StatusMatchNotStarted ExternalMatchStatus = "not_started"
-	StatusMatchCancelled  ExternalMatchStatus = "cancelled"
-	StatusMatchInProgress ExternalMatchStatus = "in_progress"
-	StatusMatchFinished   ExternalMatchStatus = "finished"
-	StatusMatchUnknown    ExternalMatchStatus = "unknown"
-)
-
-type ExternalTeam struct {
-	ID       int
-	Score    int
-	Name     string
-	LongName string
-}
-
-type FootballAPIFixture struct {
-	ID   uint
-	Home uint
-	Away uint
+	ExternalTeam *ExternalTeamDB
 }
 
 type SubscriptionStatus string
@@ -139,41 +90,61 @@ type Subscription struct {
 	Match *Match
 }
 
-type Data struct {
-	Fixture Fixture       `json:"fixture"`
-	Teams   TeamsExternal `json:"teams"`
-	Goals   Goals         `json:"goals"`
+type ExternalMatchStatus string
+
+const (
+	StatusMatchNotStarted ExternalMatchStatus = "not_started"
+	StatusMatchCancelled  ExternalMatchStatus = "cancelled"
+	StatusMatchInProgress ExternalMatchStatus = "in_progress"
+	StatusMatchFinished   ExternalMatchStatus = "finished"
+	StatusMatchUnknown    ExternalMatchStatus = "unknown"
+)
+
+// TODO: find a better name instead of DB suffix
+type ExternalMatchDB struct {
+	ID        uint
+	MatchID   uint
+	HomeScore int
+	AwayScore int
+	Status    ExternalMatchStatus
+}
+
+type CheckResultTask struct {
+	ID            uint
+	MatchID       uint
+	Name          string
+	AttemptNumber uint
+}
+
+type ExternalMatchesResponse struct {
+	Leagues []ExternalLeague
+}
+
+type ExternalLeague struct {
+	CountryCode      string
+	Name             string
+	ParentLeagueName string
+	Matches          []ExternalMatch
+}
+
+type ExternalMatch struct {
+	ID     int
+	Time   time.Time
+	Home   ExternalTeam
+	Away   ExternalTeam
+	Status ExternalMatchStatus
+}
+
+type ExternalTeam struct {
+	ID       int
+	Score    int
+	Name     string
+	LongName string
 }
 
 type LeagueData struct {
 	League  League
 	Country Country
-}
-
-type Fixture struct {
-	ID     uint   `json:"id"`
-	Status Status `json:"status"`
-	Date   string `json:"date"`
-}
-
-type TeamsExternal struct {
-	Home TeamExternal `json:"home"`
-	Away TeamExternal `json:"away"`
-}
-
-type TeamExternal struct {
-	ID   uint   `json:"id"`
-	Name string `json:"name"`
-}
-
-type Goals struct {
-	Home uint `json:"home"`
-	Away uint `json:"away"`
-}
-
-type Status struct {
-	Short string `json:"short"`
-	Long  string `json:"long"`
 }
 
 type League struct {
@@ -185,48 +156,22 @@ type Country struct {
 	Name string
 }
 
-func fromRepositoryExternalMatch(f repository.ExternalMatch) (*FootballAPIFixture, error) {
-	d := &Data{}
-	err := json.Unmarshal(f.Data.Bytes, d)
-	if err != nil {
-		return nil, err
-	}
-
-	return &FootballAPIFixture{
-		ID:   f.ID,
-		Home: d.Goals.Home,
-		Away: d.Goals.Away,
-	}, nil
+type ClientTask struct {
+	Name      string
+	ExecuteAt time.Time
 }
 
-func fromClientFootballAPIFixture(c client.Result) Data {
-	return Data{
-		Fixture: Fixture{
-			ID: c.Fixture.ID,
-			Status: Status{
-				Short: c.Fixture.Status.Short,
-				Long:  c.Fixture.Status.Long,
-			},
-			Date: c.Fixture.Date,
-		},
-		Teams: TeamsExternal{
-			Home: TeamExternal{
-				ID:   c.Teams.Home.ID,
-				Name: c.Teams.Home.Name,
-			},
-			Away: TeamExternal{
-				ID:   c.Teams.Away.ID,
-				Name: c.Teams.Away.Name,
-			},
-		},
-		Goals: Goals{
-			Home: c.Goals.Home,
-			Away: c.Goals.Away,
-		},
+func fromRepositoryExternalMatch(f repository.ExternalMatch) *ExternalMatchDB {
+	return &ExternalMatchDB{
+		ID:        f.ID,
+		MatchID:   f.MatchID,
+		HomeScore: f.HomeScore,
+		AwayScore: f.AwayScore,
+		Status:    ExternalMatchStatus(f.Status),
 	}
 }
 
-func fromClientFotmobResult(response client.MatchesResponse) ([]ExternalLeague, error) {
+func fromClientFotmobLeagues(response client.MatchesResponse) ([]ExternalLeague, error) {
 	leagues := make([]ExternalLeague, 0, len(response.Leagues))
 	for _, v := range response.Leagues {
 		matches := make([]ExternalMatch, 0, len(v.Matches))
@@ -300,14 +245,17 @@ func fromClientFotmobTeam(team client.TeamFotmob) ExternalTeam {
 	}
 }
 
-func fromRepositoryMatch(m repository.Match) (*Match, error) {
-	fixtures := make([]FootballAPIFixture, 0, len(m.ExternalMatches))
-	for _, fixture := range m.ExternalMatches {
-		repoApiFixture, err := fromRepositoryExternalMatch(fixture)
-		if err != nil {
-			return nil, err
-		}
-		fixtures = append(fixtures, *repoApiFixture)
+func fromClientTask(task client.Task) ClientTask {
+	return ClientTask{
+		Name:      task.Name,
+		ExecuteAt: task.ExecuteAt,
+	}
+}
+
+func fromRepositoryMatch(m repository.Match) *Match {
+	var externalMatch *ExternalMatchDB
+	if m.ExternalMatch != nil {
+		externalMatch = fromRepositoryExternalMatch(*m.ExternalMatch)
 	}
 
 	var homeTeam *Team
@@ -335,48 +283,45 @@ func fromRepositoryMatch(m repository.Match) (*Match, error) {
 		checkResultTask = fromRepositoryCheckResultTask(*m.CheckResultTask)
 	}
 	return &Match{
-		ID:                  m.ID,
-		StartsAt:            m.StartsAt,
-		ResultStatus:        ResultStatus(m.ResultStatus),
-		FootballApiFixtures: fixtures,
-		CheckResultTask:     &checkResultTask,
-		HomeTeam:            homeTeam,
-		AwayTeam:            awayTeam,
-	}, nil
+		ID:              m.ID,
+		StartsAt:        m.StartsAt,
+		ResultStatus:    ResultStatus(m.ResultStatus),
+		ExternalMatch:   externalMatch,
+		CheckResultTask: &checkResultTask,
+		HomeTeam:        homeTeam,
+		AwayTeam:        awayTeam,
+	}
 }
 
-func fromRepositoryMatches(m []repository.Match) ([]Match, error) {
+func fromRepositoryMatches(m []repository.Match) []Match {
 	matches := make([]Match, 0, len(m))
 	for i := range m {
-		match, err := fromRepositoryMatch(m[i])
-		if err != nil {
-			return nil, err
-		}
+		match := fromRepositoryMatch(m[i])
 		matches = append(matches, *match)
 	}
 
-	return matches, nil
+	return matches
 }
 
-func fromRepositoryExternalTeam(t repository.ExternalTeam) FootballApiTeam {
-	return FootballApiTeam{
+func fromRepositoryExternalTeam(t repository.ExternalTeam) ExternalTeamDB {
+	return ExternalTeamDB{
 		ID:     t.ID,
 		TeamID: t.TeamID,
 	}
 }
 
 func fromRepositoryAlias(a repository.Alias) Alias {
-	var footballAPITeam *FootballApiTeam
+	var externalTeam *ExternalTeamDB
 
 	if a.ExternalTeam != nil {
 		mapped := fromRepositoryExternalTeam(*a.ExternalTeam)
-		footballAPITeam = &mapped
+		externalTeam = &mapped
 	}
 
 	return Alias{
-		Alias:           a.Alias,
-		TeamID:          a.TeamID,
-		FootballApiTeam: footballAPITeam,
+		Alias:        a.Alias,
+		TeamID:       a.TeamID,
+		ExternalTeam: externalTeam,
 	}
 }
 
@@ -384,11 +329,7 @@ func fromRepositorySubscription(s repository.Subscription) (*Subscription, error
 	var match *Match
 
 	if s.Match != nil {
-		mapped, err := fromRepositoryMatch(*s.Match)
-		if err != nil {
-			return nil, err
-		}
-		match = mapped
+		match = fromRepositoryMatch(*s.Match)
 	}
 
 	return &Subscription{
@@ -425,29 +366,29 @@ func fromRepositoryCheckResultTask(t repository.CheckResultTask) CheckResultTask
 	}
 }
 
-func toRepositoryFootballAPIFixtureData(data Data) repository.Data {
-	return repository.Data{
-		Fixture: repository.Fixture{
-			ID: data.Fixture.ID,
-			Status: repository.Status{
-				Short: data.Fixture.Status.Short,
-				Long:  data.Fixture.Status.Long,
-			},
-			Date: data.Fixture.Date,
-		},
-		Teams: repository.TeamsExternal{
-			Home: repository.TeamExternal{
-				ID:   data.Teams.Home.ID,
-				Name: data.Teams.Home.Name,
-			},
-			Away: repository.TeamExternal{
-				ID:   data.Teams.Away.ID,
-				Name: data.Teams.Away.Name,
-			},
-		},
-		Goals: repository.Goals{
-			Home: data.Goals.Home,
-			Away: data.Goals.Away,
-		},
+func toRepositoryExternalMatch(matchID uint, externalMatch ExternalMatch) repository.ExternalMatch {
+	return repository.ExternalMatch{
+		ID:        uint(externalMatch.ID),
+		MatchID:   matchID,
+		HomeScore: externalMatch.Home.Score,
+		AwayScore: externalMatch.Away.Score,
+		Status:    string(externalMatch.Status),
+	}
+}
+
+func toRepositoryMatch(homeTeamID, awayTeamID uint, startsAt time.Time, resultStatus ResultStatus) repository.Match {
+	return repository.Match{
+		HomeTeamID:   homeTeamID,
+		AwayTeamID:   awayTeamID,
+		StartsAt:     startsAt,
+		ResultStatus: string(resultStatus),
+	}
+}
+
+func toRepositoryCheckResultTask(matchID uint, task ClientTask) repository.CheckResultTask {
+	return repository.CheckResultTask{
+		MatchID:   matchID,
+		Name:      task.Name,
+		ExecuteAt: task.ExecuteAt,
 	}
 }

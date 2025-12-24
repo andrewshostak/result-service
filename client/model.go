@@ -1,5 +1,7 @@
 package client
 
+import "time"
+
 type FixturesResponse struct {
 	Response []Result `json:"response"`
 }
@@ -48,15 +50,6 @@ type TeamsResponse struct {
 
 type TeamsResult struct {
 	Team Team `json:"team"`
-}
-
-type LeaguesResponse struct {
-	Response []LeagueResult `json:"response"`
-}
-
-type LeagueResult struct {
-	League  League  `json:"league"`
-	Country Country `json:"country"`
 }
 
 type League struct {
@@ -122,4 +115,9 @@ type TeamFotmob struct {
 	Score    int    `json:"score"`
 	Name     string `json:"name"`
 	LongName string `json:"longName"`
+}
+
+type Task struct {
+	Name      string
+	ExecuteAt time.Time
 }

@@ -5,6 +5,8 @@ package mocks
 import (
 	context "context"
 
+	client "github.com/andrewshostak/result-service/client"
+
 	mock "github.com/stretchr/testify/mock"
 
 	time "time"
@@ -34,23 +36,23 @@ func (_m *TaskClient) DeleteResultCheckTask(ctx context.Context, taskName string
 }
 
 // ScheduleResultCheck provides a mock function with given fields: ctx, matchID, attempt, scheduleAt
-func (_m *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*string, error) {
+func (_m *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*client.Task, error) {
 	ret := _m.Called(ctx, matchID, attempt, scheduleAt)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ScheduleResultCheck")
 	}
 
-	var r0 *string
+	var r0 *client.Task
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, time.Time) (*string, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, time.Time) (*client.Task, error)); ok {
 		return rf(ctx, matchID, attempt, scheduleAt)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, time.Time) *string); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, time.Time) *client.Task); ok {
 		r0 = rf(ctx, matchID, attempt, scheduleAt)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*string)
+			r0 = ret.Get(0).(*client.Task)
 		}
 	}
 

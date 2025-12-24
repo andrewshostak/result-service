@@ -55,10 +55,10 @@ erDiagram
         String url UK
         Int match_id FK
         String key
-        Date created_at
-        String subscription_status
-        Date notified_at
+        String status
         String error
+        Date notified_at
+        Date created_at
     }
     
     ExternalTeam {
@@ -71,6 +71,8 @@ erDiagram
         Int match_id FK
         String name UK
         Int attempt_number
+        Date execute_at
+        Date created_at
     }
     
     Team ||--o{ Alias : has 

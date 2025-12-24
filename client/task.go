@@ -37,7 +37,7 @@ func NewClient(config config.GoogleCloud, client *cloudtasks.Client) *TaskClient
 	return &TaskClient{config: config, client: client}
 }
 
-func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*string, error) {
+func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*Task, error) {
 	targetURL := fmt.Sprintf("%s%s", c.config.TasksBaseURL, checkResultPath)
 
 	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", c.config.ProjectID, c.config.Region, checkResultQueue)
@@ -75,7 +75,10 @@ func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, atte
 		return nil, fmt.Errorf("failed to create result-check task: %w", err)
 	}
 
-	return &createdTask.Name, nil
+	return &Task{
+		Name:      createdTask.Name,
+		ExecuteAt: createdTask.ScheduleTime.AsTime(),
+	}, nil
 }
 
 func (c *TaskClient) DeleteResultCheckTask(ctx context.Context, taskName string) error {

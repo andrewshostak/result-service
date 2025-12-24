@@ -40,20 +40,17 @@ func (s *SubscriberNotifierService) NotifySubscriber(ctx context.Context, subscr
 		return fmt.Errorf("failed to get match: %w", err)
 	}
 
-	m, err := fromRepositoryMatch(*match)
-	if err != nil {
-		return fmt.Errorf("failed to map from repository match: %w", err)
-	}
+	m := fromRepositoryMatch(*match)
 
-	if len(m.FootballApiFixtures) == 0 {
+	if m.ExternalMatch == nil {
 		return fmt.Errorf("no football api fixtures found for the match")
 	}
 
 	err = s.notifierClient.Notify(ctx, client.Notification{
 		Url:  subscription.Url,
 		Key:  subscription.Key,
-		Home: m.FootballApiFixtures[0].Home,
-		Away: m.FootballApiFixtures[0].Away,
+		Home: uint(m.ExternalMatch.HomeScore),
+		Away: uint(m.ExternalMatch.AwayScore),
 	})
 	if err != nil {
 		errUpdate := s.subscriptionRepository.Update(ctx, subscription.ID, repository.Subscription{Status: string(SubscriberErrorSub)})

@@ -85,45 +85,6 @@ func (c *FootballAPIClient) SearchFixtures(ctx context.Context, search FixtureSe
 	return nil, fmt.Errorf("%s: %w", fmt.Sprintf("failed to get fixtures, status %d", res.StatusCode), errs.ErrUnexpectedAPIFootballStatusCode)
 }
 
-func (c *FootballAPIClient) SearchLeagues(ctx context.Context, season uint) (*LeaguesResponse, error) {
-	url := c.baseURL + leaguesPath
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request to get leagues: %w", err)
-	}
-
-	q := req.URL.Query()
-	q.Add("season", strconv.Itoa(int(season)))
-
-	req.URL.RawQuery = q.Encode()
-
-	req.Header.Set(authHeader, c.apiKey)
-
-	res, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to send request to get leagues: %w", err)
-	}
-
-	defer func() {
-		err := res.Body.Close()
-		if err != nil {
-			c.logger.Error().Err(err).Msg("couldn't close response body")
-		}
-	}()
-
-	if res.StatusCode == http.StatusOK {
-		var body LeaguesResponse
-		if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
-			return nil, fmt.Errorf("failed to decode get leagues response body: %w", err)
-		}
-
-		return &body, nil
-	}
-
-	return nil, fmt.Errorf("%s: %w", fmt.Sprintf("failed to get leagues, status %d", res.StatusCode), errs.ErrUnexpectedAPIFootballStatusCode)
-}
-
 func (c *FootballAPIClient) SearchTeams(ctx context.Context, search TeamsSearch) (*TeamsResponse, error) {
 	url := c.baseURL + teamsPath
 

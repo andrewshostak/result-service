@@ -19,7 +19,7 @@ import (
 func TestMatchService_Create(t *testing.T) {
 	footballAPIFixtureRepository := mocks.NewExternalMatchRepository(t)
 	checkResultTaskRepository := mocks.NewCheckResultTaskRepository(t)
-	footballAPIClient := mocks.NewFootballAPIClient(t)
+	fotmobClient := mocks.NewFotmobClient(t)
 	logger := mocks.NewLogger(t)
 	taskClient := mocks.NewTaskClient(t)
 
@@ -48,6 +48,10 @@ func TestMatchService_Create(t *testing.T) {
 	scheduledMatch := fakeRepositoryMatch(func(r *repository.Match) {
 		r.ID = matchID
 		r.ResultStatus = string(service.Scheduled)
+	})
+	resultReceivedMatch := fakeRepositoryMatch(func(r *repository.Match) {
+		r.ID = matchID
+		r.ResultStatus = string(service.Received)
 	})
 
 	tests := []struct {
@@ -141,6 +145,28 @@ func TestMatchService_Create(t *testing.T) {
 			},
 			result: matchID,
 		},
+		{
+			name:  "it returns error if match already exists and has not not_scheduled status",
+			input: createMatchRequest,
+			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
+				t.Helper()
+				m := mocks.NewAliasRepository(t)
+				m.On("Find", ctx, aliasHomeName).Return(&aliasHome, nil).Once()
+				m.On("Find", ctx, aliasAwayName).Return(&aliasAway, nil).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, repository.Match{
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
+				}).Return(&resultReceivedMatch, nil).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("match already exists with result status: %s", resultReceivedMatch.ResultStatus),
+		},
 	}
 
 	for _, tt := range tests {
@@ -165,7 +191,7 @@ func TestMatchService_Create(t *testing.T) {
 				matchRepository,
 				footballAPIFixtureRepository,
 				checkResultTaskRepository,
-				footballAPIClient,
+				fotmobClient,
 				taskClient,
 				logger,
 			)
@@ -240,12 +266,12 @@ func fakeExternalMatchRepository(matchID uint) repository.ExternalMatch {
 	return repository.ExternalMatch{
 		ID:      uint(gofakeit.Uint8()),
 		MatchID: matchID,
-		Data:    data,
+		// TODO: add fields
 	}
 }
 
 func expectedMatch(repositoryMatch repository.Match) service.Match {
-	var fixtures []service.FootballAPIFixture
+	var externalMatch *service.ExternalMatchDB
 	var homeTeam *service.Team
 	var awayTeam *service.Team
 
@@ -287,23 +313,22 @@ func expectedMatch(repositoryMatch repository.Match) service.Match {
 		}
 	}
 
-	if repositoryMatch.ExternalMatches != nil {
-		fixtures = make([]service.FootballAPIFixture, 0, len(repositoryMatch.ExternalMatches))
-		for i := range repositoryMatch.ExternalMatches {
-			fixtures = append(fixtures, service.FootballAPIFixture{
-				ID:   repositoryMatch.ExternalMatches[i].ID,
-				Home: 4,
-				Away: 2,
-			})
+	if repositoryMatch.ExternalMatch != nil {
+		externalMatch = &service.ExternalMatchDB{
+			ID:        repositoryMatch.ExternalMatch.ID,
+			MatchID:   repositoryMatch.ExternalMatch.MatchID,
+			HomeScore: repositoryMatch.ExternalMatch.HomeScore,
+			AwayScore: repositoryMatch.ExternalMatch.AwayScore,
+			Status:    service.ExternalMatchStatus(repositoryMatch.ExternalMatch.Status),
 		}
 	}
 
 	return service.Match{
-		ID:                  repositoryMatch.ID,
-		StartsAt:            repositoryMatch.StartsAt,
-		FootballApiFixtures: fixtures,
-		HomeTeam:            homeTeam,
-		AwayTeam:            awayTeam,
+		ID:            repositoryMatch.ID,
+		StartsAt:      repositoryMatch.StartsAt,
+		ExternalMatch: externalMatch,
+		HomeTeam:      homeTeam,
+		AwayTeam:      awayTeam,
 	}
 }
 

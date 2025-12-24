@@ -49,6 +49,7 @@ func startServer(_ *cobra.Command, _ []string) {
 	defer cloudTasksClient.Close()
 
 	footballAPIClient := client.NewFootballAPIClient(&httpClient, logger, cfg.ExternalAPI.FootballAPIBaseURL, cfg.ExternalAPI.RapidAPIKey)
+	fotmobClient := client.NewFotmobClient(&httpClient, logger, cfg.ExternalAPI.FotmobAPIBaseURL)
 	notifierClient := client.NewNotifierClient(&httpClient, logger)
 	taskClient := client.NewClient(cfg.GoogleCloud, cloudTasksClient)
 
@@ -64,7 +65,7 @@ func startServer(_ *cobra.Command, _ []string) {
 		matchRepository,
 		externalMatchRepository,
 		checkResultTaskRepository,
-		footballAPIClient,
+		fotmobClient,
 		taskClient,
 		logger,
 	)

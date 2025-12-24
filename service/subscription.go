@@ -38,10 +38,7 @@ func (s *SubscriptionService) Create(ctx context.Context, request CreateSubscrip
 	if err != nil {
 		return fmt.Errorf("failed to get a match: %w", err)
 	}
-	match, err := fromRepositoryMatch(*m)
-	if err != nil {
-		return fmt.Errorf("failed to map from repository match: %w", err)
-	}
+	match := fromRepositoryMatch(*m)
 
 	if !s.isMatchResultScheduled(*match) {
 		return errors.New("match result status doesn't allow to create a subscription")
@@ -79,10 +76,7 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 	if err != nil {
 		return fmt.Errorf("failed to find a match: %w", err)
 	}
-	match, err := fromRepositoryMatch(*m)
-	if err != nil {
-		return fmt.Errorf("failed to map from repository match: %w", err)
-	}
+	match := fromRepositoryMatch(*m)
 
 	found, err := s.subscriptionRepository.One(ctx, match.ID, request.SecretKey, request.BaseURL)
 	if err != nil {

@@ -2,8 +2,6 @@ package repository
 
 import (
 	"time"
-
-	"github.com/jackc/pgtype"
 )
 
 type Alias struct {
@@ -32,18 +30,18 @@ type Match struct {
 	StartsAt     time.Time `gorm:"column:starts_at"`
 	ResultStatus string    `gorm:"column:result_status;default:not_scheduled"`
 
-	ExternalMatches []ExternalMatch
+	ExternalMatch   *ExternalMatch
 	CheckResultTask *CheckResultTask
 	HomeTeam        *Team `gorm:"foreignKey:HomeTeamID"`
 	AwayTeam        *Team `gorm:"foreignKey:AwayTeamID"`
 }
 
 type ExternalMatch struct {
-	ID      uint         `gorm:"column:id;primaryKey"`
-	MatchID uint         `gorm:"column:match_id"`
-	Home    int          `gorm:"column:home"`
-	Away    int          `gorm:"column:away"`
-	Data    pgtype.JSONB `gorm:"column:data"`
+	ID        uint   `gorm:"column:id;primaryKey"`
+	MatchID   uint   `gorm:"column:match_id"`
+	HomeScore int    `gorm:"column:home_score"`
+	AwayScore int    `gorm:"column:away_score"`
+	Status    string `gorm:"column:status"`
 
 	Match *Match `gorm:"foreignKey:MatchID"`
 }
@@ -61,10 +59,12 @@ type Subscription struct {
 }
 
 type CheckResultTask struct {
-	ID            uint   `gorm:"column:id;primaryKey"`
-	Name          string `gorm:"column:name;unique"`
-	MatchID       uint   `gorm:"column:match_id;unique"`
-	AttemptNumber uint   `gorm:"column:attempt_number;default:1"`
+	ID            uint      `gorm:"column:id;primaryKey"`
+	MatchID       uint      `gorm:"column:match_id;unique"`
+	Name          string    `gorm:"column:name;unique"`
+	AttemptNumber uint      `gorm:"column:attempt_number;default:1"`
+	ExecuteAt     time.Time `gorm:"column:execute_at"`
+	CreatedAt     time.Time `gorm:"column:created_at"`
 
 	Match *Match `gorm:"foreignKey:MatchID"`
 }

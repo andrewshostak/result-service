@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgtype"
 	"gorm.io/gorm"
 )
 
@@ -17,12 +16,6 @@ func NewExternalMatchRepository(db *gorm.DB) *ExternalMatchRepository {
 }
 
 func (r *ExternalMatchRepository) Create(ctx context.Context, externalMatch ExternalMatch, data Data) (*ExternalMatch, error) {
-	dataAsJson, err := toJsonB(data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create jsonb data: %w", err)
-	}
-
-	externalMatch.Data = *dataAsJson
 	result := r.db.WithContext(ctx).Create(&externalMatch)
 	if result.Error != nil {
 		return nil, result.Error
@@ -31,41 +24,33 @@ func (r *ExternalMatchRepository) Create(ctx context.Context, externalMatch Exte
 	return &externalMatch, nil
 }
 
-func (r *ExternalMatchRepository) Save(ctx context.Context, externalMatch ExternalMatch, data Data) (*ExternalMatch, error) {
-	dataAsJson, err := toJsonB(data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create jsonb data: %w", err)
+func (r *ExternalMatchRepository) Save(ctx context.Context, id *uint, externalMatch ExternalMatch) (*ExternalMatch, error) {
+	toSave := externalMatch
+	if id != nil {
+		toSave.ID = *id
 	}
 
-	externalMatch.Data = *dataAsJson
-	result := r.db.WithContext(ctx).Save(&externalMatch)
+	result := r.db.WithContext(ctx).Save(&toSave)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 
-	return &externalMatch, nil
+	return &toSave, nil
 }
 
 func (r *ExternalMatchRepository) Update(ctx context.Context, id uint, data Data) (*ExternalMatch, error) {
-	dataAsJson, err := toJsonB(data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create jsonb data: %w", err)
-	}
-
-	fixture := ExternalMatch{ID: id}
-	result := r.db.WithContext(ctx).Model(&fixture).Updates(ExternalMatch{Data: *dataAsJson})
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return &fixture, nil
-}
-
-func toJsonB(result interface{}) (*pgtype.JSONB, error) {
-	var externalDataAsJson pgtype.JSONB
-	if err := externalDataAsJson.Set(result); err != nil {
-		return nil, err
-	}
-
-	return &externalDataAsJson, nil
+	return nil, fmt.Errorf("not implemented")
+	// TODO
+	//dataAsJson, err := toJsonB(data)
+	//if err != nil {
+	//	return nil, fmt.Errorf("failed to create jsonb data: %w", err)
+	//}
+	//
+	//fixture := ExternalMatch{ID: id}
+	//result := r.db.WithContext(ctx).Model(&fixture).Updates(ExternalMatch{Data: *dataAsJson})
+	//if result.Error != nil {
+	//	return nil, result.Error
+	//}
+	//
+	//return &fixture, nil
 }

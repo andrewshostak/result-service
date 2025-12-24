@@ -3,7 +3,6 @@ package errs
 import "errors"
 
 var (
-	ErrIncorrectFixtureStatus          = errors.New("incorrect fixture status")
 	ErrUnexpectedAPIFootballStatusCode = errors.New("unexpected status code received from api-football")
 	ErrUnexpectedFotmobStatusCode      = errors.New("unexpected status code received from fotmob")
 	ErrUnexpectedNotifierStatusCode    = errors.New("unexpected status code received from notifier")
@@ -30,6 +29,14 @@ type SubscriptionNotFoundError struct {
 }
 
 func (e SubscriptionNotFoundError) Error() string {
+	return e.Message
+}
+
+type CheckResultNotFoundError struct {
+	Message string
+}
+
+func (e CheckResultNotFoundError) Error() string {
 	return e.Message
 }
 

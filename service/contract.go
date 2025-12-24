@@ -26,18 +26,18 @@ type MatchRepository interface {
 
 type ExternalMatchRepository interface {
 	Create(ctx context.Context, match repository.ExternalMatch, data repository.Data) (*repository.ExternalMatch, error)
-	Save(ctx context.Context, match repository.ExternalMatch, data repository.Data) (*repository.ExternalMatch, error)
+	Save(ctx context.Context, id *uint, externalMatch repository.ExternalMatch) (*repository.ExternalMatch, error)
 	Update(ctx context.Context, id uint, data repository.Data) (*repository.ExternalMatch, error)
 }
 
 type CheckResultTaskRepository interface {
-	Create(ctx context.Context, name string, matchID uint) (*repository.CheckResultTask, error)
+	GetByMatchID(ctx context.Context, matchID uint) (*repository.CheckResultTask, error)
+	Create(ctx context.Context, checkResultTask repository.CheckResultTask) (*repository.CheckResultTask, error)
 	Update(ctx context.Context, id uint, checkResultTask repository.CheckResultTask) (*repository.CheckResultTask, error)
 }
 
 type FootballAPIClient interface {
 	SearchFixtures(ctx context.Context, search client.FixtureSearch) (*client.FixturesResponse, error)
-	SearchLeagues(ctx context.Context, season uint) (*client.LeaguesResponse, error)
 	SearchTeams(ctx context.Context, search client.TeamsSearch) (*client.TeamsResponse, error)
 }
 
@@ -46,7 +46,7 @@ type FotmobClient interface {
 }
 
 type TaskClient interface {
-	ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*string, error)
+	ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*client.Task, error)
 	ScheduleSubscriberNotification(ctx context.Context, subscriptionID uint) error
 	DeleteResultCheckTask(ctx context.Context, taskName string) error
 }
