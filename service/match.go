@@ -180,7 +180,7 @@ func (s *MatchService) findExternalMatch(externalHomeTeamID, externalAwayTeamID 
 		}
 	}
 
-	return nil, errors.New("match not found in external")
+	return nil, errors.New("match not found")
 }
 
 func (s *MatchService) isResultCheckSchedulingAllowed(externalMatch ExternalMatch) bool {
