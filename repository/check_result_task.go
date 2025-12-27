@@ -32,6 +32,10 @@ func (r *CheckResultTaskRepository) GetByMatchID(ctx context.Context, matchID ui
 	return &task, nil
 }
 
+func (r *CheckResultTaskRepository) Save(ctx context.Context, matchID *uint, name *string, checkResultTask CheckResultTask) (*CheckResultTask, error) {
+	panic("implement me")
+}
+
 func (r *CheckResultTaskRepository) Create(ctx context.Context, checkResultTask CheckResultTask) (*CheckResultTask, error) {
 	result := r.db.WithContext(ctx).Create(&checkResultTask)
 	if result.Error != nil {

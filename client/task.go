@@ -37,6 +37,10 @@ func NewClient(config config.GoogleCloud, client *cloudtasks.Client) *TaskClient
 	return &TaskClient{config: config, client: client}
 }
 
+func (c *TaskClient) GetResultCheckTask(ctx context.Context, matchID uint, attempt uint) (*Task, error) {
+	panic("implement me")
+}
+
 func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*Task, error) {
 	targetURL := fmt.Sprintf("%s%s", c.config.TasksBaseURL, checkResultPath)
 

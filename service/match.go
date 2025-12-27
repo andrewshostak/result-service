@@ -113,7 +113,7 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 	s.logger.Info().Uint("match_id", savedMatch.ID).Msg("match saved")
 
 	externalMatchID := uint(externalMatch.ID)
-	savedExternalMatch, err := s.externalMatchRepository.Save(ctx, &externalMatchID, toRepositoryExternalMatch(externalMatchID, *externalMatch))
+	savedExternalMatch, err := s.externalMatchRepository.Save(ctx, &externalMatchID, toRepositoryExternalMatch(savedMatch.ID, *externalMatch))
 	if err != nil {
 		return 0, fmt.Errorf("failed to save external match with id %d and match id %d: %w", externalMatchID, savedMatch.ID, err)
 	}
@@ -122,24 +122,23 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 
 	match = fromRepositoryMatch(*savedMatch)
 
-	checkResultTask, err := s.checkResultTaskRepository.GetByMatchID(ctx, match.ID)
-	if err != nil && !errors.As(err, &errs.CheckResultNotFoundError{}) {
-		return 0, fmt.Errorf("failed to get check result task: %w", err)
-	}
-
-	if checkResultTask != nil {
-		return match.ID, nil
-	}
-
 	task, err := s.taskClient.ScheduleResultCheck(ctx, match.ID, 1, match.StartsAt.Add(s.config.FirstAttemptDelay))
-	if err != nil {
+	if err != nil && !errors.As(err, &errs.ClientTaskAlreadyExistsError{}) {
 		return 0, fmt.Errorf("failed to schedule result check task: %w", err)
 	}
 
+	if errors.As(err, &errs.ClientTaskAlreadyExistsError{}) {
+		foundTask, errGetTask := s.taskClient.GetResultCheckTask(ctx, match.ID, 1)
+		if errGetTask != nil {
+			return 0, fmt.Errorf("failed to get result check task: %w", errGetTask)
+		}
+		task = foundTask
+	}
+
 	scheduledTask := fromClientTask(*task)
-	_, err = s.checkResultTaskRepository.Create(ctx, toRepositoryCheckResultTask(match.ID, scheduledTask))
-	if err != nil && !errors.As(err, &errs.CheckResultTaskAlreadyExistsError{}) {
-		return 0, fmt.Errorf("failed to create result-check task: %w", err)
+	_, err = s.checkResultTaskRepository.Save(ctx, &match.ID, &scheduledTask.Name, toRepositoryCheckResultTask(match.ID, scheduledTask))
+	if err != nil {
+		return 0, fmt.Errorf("failed to save result-check task: %w", err)
 	}
 
 	s.logger.Info().
@@ -149,12 +148,12 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		Str("alias_away", aliasAway.Alias).
 		Msg("match result acquiring scheduled")
 
-	_, err = s.matchRepository.Update(ctx, savedMatch.ID, string(Scheduled))
+	_, err = s.matchRepository.Update(ctx, match.ID, string(Scheduled))
 	if err != nil {
 		return 0, fmt.Errorf("failed to set match status to %s: %w", Scheduled, err)
 	}
 
-	return savedMatch.ID, nil
+	return match.ID, nil
 }
 
 func (s *MatchService) findAlias(ctx context.Context, alias string) (*Alias, error) {
@@ -184,7 +183,7 @@ func (s *MatchService) findExternalMatch(externalHomeTeamID, externalAwayTeamID 
 }
 
 func (s *MatchService) isResultCheckSchedulingAllowed(externalMatch ExternalMatch) bool {
-	return externalMatch.Status != StatusMatchNotStarted && externalMatch.Status != StatusMatchInProgress
+	return externalMatch.Status == StatusMatchNotStarted || externalMatch.Status == StatusMatchInProgress
 }
 
 func (s *MatchService) isResultCheckScheduled(match Match) bool {

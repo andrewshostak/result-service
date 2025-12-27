@@ -74,6 +74,36 @@ func (_m *CheckResultTaskRepository) GetByMatchID(ctx context.Context, matchID u
 	return r0, r1
 }
 
+// Save provides a mock function with given fields: ctx, matchID, name, checkResultTask
+func (_m *CheckResultTaskRepository) Save(ctx context.Context, matchID *uint, name *string, checkResultTask repository.CheckResultTask) (*repository.CheckResultTask, error) {
+	ret := _m.Called(ctx, matchID, name, checkResultTask)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Save")
+	}
+
+	var r0 *repository.CheckResultTask
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *uint, *string, repository.CheckResultTask) (*repository.CheckResultTask, error)); ok {
+		return rf(ctx, matchID, name, checkResultTask)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *uint, *string, repository.CheckResultTask) *repository.CheckResultTask); ok {
+		r0 = rf(ctx, matchID, name, checkResultTask)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*repository.CheckResultTask)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *uint, *string, repository.CheckResultTask) error); ok {
+		r1 = rf(ctx, matchID, name, checkResultTask)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Update provides a mock function with given fields: ctx, id, checkResultTask
 func (_m *CheckResultTaskRepository) Update(ctx context.Context, id uint, checkResultTask repository.CheckResultTask) (*repository.CheckResultTask, error) {
 	ret := _m.Called(ctx, id, checkResultTask)

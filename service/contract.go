@@ -33,6 +33,7 @@ type ExternalMatchRepository interface {
 type CheckResultTaskRepository interface {
 	GetByMatchID(ctx context.Context, matchID uint) (*repository.CheckResultTask, error)
 	Create(ctx context.Context, checkResultTask repository.CheckResultTask) (*repository.CheckResultTask, error)
+	Save(ctx context.Context, matchID *uint, name *string, checkResultTask repository.CheckResultTask) (*repository.CheckResultTask, error)
 	Update(ctx context.Context, id uint, checkResultTask repository.CheckResultTask) (*repository.CheckResultTask, error)
 }
 
@@ -46,6 +47,7 @@ type FotmobClient interface {
 }
 
 type TaskClient interface {
+	GetResultCheckTask(ctx context.Context, matchID uint, attempt uint) (*client.Task, error)
 	ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*client.Task, error)
 	ScheduleSubscriberNotification(ctx context.Context, subscriptionID uint) error
 	DeleteResultCheckTask(ctx context.Context, taskName string) error
