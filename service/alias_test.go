@@ -52,11 +52,13 @@ func TestAliasService_Search(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		s := service.NewAliasService(tt.aliasRepository(t), logger)
-		actual, err := s.Search(ctx, alias)
-		assert.Equal(t, tt.result, actual)
-		if tt.expectedErr != nil {
-			assert.EqualError(t, err, tt.expectedErr.Error())
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			s := service.NewAliasService(tt.aliasRepository(t), logger)
+			actual, err := s.Search(ctx, alias)
+			assert.Equal(t, tt.result, actual)
+			if tt.expectedErr != nil {
+				assert.EqualError(t, err, tt.expectedErr.Error())
+			}
+		})
 	}
 }
