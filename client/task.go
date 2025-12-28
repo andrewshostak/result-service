@@ -38,7 +38,17 @@ func NewClient(config config.GoogleCloud, client *cloudtasks.Client) *TaskClient
 }
 
 func (c *TaskClient) GetResultCheckTask(ctx context.Context, matchID uint, attempt uint) (*Task, error) {
-	panic("implement me")
+	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", c.config.ProjectID, c.config.Region, checkResultQueue)
+	name := fmt.Sprintf("%s/tasks/match-%d-attempt-%d", queuePath, matchID, attempt)
+
+	req := &taskspb.GetTaskRequest{Name: name}
+
+	task, err := c.client.GetTask(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get result-check task: %w", err)
+	}
+
+	return &Task{Name: task.Name, ExecuteAt: task.ScheduleTime.AsTime()}, nil
 }
 
 func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*Task, error) {

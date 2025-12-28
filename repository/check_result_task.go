@@ -8,6 +8,7 @@ import (
 
 	"github.com/andrewshostak/result-service/errs"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type CheckResultTaskRepository struct {
@@ -32,8 +33,18 @@ func (r *CheckResultTaskRepository) GetByMatchID(ctx context.Context, matchID ui
 	return &task, nil
 }
 
-func (r *CheckResultTaskRepository) Save(ctx context.Context, matchID *uint, name *string, checkResultTask CheckResultTask) (*CheckResultTask, error) {
-	panic("implement me")
+func (r *CheckResultTaskRepository) Save(ctx context.Context, checkResultTask CheckResultTask) (*CheckResultTask, error) {
+	task := checkResultTask
+	result := r.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "match_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"name", "attempt_number", "execute_at"}),
+	}).Create(&task)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &task, nil
 }
 
 func (r *CheckResultTaskRepository) Create(ctx context.Context, checkResultTask CheckResultTask) (*CheckResultTask, error) {

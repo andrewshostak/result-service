@@ -617,7 +617,7 @@ func TestMatchService_Create(t *testing.T) {
 			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
 				t.Helper()
 				m := mocks.NewCheckResultTaskRepository(t)
-				m.On("Save", ctx, &matchID, &createdTaskName, repository.CheckResultTask{
+				m.On("Save", ctx, repository.CheckResultTask{
 					MatchID:   matchID,
 					Name:      createdTaskName,
 					ExecuteAt: startsAt.Add(pollingFirstAttemptDelay),
@@ -685,7 +685,7 @@ func TestMatchService_Create(t *testing.T) {
 			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
 				t.Helper()
 				m := mocks.NewCheckResultTaskRepository(t)
-				m.On("Save", ctx, &matchID, &createdTaskName, repository.CheckResultTask{
+				m.On("Save", ctx, repository.CheckResultTask{
 					MatchID:   matchID,
 					Name:      createdTaskName,
 					ExecuteAt: startsAt.Add(pollingFirstAttemptDelay),
@@ -755,7 +755,78 @@ func TestMatchService_Create(t *testing.T) {
 			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
 				t.Helper()
 				m := mocks.NewCheckResultTaskRepository(t)
-				m.On("Save", ctx, &matchID, &createdTaskName, repository.CheckResultTask{
+				m.On("Save", ctx, repository.CheckResultTask{
+					MatchID:   matchID,
+					Name:      createdTaskName,
+					ExecuteAt: startsAt.Add(pollingFirstAttemptDelay),
+				}).Return(&repository.CheckResultTask{}, nil).Once()
+				return m
+			},
+			result: matchID,
+		},
+		{
+			name:  "it successfully creates match and schedules result check - when task already exists",
+			input: createMatchRequest,
+			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
+				t.Helper()
+				m := mocks.NewAliasRepository(t)
+				m.On("Find", ctx, aliasHomeName).Return(&aliasHome, nil).Once()
+				m.On("Find", ctx, aliasAwayName).Return(&aliasAway, nil).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				savedMatch := fakeRepositoryMatch(func(r *repository.Match) {
+					r.ID = matchID
+					r.HomeTeamID = aliasHome.TeamID
+					r.AwayTeamID = aliasAway.TeamID
+					r.StartsAt = startsAt.UTC()
+					r.ResultStatus = string(service.NotScheduled)
+				})
+				updatedMatch := savedMatch
+				updatedMatch.ResultStatus = string(service.Scheduled)
+				m.On("One", ctx, repository.Match{
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
+				}).Return(nil, fmt.Errorf("match not found: %w", errs.MatchNotFoundError{Message: "not found"})).Once()
+				m.On("Save", ctx, (*uint)(nil), repository.Match{
+					HomeTeamID:   aliasHome.TeamID,
+					AwayTeamID:   aliasAway.TeamID,
+					StartsAt:     startsAt.UTC(),
+					ResultStatus: string(service.NotScheduled),
+				}).Return(&savedMatch, nil).Once()
+				m.On("Update", ctx, matchID, string(service.Scheduled)).Return(&updatedMatch, nil).Once()
+				return m
+			},
+			fotmobClient: func(t *testing.T) *mocks.FotmobClient {
+				t.Helper()
+				m := mocks.NewFotmobClient(t)
+				m.On("GetMatchesByDate", ctx, startsAt.UTC()).Return(&client.MatchesResponse{
+					Leagues: []client.LeagueFotmob{
+						{Matches: []client.MatchFotmob{externalMatch, fakeClientMatch()}},
+					},
+				}, nil).Once()
+				return m
+			},
+			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
+				t.Helper()
+				m := mocks.NewExternalMatchRepository(t)
+				m.On("Save", ctx, &externalMatchID, externalMatchSaved).Return(&repository.ExternalMatch{ID: externalMatchID}, nil).Once()
+				return m
+			},
+			taskClient: func(t *testing.T) *mocks.TaskClient {
+				t.Helper()
+				m := mocks.NewTaskClient(t)
+				m.On("ScheduleResultCheck", ctx, matchID, uint(1), startsAt.Add(pollingFirstAttemptDelay)).Return(nil, fmt.Errorf("already exists: %w", errs.ClientTaskAlreadyExistsError{Message: "task exists"})).Once()
+				m.On("GetResultCheckTask", ctx, matchID, uint(1)).Return(&clientTask, nil).Once()
+				return m
+			},
+			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
+				t.Helper()
+				m := mocks.NewCheckResultTaskRepository(t)
+				m.On("Save", ctx, repository.CheckResultTask{
 					MatchID:   matchID,
 					Name:      createdTaskName,
 					ExecuteAt: startsAt.Add(pollingFirstAttemptDelay),

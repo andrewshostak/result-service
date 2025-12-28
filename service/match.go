@@ -136,7 +136,7 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 	}
 
 	scheduledTask := fromClientTask(*task)
-	_, err = s.checkResultTaskRepository.Save(ctx, &match.ID, &scheduledTask.Name, toRepositoryCheckResultTask(match.ID, scheduledTask))
+	_, err = s.checkResultTaskRepository.Save(ctx, toRepositoryCheckResultTask(match.ID, scheduledTask))
 	if err != nil {
 		return 0, fmt.Errorf("failed to save result-check task: %w", err)
 	}
