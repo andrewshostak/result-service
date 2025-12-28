@@ -44,9 +44,9 @@ func (_m *AliasRepository) Find(ctx context.Context, alias string) (*repository.
 	return r0, r1
 }
 
-// SaveInTrx provides a mock function with given fields: ctx, alias, footballAPITeamID
-func (_m *AliasRepository) SaveInTrx(ctx context.Context, alias string, footballAPITeamID uint) error {
-	ret := _m.Called(ctx, alias, footballAPITeamID)
+// SaveInTrx provides a mock function with given fields: ctx, alias, externalTeamID
+func (_m *AliasRepository) SaveInTrx(ctx context.Context, alias string, externalTeamID uint) error {
+	ret := _m.Called(ctx, alias, externalTeamID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveInTrx")
@@ -54,7 +54,7 @@ func (_m *AliasRepository) SaveInTrx(ctx context.Context, alias string, football
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, string, uint) error); ok {
-		r0 = rf(ctx, alias, footballAPITeamID)
+		r0 = rf(ctx, alias, externalTeamID)
 	} else {
 		r0 = ret.Error(0)
 	}

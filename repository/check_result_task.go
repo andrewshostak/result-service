@@ -47,29 +47,6 @@ func (r *CheckResultTaskRepository) Save(ctx context.Context, checkResultTask Ch
 	return &task, nil
 }
 
-func (r *CheckResultTaskRepository) Create(ctx context.Context, checkResultTask CheckResultTask) (*CheckResultTask, error) {
-	result := r.db.WithContext(ctx).Create(&checkResultTask)
-	if result.Error != nil {
-		if isDuplicateError(result.Error) {
-			return nil, fmt.Errorf("check result task already exists: %w", errs.CheckResultTaskAlreadyExistsError{Message: result.Error.Error()})
-		}
-
-		return nil, fmt.Errorf("failed to create check result task: %w", result.Error)
-	}
-
-	return &checkResultTask, nil
-}
-
-func (r *CheckResultTaskRepository) Update(ctx context.Context, id uint, checkResultTask CheckResultTask) (*CheckResultTask, error) {
-	task := CheckResultTask{ID: id}
-	result := r.db.WithContext(ctx).Model(&task).Updates(checkResultTask)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return &task, nil
-}
-
 func isDuplicateError(err error) bool {
 	if errors.Is(err, gorm.ErrDuplicatedKey) {
 		return true

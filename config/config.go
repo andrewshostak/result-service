@@ -30,10 +30,7 @@ type App struct {
 }
 
 type ExternalAPI struct {
-	// TODO: remove football-api keys
-	RapidAPIKey        string `env:"RAPID_API_KEY,required"`
-	FootballAPIBaseURL string `env:"FOOTBALL_API_BASE_URL" envDefault:"https://api-football-v1.p.rapidapi.com"`
-	FotmobAPIBaseURL   string `env:"FOOTMOB_API_BASE_URL" envDefault:"https://www.fotmob.com"`
+	FotmobAPIBaseURL string `env:"FOOTMOB_API_BASE_URL" envDefault:"https://www.fotmob.com"`
 }
 
 type ResultCheck struct {

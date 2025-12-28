@@ -385,10 +385,11 @@ func toRepositoryMatch(homeTeamID, awayTeamID uint, startsAt time.Time, resultSt
 	}
 }
 
-func toRepositoryCheckResultTask(matchID uint, task ClientTask) repository.CheckResultTask {
+func toRepositoryCheckResultTask(matchID uint, attemptNumber uint, task ClientTask) repository.CheckResultTask {
 	return repository.CheckResultTask{
-		MatchID:   matchID,
-		Name:      task.Name,
-		ExecuteAt: task.ExecuteAt,
+		MatchID:       matchID,
+		Name:          task.Name,
+		ExecuteAt:     task.ExecuteAt,
+		AttemptNumber: attemptNumber,
 	}
 }

@@ -283,10 +283,11 @@ To back-fill aliases data a separate command is created. The command description
     - [X] Update command logic to accept date, update leagues, update mapping
   - [ ] Modify Match creation flow 
     - [X] Update football_api_fixtures table: rename to external_matches, add score_home, score_away
-    - [ ] Update match creation endpoint
+    - [X] Update match creation endpoint
+    - [X] Update result checker service
+    - [ ] Update subscription creation endpoint
+    - [ ] Update other endpoints if needed
     - [ ] Delete football_api_team table and its references
 - [ ] Include signed requests & validate google-auth middleware
 - [ ] Find a solution for same-time results (i.e. do not process tasks concurrently)
 - [ ] Add created_at / updated_at columns
-
-// TODO: use case what happens if match sent starting time is different from match football api starting time

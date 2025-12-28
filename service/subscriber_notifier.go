@@ -43,7 +43,7 @@ func (s *SubscriberNotifierService) NotifySubscriber(ctx context.Context, subscr
 	m := fromRepositoryMatch(*match)
 
 	if m.ExternalMatch == nil {
-		return fmt.Errorf("no football api fixtures found for the match")
+		return fmt.Errorf("no external match found for the match")
 	}
 
 	err = s.notifierClient.Notify(ctx, client.Notification{

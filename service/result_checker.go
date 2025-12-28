@@ -9,120 +9,125 @@ import (
 	"github.com/andrewshostak/result-service/repository"
 )
 
-var matchFinishedStatuses = []string{"FT", "AET", "PEN"}
-var matchCancellResultStatuses = []string{"TBD", "NS", "PST", "CANC", "ABD", "AWD", "WO"}
-var matchInPlayStatuses = []string{"LIVE", "1H", "HT", "2H", "ET", "BT", "P", "SUSP", "INT"}
-
 type ResultCheckerService struct {
-	config                       config.ResultCheck
-	matchRepository              MatchRepository
-	footballAPIFixtureRepository ExternalMatchRepository
-	subscriptionRepository       SubscriptionRepository
-	checkResultTaskRepository    CheckResultTaskRepository
-	footballAPIClient            FootballAPIClient
-	taskClient                   TaskClient
-	logger                       Logger
+	config                    config.ResultCheck
+	matchRepository           MatchRepository
+	externalMatchRepository   ExternalMatchRepository
+	subscriptionRepository    SubscriptionRepository
+	checkResultTaskRepository CheckResultTaskRepository
+	fotmobClient              FotmobClient
+	taskClient                TaskClient
+	logger                    Logger
 }
 
 func NewResultCheckerService(
 	config config.ResultCheck,
 	matchRepository MatchRepository,
-	footballAPIFixtureRepository ExternalMatchRepository,
+	externalMatchRepository ExternalMatchRepository,
 	subscriptionRepository SubscriptionRepository,
 	checkResultTaskRepository CheckResultTaskRepository,
 	taskClient TaskClient,
-	footballAPIClient FootballAPIClient,
+	fotmobClient FotmobClient,
 	logger Logger,
 ) *ResultCheckerService {
 	return &ResultCheckerService{
-		config:                       config,
-		matchRepository:              matchRepository,
-		footballAPIFixtureRepository: footballAPIFixtureRepository,
-		subscriptionRepository:       subscriptionRepository,
-		checkResultTaskRepository:    checkResultTaskRepository,
-		taskClient:                   taskClient,
-		footballAPIClient:            footballAPIClient,
-		logger:                       logger,
+		config:                    config,
+		matchRepository:           matchRepository,
+		externalMatchRepository:   externalMatchRepository,
+		subscriptionRepository:    subscriptionRepository,
+		checkResultTaskRepository: checkResultTaskRepository,
+		taskClient:                taskClient,
+		fotmobClient:              fotmobClient,
+		logger:                    logger,
 	}
 }
 
 func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) error {
-	//	m, err := s.matchRepository.One(ctx, repository.Match{ID: matchID})
-	//	if err != nil {
-	//		return fmt.Errorf("failed to get match by id: %w", err)
-	//	}
-	//
-	//	match, err := fromRepositoryMatch(*m)
-	//	if err != nil {
-	//		return fmt.Errorf("failed to map from repository match: %w", err)
-	//	}
-	//
-	//	if !s.isScheduled(match) {
-	//		s.logger.Error().
-	//			Uint("match_id", matchID).
-	//			Msg(fmt.Sprintf("expected result status to be %s, actual result status is %s", Scheduled, match.ResultStatus))
-	//		return nil
-	//	}
-	//
-	//	if match.ExternalMatch == nil {
-	//		s.logger.Error().
-	//			Uint("match_id", matchID).
-	//			Msg("no football api fixtures found for the match")
-	//		return errors.New("match doesn't have any football api fixtures")
-	//	}
-	//
-	//	response, err := s.footballAPIClient.SearchFixtures(ctx, client.FixtureSearch{ID: &match.ExternalMatch.ID})
-	//	if err != nil {
-	//		s.logger.Error().Uint("match_id", matchID).Err(err)
-	//		if errUpdate := s.updateMatchResultStatus(ctx, match.ID, APIError); errUpdate != nil {
-	//			s.logger.Error().Uint("match_id", matchID).Err(errUpdate)
-	//		}
-	//
-	//		return fmt.Errorf("failed to get fixture from football api: %w", err)
-	//	}
-	//
-	//	if len(response.Response) < 1 {
-	//		if errUpdate := s.updateMatchResultStatus(ctx, match.ID, APIError); errUpdate != nil {
-	//			s.logger.Error().Uint("match_id", matchID).Err(errors.New("fixture not found"))
-	//		}
-	//		return fmt.Errorf("fixture with id %d not found", match.ExternalMatch.ID)
-	//	}
-	//
-	//	fixture := fromClientFootballAPIFixture(response.Response[0])
-	//	_, err = s.footballAPIFixtureRepository.Update(ctx, match.ExternalMatch.ID, toRepositoryExternalMatch(fixture))
-	//	if err != nil {
-	//		s.logger.Error().
-	//			Uint("match_id", matchID).
-	//			Err(err)
-	//		return fmt.Errorf("failed to update fixture: %w", err)
-	//	}
-	//
-	//	if slices.Contains(matchCancellResultStatuses, fixture.Fixture.Status.Short) {
-	//		return s.handleCancelledFixture(ctx, matchID)
-	//	}
-	//
-	//	if slices.Contains(matchInPlayStatuses, fixture.Fixture.Status.Short) {
-	//		return s.handleInPlayFixture(ctx, *match)
-	//	}
-	//
-	//	if slices.Contains(matchFinishedStatuses, fixture.Fixture.Status.Short) {
-	//		return s.handleFinishedFixture(ctx, match.ID)
-	//	}
-	//
-	//	return errors.New(fmt.Sprintf("unexpected fixture status received: %s - %s", fixture.Fixture.Status.Short, fixture.Fixture.Status.Long))
-	//}
-	//
-	//func (s *ResultCheckerService) handleCancelledFixture(ctx context.Context, matchID uint) error {
-	//	if err := s.updateMatchResultStatus(ctx, matchID, Cancelled); err != nil {
-	//		s.logger.Error().Uint("match_id", matchID).Err(err)
-	//		return fmt.Errorf("failed to handle cancelled fixture: %w", err)
-	//	}
-	//
-	//	return nil
-	panic("not implemented")
+	m, err := s.matchRepository.One(ctx, repository.Match{ID: matchID})
+	if err != nil {
+		return fmt.Errorf("failed to get match by id: %w", err)
+	}
+
+	match := fromRepositoryMatch(*m)
+
+	if !s.isScheduled(match) {
+		s.logger.Error().
+			Uint("match_id", matchID).
+			Msg(fmt.Sprintf("expected result status to be %s, actual result status is %s", Scheduled, match.ResultStatus))
+		return nil
+	}
+
+	if match.ExternalMatch == nil {
+		s.logger.Error().
+			Uint("match_id", matchID).
+			Msg("no external match found for the match")
+		return errors.New("match doesn't have external match")
+	}
+
+	matchesByDate, err := s.fotmobClient.GetMatchesByDate(ctx, match.StartsAt)
+	if err != nil {
+		s.logger.Error().Uint("match_id", matchID).Err(err)
+		if errUpdate := s.updateMatchResultStatus(ctx, match.ID, APIError); errUpdate != nil {
+			s.logger.Error().Uint("match_id", matchID).Err(errUpdate)
+		}
+
+		return fmt.Errorf("failed to get matches from external api: %w", err)
+	}
+
+	leagues, err := fromClientFotmobLeagues(*matchesByDate)
+	if err != nil {
+		return fmt.Errorf("failed to map from external api matches: %w", err)
+	}
+
+	externalMatch, err := s.findExternalMatch(match.ExternalMatch.ID, leagues)
+	if err != nil {
+		return fmt.Errorf("external match with id %d is not found: %w", match.ExternalMatch.ID, err)
+	}
+
+	_, err = s.externalMatchRepository.Save(ctx, &match.ExternalMatch.ID, toRepositoryExternalMatch(match.ID, *externalMatch))
+	if err != nil {
+		s.logger.Error().
+			Uint("match_id", matchID).
+			Err(err)
+		return fmt.Errorf("failed to update external math: %w", err)
+	}
+
+	switch externalMatch.Status {
+	case StatusMatchNotStarted:
+		return errors.New("external match status is not started")
+	case StatusMatchCancelled:
+		return s.handleCancelledMatch(ctx, matchID)
+	case StatusMatchInProgress:
+		return s.handleInPlayMatch(ctx, *match)
+	case StatusMatchFinished:
+		return s.handleFinishedMatch(ctx, match.ID)
+	default:
+		return errors.New(fmt.Sprintf("unexpected external match status received: %s", externalMatch.Status))
+	}
 }
 
-func (s *ResultCheckerService) handleInPlayFixture(ctx context.Context, match Match) error {
+func (s *ResultCheckerService) findExternalMatch(externalID uint, leagues []ExternalLeague) (*ExternalMatch, error) {
+	for _, matches := range leagues {
+		for _, match := range matches.Matches {
+			if match.ID == int(externalID) {
+				return &match, nil
+			}
+		}
+	}
+
+	return nil, errors.New("match not found")
+}
+
+func (s *ResultCheckerService) handleCancelledMatch(ctx context.Context, matchID uint) error {
+	if err := s.updateMatchResultStatus(ctx, matchID, Cancelled); err != nil {
+		s.logger.Error().Uint("match_id", matchID).Err(err)
+		return fmt.Errorf("failed to update cancelled match: %w", err)
+	}
+
+	return nil
+}
+
+func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match Match) error {
 	if match.CheckResultTask == nil {
 		return errors.New("match doesn't have a result check task")
 	}
@@ -132,7 +137,9 @@ func (s *ResultCheckerService) handleInPlayFixture(ctx context.Context, match Ma
 		scheduleAt.Add(s.config.Interval)
 	}
 
-	name, err := s.taskClient.ScheduleResultCheck(ctx, match.ID, match.CheckResultTask.AttemptNumber, scheduleAt)
+	attemptNumber := match.CheckResultTask.AttemptNumber + 1
+
+	task, err := s.taskClient.ScheduleResultCheck(ctx, match.ID, attemptNumber, scheduleAt)
 	if err != nil {
 		if errUpdate := s.updateMatchResultStatus(ctx, match.ID, SchedulingError); errUpdate != nil {
 			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate)
@@ -141,19 +148,18 @@ func (s *ResultCheckerService) handleInPlayFixture(ctx context.Context, match Ma
 		return fmt.Errorf("failed to re-schedule result check task: %w", err)
 	}
 
-	if _, err := s.checkResultTaskRepository.Update(ctx, match.CheckResultTask.ID, repository.CheckResultTask{
-		Name:          name.Name,
-		AttemptNumber: match.CheckResultTask.AttemptNumber + 1,
-	}); err != nil {
+	scheduledTask := fromClientTask(*task)
+
+	if _, err := s.checkResultTaskRepository.Save(ctx, toRepositoryCheckResultTask(match.ID, attemptNumber, scheduledTask)); err != nil {
 		return fmt.Errorf("failed to update result check task: %w", err)
 	}
 
 	return nil
 }
 
-func (s *ResultCheckerService) handleFinishedFixture(ctx context.Context, matchID uint) error {
+func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID uint) error {
 	if err := s.updateMatchResultStatus(ctx, matchID, Received); err != nil {
-		return fmt.Errorf("failed to handle finished fixture: %w", err)
+		return fmt.Errorf("failed to handle finished match: %w", err)
 	}
 
 	subs, err := s.subscriptionRepository.ListByMatchAndStatus(ctx, matchID, string(PendingSub))

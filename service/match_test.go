@@ -289,7 +289,7 @@ func TestMatchService_Create(t *testing.T) {
 				}, nil).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("match with home team id %d and away team id %d is not found: %w", aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, errors.New("match not found")),
+			expectedErr: fmt.Errorf("external match with home team id %d and away team id %d is not found: %w", aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, errors.New("match not found")),
 		},
 		{
 			name:  "it returns error when result scheduling not allowed",
@@ -618,9 +618,10 @@ func TestMatchService_Create(t *testing.T) {
 				t.Helper()
 				m := mocks.NewCheckResultTaskRepository(t)
 				m.On("Save", ctx, repository.CheckResultTask{
-					MatchID:   matchID,
-					Name:      createdTaskName,
-					ExecuteAt: startsAt.Add(pollingFirstAttemptDelay),
+					MatchID:       matchID,
+					Name:          createdTaskName,
+					ExecuteAt:     startsAt.Add(pollingFirstAttemptDelay),
+					AttemptNumber: 1,
 				}).Return(nil, errUnexpected).Once()
 				return m
 			},
@@ -686,9 +687,10 @@ func TestMatchService_Create(t *testing.T) {
 				t.Helper()
 				m := mocks.NewCheckResultTaskRepository(t)
 				m.On("Save", ctx, repository.CheckResultTask{
-					MatchID:   matchID,
-					Name:      createdTaskName,
-					ExecuteAt: startsAt.Add(pollingFirstAttemptDelay),
+					MatchID:       matchID,
+					Name:          createdTaskName,
+					ExecuteAt:     startsAt.Add(pollingFirstAttemptDelay),
+					AttemptNumber: 1,
 				}).Return(&repository.CheckResultTask{}, nil).Once()
 				return m
 			},
@@ -756,9 +758,10 @@ func TestMatchService_Create(t *testing.T) {
 				t.Helper()
 				m := mocks.NewCheckResultTaskRepository(t)
 				m.On("Save", ctx, repository.CheckResultTask{
-					MatchID:   matchID,
-					Name:      createdTaskName,
-					ExecuteAt: startsAt.Add(pollingFirstAttemptDelay),
+					MatchID:       matchID,
+					Name:          createdTaskName,
+					ExecuteAt:     startsAt.Add(pollingFirstAttemptDelay),
+					AttemptNumber: 1,
 				}).Return(&repository.CheckResultTask{}, nil).Once()
 				return m
 			},
@@ -827,9 +830,10 @@ func TestMatchService_Create(t *testing.T) {
 				t.Helper()
 				m := mocks.NewCheckResultTaskRepository(t)
 				m.On("Save", ctx, repository.CheckResultTask{
-					MatchID:   matchID,
-					Name:      createdTaskName,
-					ExecuteAt: startsAt.Add(pollingFirstAttemptDelay),
+					MatchID:       matchID,
+					Name:          createdTaskName,
+					ExecuteAt:     startsAt.Add(pollingFirstAttemptDelay),
+					AttemptNumber: 1,
 				}).Return(&repository.CheckResultTask{}, nil).Once()
 				return m
 			},

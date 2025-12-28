@@ -11,7 +11,7 @@ import (
 
 type AliasRepository interface {
 	Find(ctx context.Context, alias string) (*repository.Alias, error)
-	SaveInTrx(ctx context.Context, alias string, footballAPITeamID uint) error
+	SaveInTrx(ctx context.Context, alias string, externalTeamID uint) error
 	Search(ctx context.Context, alias string) ([]repository.Alias, error)
 }
 
@@ -32,14 +32,7 @@ type ExternalMatchRepository interface {
 
 type CheckResultTaskRepository interface {
 	GetByMatchID(ctx context.Context, matchID uint) (*repository.CheckResultTask, error)
-	Create(ctx context.Context, checkResultTask repository.CheckResultTask) (*repository.CheckResultTask, error)
 	Save(ctx context.Context, checkResultTask repository.CheckResultTask) (*repository.CheckResultTask, error)
-	Update(ctx context.Context, id uint, checkResultTask repository.CheckResultTask) (*repository.CheckResultTask, error)
-}
-
-type FootballAPIClient interface {
-	SearchFixtures(ctx context.Context, search client.FixtureSearch) (*client.FixturesResponse, error)
-	SearchTeams(ctx context.Context, search client.TeamsSearch) (*client.TeamsResponse, error)
 }
 
 type FotmobClient interface {

@@ -93,7 +93,7 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 
 	externalMatch, err := s.findExternalMatch(aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, leagues)
 	if err != nil {
-		return 0, fmt.Errorf("match with home team id %d and away team id %d is not found: %w", aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, err)
+		return 0, fmt.Errorf("external match with home team id %d and away team id %d is not found: %w", aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, err)
 	}
 
 	if !s.isResultCheckSchedulingAllowed(*externalMatch) {
@@ -136,7 +136,7 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 	}
 
 	scheduledTask := fromClientTask(*task)
-	_, err = s.checkResultTaskRepository.Save(ctx, toRepositoryCheckResultTask(match.ID, scheduledTask))
+	_, err = s.checkResultTaskRepository.Save(ctx, toRepositoryCheckResultTask(match.ID, 1, scheduledTask))
 	if err != nil {
 		return 0, fmt.Errorf("failed to save result-check task: %w", err)
 	}
