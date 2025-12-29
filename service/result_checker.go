@@ -133,8 +133,8 @@ func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match Matc
 	}
 
 	scheduleAt := match.StartsAt.Add(s.config.FirstAttemptDelay)
-	for i := uint(0); i <= match.CheckResultTask.AttemptNumber; i++ {
-		scheduleAt.Add(s.config.Interval)
+	for i := uint(0); i < match.CheckResultTask.AttemptNumber; i++ {
+		scheduleAt = scheduleAt.Add(s.config.Interval)
 	}
 
 	attemptNumber := match.CheckResultTask.AttemptNumber + 1

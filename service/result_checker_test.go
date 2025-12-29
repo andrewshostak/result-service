@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/andrewshostak/result-service/client"
 	"github.com/andrewshostak/result-service/config"
 	loggerinternal "github.com/andrewshostak/result-service/logger"
 	"github.com/andrewshostak/result-service/repository"
@@ -14,6 +15,7 @@ import (
 	"github.com/andrewshostak/result-service/service/mocks"
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestResultCheckerService_CheckResult(t *testing.T) {
@@ -23,6 +25,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 	ctx := context.Background()
 	unexpectedErr := errors.New("unexpected error")
 	matchID := uint(gofakeit.Uint8())
+	startsAt := time.Now().Add(2 * time.Hour)
 
 	tests := []struct {
 		name                      string
@@ -75,6 +78,139 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				return m
 			},
 			expectedErr: errors.New("match doesn't have external match"),
+		},
+		{
+			name:  "it returns error when GetMatchesByDate returns error and Update fails",
+			input: matchID,
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				externalMatchID := uint(gofakeit.Uint32())
+				scheduledMatch := fakeRepositoryMatch(func(r *repository.Match) {
+					r.ID = matchID
+					r.ResultStatus = string(service.Scheduled)
+					r.StartsAt = startsAt
+					r.ExternalMatch = &repository.ExternalMatch{
+						ID:      externalMatchID,
+						MatchID: matchID,
+					}
+				})
+				m.On("One", ctx, repository.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
+				m.On("Update", ctx, matchID, string(service.APIError)).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			fotmobClient: func(t *testing.T) *mocks.FotmobClient {
+				t.Helper()
+				m := mocks.NewFotmobClient(t)
+				m.On("GetMatchesByDate", ctx, startsAt).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to get matches from external api: %w", unexpectedErr),
+		},
+		{
+			name:  "it returns error when GetMatchesByDate returns error and Update succeeds",
+			input: matchID,
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				externalMatchID := uint(gofakeit.Uint32())
+				scheduledMatch := fakeRepositoryMatch(func(r *repository.Match) {
+					r.ID = matchID
+					r.ResultStatus = string(service.Scheduled)
+					r.StartsAt = startsAt
+					r.ExternalMatch = &repository.ExternalMatch{
+						ID:      externalMatchID,
+						MatchID: matchID,
+					}
+				})
+				updatedMatch := scheduledMatch
+				updatedMatch.ResultStatus = string(service.APIError)
+				m.On("One", ctx, repository.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
+				m.On("Update", ctx, matchID, string(service.APIError)).Return(&updatedMatch, nil).Once()
+				return m
+			},
+			fotmobClient: func(t *testing.T) *mocks.FotmobClient {
+				t.Helper()
+				m := mocks.NewFotmobClient(t)
+				m.On("GetMatchesByDate", ctx, startsAt).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to get matches from external api: %w", unexpectedErr),
+		},
+		{
+			name:  "it returns error when mapping fromClientFotmobLeagues returns error",
+			input: matchID,
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				externalMatchID := uint(gofakeit.Uint32())
+				scheduledMatch := fakeRepositoryMatch(func(r *repository.Match) {
+					r.ID = matchID
+					r.ResultStatus = string(service.Scheduled)
+					r.StartsAt = startsAt
+					r.ExternalMatch = &repository.ExternalMatch{
+						ID:      externalMatchID,
+						MatchID: matchID,
+					}
+				})
+				m.On("One", ctx, repository.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
+				return m
+			},
+			fotmobClient: func(t *testing.T) *mocks.FotmobClient {
+				t.Helper()
+				m := mocks.NewFotmobClient(t)
+				m.On("GetMatchesByDate", ctx, mock.Anything).Return(&client.MatchesResponse{
+					Leagues: []client.LeagueFotmob{
+						{
+							Matches: []client.MatchFotmob{
+								fakeClientMatch(func(r *client.MatchFotmob) {
+									r.Status = client.StatusFotmob{UTCTime: "invalid time"}
+								}),
+							},
+						},
+					},
+				}, nil).Once()
+				return m
+			},
+			expectedErr: errors.New("failed to map from external api matches: failed to map from client match: unable to parse match starting time invalid time"),
+		},
+		{
+			name:  "it returns error when findExternalMatch returns error because match not found",
+			input: matchID,
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				externalMatchID := uint(gofakeit.Uint32())
+				startsAt := time.Now().Add(2 * time.Hour)
+				scheduledMatch := fakeRepositoryMatch(func(r *repository.Match) {
+					r.ID = matchID
+					r.ResultStatus = string(service.Scheduled)
+					r.StartsAt = startsAt
+					r.ExternalMatch = &repository.ExternalMatch{
+						ID:      externalMatchID,
+						MatchID: matchID,
+					}
+				})
+				m.On("One", ctx, repository.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
+				return m
+			},
+			fotmobClient: func(t *testing.T) *mocks.FotmobClient {
+				t.Helper()
+				m := mocks.NewFotmobClient(t)
+				m.On("GetMatchesByDate", ctx, mock.Anything).Return(&client.MatchesResponse{
+					Leagues: []client.LeagueFotmob{
+						{
+							Matches: []client.MatchFotmob{
+								fakeClientMatch(func(r *client.MatchFotmob) {
+									r.ID = int(gofakeit.Uint32()) // Different ID
+								}),
+							},
+						},
+					},
+				}, nil).Once()
+				return m
+			},
+			expectedErr: errors.New("is not found: match not found"),
 		},
 	}
 
