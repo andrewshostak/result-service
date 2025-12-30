@@ -391,6 +391,40 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to re-schedule result check task: %w", unexpectedErr),
 		},
 		{
+			name:  "it returns error when external match status is in progress and task re-scheduling fails and match status update fails",
+			input: matchID,
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, repository.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
+				m.On("Update", ctx, matchID, string(service.SchedulingError)).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			fotmobClient: func(t *testing.T) *mocks.FotmobClient {
+				t.Helper()
+				m := mocks.NewFotmobClient(t)
+				m.On("GetMatchesByDate", ctx, startsAt).Return(&client.MatchesResponse{
+					Leagues: []client.LeagueFotmob{{Matches: []client.MatchFotmob{externalMatchClientInProgress}}},
+				}, nil).Once()
+				return m
+			},
+			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
+				t.Helper()
+				m := mocks.NewExternalMatchRepository(t)
+				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchInProgress).Return(&repository.ExternalMatch{}, nil).Once()
+				return m
+			},
+			taskClient: func(t *testing.T) *mocks.TaskClient {
+				t.Helper()
+				m := mocks.NewTaskClient(t)
+				m.On("ScheduleResultCheck", ctx, matchID, scheduledMatch.CheckResultTask.AttemptNumber+1, scheduledMatch.StartsAt.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
+					Return(nil, unexpectedErr).
+					Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to re-schedule result check task: %w", unexpectedErr),
+		},
+		{
 			name:  "it returns error when external match status is in progress and rescheduled task saving returns error",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
@@ -568,6 +602,44 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m := mocks.NewSubscriptionRepository(t)
 				m.On("ListByMatchAndStatus", ctx, matchID, string(service.PendingSub)).Return([]repository.Subscription{repositorySubscription}, nil).Once()
 				m.On("Update", ctx, repositorySubscription.ID, repository.Subscription{Status: string(service.SchedulingErrorSub)}).Return(nil).Once()
+				return m
+			},
+			taskClient: func(t *testing.T) *mocks.TaskClient {
+				t.Helper()
+				m := mocks.NewTaskClient(t)
+				m.On("ScheduleSubscriberNotification", ctx, repositorySubscription.ID).Return(unexpectedErr).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to schedule subscriber notification: %w", unexpectedErr),
+		},
+		{
+			name:  "it returns error when external match status is finished, task client fails and subscription update fails",
+			input: matchID,
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, repository.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
+				return m
+			},
+			fotmobClient: func(t *testing.T) *mocks.FotmobClient {
+				t.Helper()
+				m := mocks.NewFotmobClient(t)
+				m.On("GetMatchesByDate", ctx, startsAt).Return(&client.MatchesResponse{
+					Leagues: []client.LeagueFotmob{{Matches: []client.MatchFotmob{externalMatchClientFinished}}},
+				}, nil).Once()
+				return m
+			},
+			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
+				t.Helper()
+				m := mocks.NewExternalMatchRepository(t)
+				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(&repository.ExternalMatch{}, nil).Once()
+				return m
+			},
+			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
+				t.Helper()
+				m := mocks.NewSubscriptionRepository(t)
+				m.On("ListByMatchAndStatus", ctx, matchID, string(service.PendingSub)).Return([]repository.Subscription{repositorySubscription}, nil).Once()
+				m.On("Update", ctx, repositorySubscription.ID, repository.Subscription{Status: string(service.SchedulingErrorSub)}).Return(unexpectedErr).Once()
 				return m
 			},
 			taskClient: func(t *testing.T) *mocks.TaskClient {
