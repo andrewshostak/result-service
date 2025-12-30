@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/andrewshostak/result-service/config"
+	"github.com/andrewshostak/result-service/errs"
 	"github.com/andrewshostak/result-service/repository"
 )
 
@@ -157,19 +158,12 @@ func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match Matc
 }
 
 func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID uint) error {
-	if err := s.updateMatchResultStatus(ctx, matchID, Received); err != nil {
-		return fmt.Errorf("failed to handle finished match: %w", err)
-	}
-
 	subs, err := s.subscriptionRepository.ListByMatchAndStatus(ctx, matchID, string(PendingSub))
 	if err != nil {
 		return fmt.Errorf("failed to get subscriptions: %w", err)
 	}
 
-	subscriptions, err := fromRepositorySubscriptions(subs)
-	if err != nil {
-		return fmt.Errorf("failed to map from repository subscriptions: %w", err)
-	}
+	subscriptions := fromRepositorySubscriptions(subs)
 
 	if len(subscriptions) == 0 {
 		s.logger.Error().Uint("match_id", matchID).Msg("no pending subscriptions found for the match")
@@ -177,7 +171,7 @@ func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID 
 
 	for _, subscription := range subscriptions {
 		err := s.taskClient.ScheduleSubscriberNotification(ctx, subscription.ID)
-		if err != nil {
+		if err != nil && !errors.As(err, &errs.ClientTaskAlreadyExistsError{}) {
 			errUpdate := s.subscriptionRepository.Update(ctx, subscription.ID, repository.Subscription{Status: string(SchedulingErrorSub)})
 			if errUpdate != nil {
 				s.logger.Error().Err(errUpdate).Uint("subscription_id", subscription.ID).Msg(fmt.Sprintf("failed to update subscription status to: %s", string(SchedulingErrorSub)))
@@ -185,6 +179,10 @@ func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID 
 
 			return fmt.Errorf("failed to schedule subscriber notification: %w", err)
 		}
+	}
+
+	if err := s.updateMatchResultStatus(ctx, matchID, Received); err != nil {
+		return fmt.Errorf("failed to handle finished match: %w", err)
 	}
 
 	return nil

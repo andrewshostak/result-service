@@ -327,14 +327,14 @@ func fromRepositoryAlias(a repository.Alias) Alias {
 	}
 }
 
-func fromRepositorySubscription(s repository.Subscription) (*Subscription, error) {
+func fromRepositorySubscription(s repository.Subscription) Subscription {
 	var match *Match
 
 	if s.Match != nil {
 		match = fromRepositoryMatch(*s.Match)
 	}
 
-	return &Subscription{
+	return Subscription{
 		ID:         s.ID,
 		Url:        s.Url,
 		MatchID:    s.MatchID,
@@ -343,20 +343,16 @@ func fromRepositorySubscription(s repository.Subscription) (*Subscription, error
 		Status:     SubscriptionStatus(s.Status),
 		NotifiedAt: s.NotifiedAt,
 		Match:      match,
-	}, nil
+	}
 }
 
-func fromRepositorySubscriptions(s []repository.Subscription) ([]Subscription, error) {
+func fromRepositorySubscriptions(s []repository.Subscription) []Subscription {
 	subscriptions := make([]Subscription, 0, len(s))
 	for i := range s {
-		repositorySubscription, err := fromRepositorySubscription(s[i])
-		if err != nil {
-			return nil, err
-		}
-		subscriptions = append(subscriptions, *repositorySubscription)
+		subscriptions = append(subscriptions, fromRepositorySubscription(s[i]))
 	}
 
-	return subscriptions, nil
+	return subscriptions
 }
 
 func fromRepositoryCheckResultTask(t repository.CheckResultTask) CheckResultTask {

@@ -83,10 +83,7 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 		return fmt.Errorf("failed to find a subscription: %w", err)
 	}
 
-	subscription, err := fromRepositorySubscription(*found)
-	if err != nil {
-		return fmt.Errorf("failed to map from repository subscription: %w", err)
-	}
+	subscription := fromRepositorySubscription(*found)
 
 	if subscription.Status != "pending" {
 		return errs.SubscriptionNotFoundError{Message: fmt.Sprintf("subscription %d has status %s instead of %s", subscription.ID, subscription.Status, "pending")}

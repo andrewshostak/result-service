@@ -135,6 +135,10 @@ func (c *TaskClient) ScheduleSubscriberNotification(ctx context.Context, subscri
 	}
 
 	if _, err := c.client.CreateTask(ctx, req); err != nil {
+		if c.isTaskAlreadyExistsError(err) {
+			return fmt.Errorf("subscriber-notification task already exists: %w", errs.ClientTaskAlreadyExistsError{Message: err.Error()})
+		}
+
 		return fmt.Errorf("failed to create subscriber-notification task: %w", err)
 	}
 
