@@ -58,6 +58,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 	externalMatchClientInProgress.StatusID = 2
 
 	clientTask := fakeClientTask()
+	repositorySubscription := fakeRepositorySubscription()
 
 	expectedRepositoryMatch := repository.ExternalMatch{
 		ID:        externalMatchID,
@@ -476,6 +477,144 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				return m
 			},
 		},
+		{
+			name:  "it returns error when external match status is finished and subscription repository fails",
+			input: matchID,
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, repository.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
+				return m
+			},
+			fotmobClient: func(t *testing.T) *mocks.FotmobClient {
+				t.Helper()
+				m := mocks.NewFotmobClient(t)
+				m.On("GetMatchesByDate", ctx, startsAt).Return(&client.MatchesResponse{
+					Leagues: []client.LeagueFotmob{{Matches: []client.MatchFotmob{externalMatchClientFinished}}},
+				}, nil).Once()
+				return m
+			},
+			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
+				t.Helper()
+				m := mocks.NewExternalMatchRepository(t)
+				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(&repository.ExternalMatch{}, nil).Once()
+				return m
+			},
+			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
+				t.Helper()
+				m := mocks.NewSubscriptionRepository(t)
+				m.On("ListByMatchAndStatus", ctx, matchID, string(service.PendingSub)).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to get subscriptions: %w", unexpectedErr),
+		},
+		{
+			name:  "it returns error when external match status is finished, no subscriptions and match update fails",
+			input: matchID,
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, repository.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
+				m.On("Update", ctx, matchID, string(service.Received)).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			fotmobClient: func(t *testing.T) *mocks.FotmobClient {
+				t.Helper()
+				m := mocks.NewFotmobClient(t)
+				m.On("GetMatchesByDate", ctx, startsAt).Return(&client.MatchesResponse{
+					Leagues: []client.LeagueFotmob{{Matches: []client.MatchFotmob{externalMatchClientFinished}}},
+				}, nil).Once()
+				return m
+			},
+			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
+				t.Helper()
+				m := mocks.NewExternalMatchRepository(t)
+				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(&repository.ExternalMatch{}, nil).Once()
+				return m
+			},
+			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
+				t.Helper()
+				m := mocks.NewSubscriptionRepository(t)
+				m.On("ListByMatchAndStatus", ctx, matchID, string(service.PendingSub)).Return([]repository.Subscription{}, nil).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to handle finished match: %w", fmt.Errorf("failed to set result status to %s: %w", "received", unexpectedErr)),
+		},
+		{
+			name:  "it returns error when external match status is finished and task client fails",
+			input: matchID,
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, repository.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
+				return m
+			},
+			fotmobClient: func(t *testing.T) *mocks.FotmobClient {
+				t.Helper()
+				m := mocks.NewFotmobClient(t)
+				m.On("GetMatchesByDate", ctx, startsAt).Return(&client.MatchesResponse{
+					Leagues: []client.LeagueFotmob{{Matches: []client.MatchFotmob{externalMatchClientFinished}}},
+				}, nil).Once()
+				return m
+			},
+			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
+				t.Helper()
+				m := mocks.NewExternalMatchRepository(t)
+				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(&repository.ExternalMatch{}, nil).Once()
+				return m
+			},
+			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
+				t.Helper()
+				m := mocks.NewSubscriptionRepository(t)
+				m.On("ListByMatchAndStatus", ctx, matchID, string(service.PendingSub)).Return([]repository.Subscription{repositorySubscription}, nil).Once()
+				m.On("Update", ctx, repositorySubscription.ID, repository.Subscription{Status: string(service.SchedulingErrorSub)}).Return(nil).Once()
+				return m
+			},
+			taskClient: func(t *testing.T) *mocks.TaskClient {
+				t.Helper()
+				m := mocks.NewTaskClient(t)
+				m.On("ScheduleSubscriberNotification", ctx, repositorySubscription.ID).Return(unexpectedErr).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to schedule subscriber notification: %w", unexpectedErr),
+		},
+		{
+			name:  "it returns nil when external match status is finished, subscription repository returns subscription and update succeeds",
+			input: matchID,
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, repository.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
+				m.On("Update", ctx, matchID, string(service.Received)).Return(&repository.Match{}, nil).Once()
+				return m
+			},
+			fotmobClient: func(t *testing.T) *mocks.FotmobClient {
+				t.Helper()
+				m := mocks.NewFotmobClient(t)
+				m.On("GetMatchesByDate", ctx, startsAt).Return(&client.MatchesResponse{
+					Leagues: []client.LeagueFotmob{{Matches: []client.MatchFotmob{externalMatchClientFinished}}},
+				}, nil).Once()
+				return m
+			},
+			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
+				t.Helper()
+				m := mocks.NewExternalMatchRepository(t)
+				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(&repository.ExternalMatch{}, nil).Once()
+				return m
+			},
+			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
+				t.Helper()
+				m := mocks.NewSubscriptionRepository(t)
+				m.On("ListByMatchAndStatus", ctx, matchID, string(service.PendingSub)).Return([]repository.Subscription{repositorySubscription}, nil).Once()
+				return m
+			},
+			taskClient: func(t *testing.T) *mocks.TaskClient {
+				t.Helper()
+				m := mocks.NewTaskClient(t)
+				m.On("ScheduleSubscriberNotification", ctx, repositorySubscription.ID).Return(nil).Once()
+				return m
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -537,4 +676,28 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			}
 		})
 	}
+}
+
+func fakeRepositorySubscription(options ...Option[repository.Subscription]) repository.Subscription {
+	statuses := []service.SubscriptionStatus{
+		service.PendingSub,
+		service.SchedulingErrorSub,
+		service.SuccessfulSub,
+		service.SubscriberErrorSub,
+	}
+
+	notifiedAt := gofakeit.Date()
+
+	sub := repository.Subscription{
+		ID:         uint(gofakeit.Uint8()),
+		Url:        gofakeit.URL(),
+		MatchID:    uint(gofakeit.Uint8()),
+		Key:        gofakeit.Password(true, true, true, false, false, 10),
+		Status:     string(statuses[gofakeit.IntRange(0, len(statuses)-1)]),
+		NotifiedAt: &notifiedAt,
+	}
+
+	applyOptions(&sub, options...)
+
+	return sub
 }
