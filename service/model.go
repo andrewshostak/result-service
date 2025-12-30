@@ -278,19 +278,21 @@ func fromRepositoryMatch(m repository.Match) *Match {
 		awayTeam = &Team{ID: m.AwayTeam.ID, Aliases: aliases}
 	}
 
-	var checkResultTask CheckResultTask
+	match := Match{
+		ID:            m.ID,
+		StartsAt:      m.StartsAt,
+		ResultStatus:  ResultStatus(m.ResultStatus),
+		ExternalMatch: externalMatch,
+		HomeTeam:      homeTeam,
+		AwayTeam:      awayTeam,
+	}
+
 	if m.CheckResultTask != nil {
-		checkResultTask = fromRepositoryCheckResultTask(*m.CheckResultTask)
+		checkResultTask := fromRepositoryCheckResultTask(*m.CheckResultTask)
+		match.CheckResultTask = &checkResultTask
 	}
-	return &Match{
-		ID:              m.ID,
-		StartsAt:        m.StartsAt,
-		ResultStatus:    ResultStatus(m.ResultStatus),
-		ExternalMatch:   externalMatch,
-		CheckResultTask: &checkResultTask,
-		HomeTeam:        homeTeam,
-		AwayTeam:        awayTeam,
-	}
+
+	return &match
 }
 
 func fromRepositoryMatches(m []repository.Match) []Match {

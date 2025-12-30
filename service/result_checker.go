@@ -93,16 +93,13 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	}
 
 	switch externalMatch.Status {
-	case StatusMatchNotStarted:
-		return errors.New("external match status is not started")
-	case StatusMatchCancelled:
-		return s.handleCancelledMatch(ctx, matchID)
 	case StatusMatchInProgress:
 		return s.handleInPlayMatch(ctx, *match)
 	case StatusMatchFinished:
 		return s.handleFinishedMatch(ctx, match.ID)
+	// if we receive here any other status - that is not expected, we should cancel the result check.
 	default:
-		return errors.New(fmt.Sprintf("unexpected external match status received: %s", externalMatch.Status))
+		return s.handleMatchWithUnexpectedStatus(ctx, matchID, externalMatch.Status)
 	}
 }
 
@@ -118,10 +115,12 @@ func (s *ResultCheckerService) findExternalMatch(externalID uint, leagues []Exte
 	return nil, errors.New("match not found")
 }
 
-func (s *ResultCheckerService) handleCancelledMatch(ctx context.Context, matchID uint) error {
+func (s *ResultCheckerService) handleMatchWithUnexpectedStatus(ctx context.Context, matchID uint, externalMatchStatus ExternalMatchStatus) error {
+	s.logger.Error().Uint("match_id", matchID).Msgf("result check cancelled: external match status is %s", externalMatchStatus)
+
 	if err := s.updateMatchResultStatus(ctx, matchID, Cancelled); err != nil {
 		s.logger.Error().Uint("match_id", matchID).Err(err)
-		return fmt.Errorf("failed to update cancelled match: %w", err)
+		return fmt.Errorf("failed to update result status of match: %w", err)
 	}
 
 	return nil

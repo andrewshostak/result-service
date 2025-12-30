@@ -285,9 +285,9 @@ To back-fill aliases data a separate command is created. The command description
     - [X] Update football_api_fixtures table: rename to external_matches, add score_home, score_away
     - [X] Update match creation endpoint
     - [X] Update result checker service
-    - [ ] Update subscription creation endpoint
     - [ ] Update other endpoints if needed
     - [ ] Delete football_api_team table and its references
 - [ ] Include signed requests & validate google-auth middleware
+- [ ] Configure max retries
 - [ ] Find a solution for same-time results (i.e. do not process tasks concurrently)
 - [ ] Add created_at / updated_at columns

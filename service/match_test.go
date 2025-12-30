@@ -924,22 +924,6 @@ func fakeRepositoryMatch(options ...Option[repository.Match]) repository.Match {
 	return m
 }
 
-func fakeRepositoryTeam(teamID uint, aliases bool) repository.Team {
-	var a []repository.Alias
-
-	if aliases {
-		fakeAlias := fakeRepositoryAlias(func(r *repository.Alias) {
-			r.TeamID = teamID
-		})
-		a = []repository.Alias{fakeAlias}
-	}
-
-	return repository.Team{
-		ID:      teamID,
-		Aliases: a,
-	}
-}
-
 func fakeRepositoryAlias(options ...Option[repository.Alias]) repository.Alias {
 	alias := repository.Alias{
 		ID:           uint(gofakeit.Uint8()),
@@ -951,6 +935,20 @@ func fakeRepositoryAlias(options ...Option[repository.Alias]) repository.Alias {
 	applyOptions(&alias, options...)
 
 	return alias
+}
+
+func fakeExternalMatchRepository(options ...Option[repository.ExternalMatch]) repository.ExternalMatch {
+	externalMatch := repository.ExternalMatch{
+		ID:        uint(gofakeit.Uint8()),
+		MatchID:   uint(gofakeit.Uint8()),
+		HomeScore: gofakeit.IntRange(0, 9),
+		AwayScore: gofakeit.IntRange(0, 9),
+		Status:    gofakeit.RandomString([]string{"not_started", "cancelled", "in_progress", "finished", "unknown"}),
+	}
+
+	applyOptions(&externalMatch, options...)
+
+	return externalMatch
 }
 
 func fakeClientMatch(options ...Option[client.MatchFotmob]) client.MatchFotmob {
@@ -993,20 +991,7 @@ func fakeClientTask(options ...Option[client.Task]) client.Task {
 	return task
 }
 
-func fakeExternalMatchRepository(options ...Option[repository.ExternalMatch]) repository.ExternalMatch {
-	externalMatch := repository.ExternalMatch{
-		ID:        uint(gofakeit.Uint8()),
-		MatchID:   uint(gofakeit.Uint8()),
-		HomeScore: gofakeit.IntRange(0, 9),
-		AwayScore: gofakeit.IntRange(0, 9),
-		Status:    gofakeit.RandomString([]string{"not_started", "cancelled", "in_progress", "finished", "unknown"}),
-	}
-
-	applyOptions(&externalMatch, options...)
-
-	return externalMatch
-}
-
+// TODO: remove if unused
 func expectedMatch(repositoryMatch repository.Match) service.Match {
 	var externalMatch *service.ExternalMatchDB
 	var homeTeam *service.Team
