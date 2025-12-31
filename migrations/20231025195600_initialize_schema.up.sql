@@ -38,7 +38,7 @@ create table if not exists subscriptions (
     match_id bigint not null,
     key text not null,
     status subscription_status not null default 'pending',
-    error text,
+    error text, -- TODO: rename to subscriber_error
     notified_at timestamptz,
     created_at timestamptz not null default now(),
     foreign key (match_id) references matches (id) on update cascade on delete cascade

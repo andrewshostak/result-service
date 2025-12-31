@@ -53,6 +53,7 @@ type Subscription struct {
 	Key        string     `gorm:"column:key;unique"`
 	CreatedAt  time.Time  `gorm:"column:created_at"`
 	Status     string     `gorm:"column:status;default:pending"`
+	Error      *string    `gorm:"column:error"`
 	NotifiedAt *time.Time `gorm:"column:notified_at"`
 
 	Match *Match `gorm:"foreignKey:MatchID"`
