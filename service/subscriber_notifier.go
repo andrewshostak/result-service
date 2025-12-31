@@ -81,6 +81,7 @@ func (s *SubscriberNotifierService) NotifySubscriber(ctx context.Context, subscr
 	})
 	if errUpdate != nil {
 		s.logger.Error().Err(errUpdate).Uint("subscription_id", subscription.ID).Msg(fmt.Sprintf("failed to update subscription status to: %s", string(SuccessfulSub)))
+		return fmt.Errorf("failed to update subscription status to %s: %w", string(SuccessfulSub), errUpdate)
 	}
 
 	return nil
