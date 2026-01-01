@@ -78,6 +78,12 @@ func (h *SubscriptionHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	if errors.As(err, &errs.SubscriptionDeleteNotAllowedError{}) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+
+		return
+	}
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 

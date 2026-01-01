@@ -103,7 +103,7 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 	}
 
 	if len(otherSubscriptions) > 0 {
-		s.logger.Info().Uint("match_id", match.ID).Msg("there are other subscriptions for the match. no need to cancel result acquiring task")
+		s.logger.Info().Uint("match_id", match.ID).Msg("there are other subscriptions for the match")
 		return nil
 	}
 
