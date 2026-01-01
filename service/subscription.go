@@ -85,8 +85,8 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 
 	subscription := fromRepositorySubscription(*found)
 
-	if subscription.Status != "pending" {
-		return errs.SubscriptionNotFoundError{Message: fmt.Sprintf("subscription %d has status %s instead of %s", subscription.ID, subscription.Status, "pending")}
+	if s.isSubscriberNotified(subscription) {
+		return errs.SubscriptionDeleteNotAllowedError{Message: "not allowed to delete successfully notified subscription"}
 	}
 
 	err = s.subscriptionRepository.Delete(ctx, subscription.ID)
@@ -132,4 +132,8 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 
 func (s *SubscriptionService) isMatchResultScheduled(match Match) bool {
 	return match.ResultStatus == Scheduled
+}
+
+func (s *SubscriptionService) isSubscriberNotified(subscription Subscription) bool {
+	return subscription.Status == SuccessfulSub
 }

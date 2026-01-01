@@ -32,6 +32,14 @@ func (e SubscriptionNotFoundError) Error() string {
 	return e.Message
 }
 
+type SubscriptionDeleteNotAllowedError struct {
+	Message string
+}
+
+func (e SubscriptionDeleteNotAllowedError) Error() string {
+	return e.Message
+}
+
 type CheckResultNotFoundError struct {
 	Message string
 }

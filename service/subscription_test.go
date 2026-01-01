@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/andrewshostak/result-service/errs"
 	"github.com/andrewshostak/result-service/repository"
 	"github.com/andrewshostak/result-service/service"
 	"github.com/andrewshostak/result-service/service/mocks"
@@ -130,6 +132,169 @@ func TestSubscriptionService_Create(t *testing.T) {
 			ss := service.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, taskClient, logger)
 
 			err := ss.Create(ctx, tt.input)
+			if tt.expectedErr != nil {
+				assert.EqualError(t, err, tt.expectedErr.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestSubscriptionService_Delete(t *testing.T) {
+	ctx := context.Background()
+
+	input := service.DeleteSubscriptionRequest{
+		StartsAt:  time.Time{},
+		AliasHome: gofakeit.Word(),
+		AliasAway: gofakeit.Word(),
+		BaseURL:   gofakeit.URL(),
+		SecretKey: gofakeit.Password(true, true, true, false, false, 10),
+	}
+
+	unexpectedErr := errors.New("unexpected error")
+
+	aliasHome := fakeRepositoryAlias(func(r *repository.Alias) {
+		r.Alias = input.AliasHome
+	})
+	aliasAway := fakeRepositoryAlias(func(r *repository.Alias) {
+		r.Alias = input.AliasAway
+	})
+	match := fakeRepositoryMatch(func(r *repository.Match) {
+		r.StartsAt = input.StartsAt.UTC()
+		r.HomeTeamID = aliasHome.TeamID
+		r.AwayTeamID = aliasAway.TeamID
+	})
+
+	tests := []struct {
+		name                   string
+		input                  service.DeleteSubscriptionRequest
+		matchRepository        func(t *testing.T) *mocks.MatchRepository
+		subscriptionRepository func(t *testing.T) *mocks.SubscriptionRepository
+		aliasRepository        func(t *testing.T) *mocks.AliasRepository
+		taskClient             func(t *testing.T) *mocks.TaskClient
+		expectedErr            error
+	}{
+		{
+			name:  "it returns error when home alias not found",
+			input: input,
+			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
+				t.Helper()
+				m := mocks.NewAliasRepository(t)
+				m.On("Find", ctx, input.AliasHome).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to find home team alias: %w", unexpectedErr),
+		},
+		{
+			name:  "it returns error when away alias not found",
+			input: input,
+			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
+				t.Helper()
+				m := mocks.NewAliasRepository(t)
+				m.On("Find", ctx, input.AliasHome).Return(&aliasHome, nil).Once()
+				m.On("Find", ctx, input.AliasAway).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to find away team alias: %w", unexpectedErr),
+		},
+		{
+			name:  "it returns error when match not found",
+			input: input,
+			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
+				t.Helper()
+				m := mocks.NewAliasRepository(t)
+				m.On("Find", ctx, input.AliasHome).Return(&aliasHome, nil).Once()
+				m.On("Find", ctx, input.AliasAway).Return(&aliasAway, nil).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, repository.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to find a match: %w", unexpectedErr),
+		},
+		{
+			name:  "it returns error when subscription not found",
+			input: input,
+			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
+				t.Helper()
+				m := mocks.NewAliasRepository(t)
+				m.On("Find", ctx, input.AliasHome).Return(&aliasHome, nil).Once()
+				m.On("Find", ctx, input.AliasAway).Return(&aliasAway, nil).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, repository.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&match, nil).Once()
+				return m
+			},
+			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
+				t.Helper()
+				m := mocks.NewSubscriptionRepository(t)
+				m.On("One", ctx, match.ID, input.SecretKey, input.BaseURL).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to find a subscription: %w", unexpectedErr),
+		},
+		{
+			name:  "it returns error when subscription was successfully notified",
+			input: input,
+			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
+				t.Helper()
+				m := mocks.NewAliasRepository(t)
+				m.On("Find", ctx, input.AliasHome).Return(&aliasHome, nil).Once()
+				m.On("Find", ctx, input.AliasAway).Return(&aliasAway, nil).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, repository.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&match, nil).Once()
+				return m
+			},
+			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
+				t.Helper()
+				m := mocks.NewSubscriptionRepository(t)
+				m.On("One", ctx, match.ID, input.SecretKey, input.BaseURL).Return(&repository.Subscription{
+					Status: string(service.SuccessfulSub),
+				}, nil).Once()
+				return m
+			},
+			expectedErr: errs.SubscriptionDeleteNotAllowedError{Message: "not allowed to delete successfully notified subscription"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var matchRepository *mocks.MatchRepository
+			if tt.matchRepository != nil {
+				matchRepository = tt.matchRepository(t)
+			}
+
+			var subscriptionRepository *mocks.SubscriptionRepository
+			if tt.subscriptionRepository != nil {
+				subscriptionRepository = tt.subscriptionRepository(t)
+			}
+
+			var aliasRepository *mocks.AliasRepository
+			if tt.aliasRepository != nil {
+				aliasRepository = tt.aliasRepository(t)
+			}
+
+			var taskClient *mocks.TaskClient
+			if tt.taskClient != nil {
+				taskClient = tt.taskClient(t)
+			}
+
+			logger := mocks.NewLogger(t)
+
+			ss := service.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, taskClient, logger)
+
+			err := ss.Delete(ctx, tt.input)
 			if tt.expectedErr != nil {
 				assert.EqualError(t, err, tt.expectedErr.Error())
 			} else {
