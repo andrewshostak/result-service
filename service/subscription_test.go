@@ -84,7 +84,7 @@ func TestSubscriptionService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to create subscription: %w", errors.New("database error")),
 		},
 		{
-			name:  "it creates subscription successfully",
+			name:  "success - it creates subscription",
 			input: request,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -186,7 +186,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 		expectedErr            error
 	}{
 		{
-			name:  "it returns error when home alias not found",
+			name:  "it returns an error when home alias finding fails",
 			input: input,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -197,7 +197,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to find home team alias: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns error when away alias not found",
+			name:  "it returns an error when away alias finding fails",
 			input: input,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -209,7 +209,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to find away team alias: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns error when match not found",
+			name:  "it returns an error when match search fails",
 			input: input,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -227,7 +227,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to find a match: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns error when subscription not found",
+			name:  "it returns an error when subscription search fails",
 			input: input,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -251,7 +251,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to find a subscription: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns error when subscription deletion is not allowed",
+			name:  "it returns an error when subscription deletion is not allowed",
 			input: input,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -277,7 +277,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			expectedErr: errs.SubscriptionDeleteNotAllowedError{Message: "not allowed to delete successfully notified subscription"},
 		},
 		{
-			name:  "it returns error when subscription deletion fails",
+			name:  "it returns an error when subscription deletion fails",
 			input: input,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -302,7 +302,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to delete subscription: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns nil when subscription list returns error",
+			name:  "it returns nil when subscription deleted and other subscriptions listing fails",
 			input: input,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -327,7 +327,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			},
 		},
 		{
-			name:  "it returns nil when subscription list contains at least one subscription",
+			name:  "success - it returns nil when subscription deleted and subscriptions list contains at least one item",
 			input: input,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -352,7 +352,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			},
 		},
 		{
-			name:  "it returns nil when match repository delete returns error",
+			name:  "it returns nil when subscription deleted and match repository deletion fails",
 			input: input,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -378,7 +378,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			},
 		},
 		{
-			name:  "it returns nil when match repository delete succeeds and match doesnt have check-result-task relation",
+			name:  "it returns nil when subscription deleted and match relation check result task doesn't exist",
 			input: input,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -404,7 +404,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			},
 		},
 		{
-			name:  "it returns nil when check result task client returns error",
+			name:  "it returns nil when subscription deleted and check result task deletion fails",
 			input: input,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -438,7 +438,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			},
 		},
 		{
-			name:  "it returns nil on successful flow",
+			name:  "success - it deletes subscription and match and check result task",
 			input: input,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()

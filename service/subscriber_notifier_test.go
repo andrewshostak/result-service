@@ -55,7 +55,7 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 		expectedErr            error
 	}{
 		{
-			name:  "it returns nil when notification and subscription update succeed",
+			name:  "success - it returns nil when processing unnotified subscription",
 			input: subscriptionID,
 			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
 				t.Helper()
@@ -79,7 +79,7 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
-			name:  "it returns error when subscription repository method returns error",
+			name:  "it returns an error when subscription retrieval fails",
 			input: subscriptionID,
 			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
 				t.Helper()
@@ -90,7 +90,7 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to get subscription by id: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns nil when subscription is already notified",
+			name:  "success - it returns nil when subscription is already notified",
 			input: subscriptionID,
 			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
 				t.Helper()
@@ -104,7 +104,7 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
-			name:  "it returns error when match repository returns error",
+			name:  "it returns an error when match retrieval fails",
 			input: subscriptionID,
 			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
 				t.Helper()
@@ -125,7 +125,7 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to get match: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns error when match has no external match",
+			name:  "it returns an error when match relation external match doesn't exist",
 			input: subscriptionID,
 			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
 				t.Helper()
@@ -146,7 +146,7 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 			expectedErr: errors.New("no external match found for the match"),
 		},
 		{
-			name:  "it returns error when notifier client returns error and subscription update fails",
+			name:  "it returns an error when notifier fails and subscription update fails",
 			input: subscriptionID,
 			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
 				t.Helper()
@@ -173,7 +173,7 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to notify subscriber: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns error when notifier client returns error and subscription update succeeds",
+			name:  "it returns an error when notifier fails and subscription update succeeds",
 			input: subscriptionID,
 			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
 				t.Helper()
@@ -200,7 +200,7 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to notify subscriber: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns error when notification succeeds but subscription update fails",
+			name:  "it returns an error when notifier succeeds but subscription update fails",
 			input: subscriptionID,
 			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
 				t.Helper()

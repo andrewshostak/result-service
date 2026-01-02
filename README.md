@@ -277,17 +277,17 @@ To back-fill aliases data a separate command is created. The command description
 - [X] Verify subscription deletion flow works
 - [X] Create a new endpoint to be called by cloud task for checking match result
 - [X] Create a new endpoint to be called by cloud task for notifying subscriber
-- [ ] Migrate to fotmob API
+- [X] Migrate to fotmob API
   - [X] Modify backfill aliases command
     - [X] Create client method to call fotmob matches list (by date)
     - [X] Update command logic to accept date, update leagues, update mapping
-  - [ ] Modify Match creation flow 
+  - [X] Modify Match creation flow 
     - [X] Update football_api_fixtures table: rename to external_matches, add score_home, score_away
     - [X] Update match creation endpoint
     - [X] Update result checker service
-    - [ ] Update other endpoints if needed
+    - [X] Update other endpoints if needed
     - [X] Delete football_api_team table and its references
-- [ ] Standardize test names 
+- [X] Standardize test names 
 - [ ] Standardize returned error messages: i.e. "failed to"/"unable to"/etc.
 - [ ] Find a solution for same-time results (i.e. do not process tasks concurrently)
 - [ ] Include signed requests & validate google-auth middleware

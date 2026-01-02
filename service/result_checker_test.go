@@ -92,7 +92,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 		taskClient                func(t *testing.T) *mocks.TaskClient
 	}{
 		{
-			name:  "it returns error when match is not found",
+			name:  "it returns an error when match retrieval fails",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -103,7 +103,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to get match by id: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns nil when match is not scheduled",
+			name:  "success - it doesn't proceed when match status is not scheduled",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -117,7 +117,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			},
 		},
 		{
-			name:  "it returns error when ExternalMatch relation is nil",
+			name:  "it returns an error when match relation with external match does not exist",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -133,7 +133,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: errors.New("match doesn't have external match"),
 		},
 		{
-			name:  "it returns error when GetMatchesByDate returns error and Update fails",
+			name:  "it returns an error when matches retrieval from external api fails and match update fails",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -151,7 +151,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to get matches from external api: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns error when GetMatchesByDate returns error and Update succeeds",
+			name:  "it returns an error when matches retrieval from external api fails and match update succeeds",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -171,7 +171,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to get matches from external api: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns error when mapping fromClientFotmobLeagues returns error",
+			name:  "it returns an error when mapping from external api result fails",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -198,7 +198,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: errors.New("failed to map from external api matches: failed to map from client match: unable to parse match starting time invalid time"),
 		},
 		{
-			name:  "it returns error when findExternalMatch returns error because match not found",
+			name:  "it returns an error when external api result doesn't contain expected match",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -225,7 +225,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: errors.New("is not found: match not found"),
 		},
 		{
-			name:  "it returns error when externalMatchRepository Save fails",
+			name:  "it returns an error when external match saving fails",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -250,7 +250,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to update external math: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns error when external match status is cancelled and update fails",
+			name:  "it returns an error when external match status is cancelled and update fails",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -303,7 +303,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			},
 		},
 		{
-			name:  "it returns error when externalMatch status is not started and update succeeds",
+			name:  "it returns nil when external match status is not started and update succeeds",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -330,7 +330,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			},
 		},
 		{
-			name:  "it returns error when external match status is in progress and there is no check result task relation",
+			name:  "it returns an error when external match status is in progress and match relation with check result task does not exist",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -357,7 +357,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: errors.New("match doesn't have a result check task"),
 		},
 		{
-			name:  "it returns error when external match status is in progress and task re-scheduling fails",
+			name:  "it returns an error when external match status is in progress and task re-scheduling fails",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -391,7 +391,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to re-schedule result check task: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns error when external match status is in progress and task re-scheduling fails and match status update fails",
+			name:  "it returns an error when external match status is in progress and task re-scheduling fails and match status update fails",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -425,7 +425,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to re-schedule result check task: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns error when external match status is in progress and rescheduled task saving returns error",
+			name:  "it returns an error when external match status is in progress and rescheduled task saving fails",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -469,7 +469,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to update result check task: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns nil when external match status is in progress and rescheduling succeeds",
+			name:  "success - it returns nil when processing external match with status in progress",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -512,7 +512,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			},
 		},
 		{
-			name:  "it returns error when external match status is finished and subscription repository fails",
+			name:  "it returns an error when external match status is finished and subscriptions retrieval fails",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -543,7 +543,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to get subscriptions: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns error when external match status is finished, no subscriptions and match update fails",
+			name:  "it returns an error when external match status is finished and match update fails after no subscriptions found",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -575,7 +575,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to handle finished match: %w", fmt.Errorf("failed to set result status to %s: %w", "received", unexpectedErr)),
 		},
 		{
-			name:  "it returns error when external match status is finished and task client fails",
+			name:  "it returns an error when external match status is finished and creation of subscriber notifier task fails",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -613,7 +613,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to schedule subscriber notification: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns error when external match status is finished, task client fails and subscription update fails",
+			name:  "it returns an error when external match status is finished and creation of subscriber notifier task fails and subscription update fails",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -651,7 +651,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to schedule subscriber notification: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns nil when external match status is finished, subscription repository returns subscription and update succeeds",
+			name:  "success - it returns nil when processing finished external match",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()

@@ -30,7 +30,7 @@ func TestAliasService_Search(t *testing.T) {
 		expectedErr     error
 	}{
 		{
-			name: "it returns wrapped error when repository method fails",
+			name: "it returns an error when aliases search fails",
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
 				m := mocks.NewAliasRepository(t)
@@ -40,7 +40,7 @@ func TestAliasService_Search(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to find aliases: %w", errors.New("repo error")),
 		},
 		{
-			name: "it returns mapped aliases when repository method returns aliases",
+			name: "it returns mapped aliases when aliases search returns aliases",
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
 				m := mocks.NewAliasRepository(t)

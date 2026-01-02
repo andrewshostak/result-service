@@ -91,12 +91,12 @@ func TestMatchService_Create(t *testing.T) {
 		expectedErr               error
 	}{
 		{
-			name:        "it returns an error when match starting date is in the past",
+			name:        "it returns an error when match starting date is not valid",
 			input:       service.CreateMatchRequest{StartsAt: time.Now().Add(-1 * time.Hour)},
 			expectedErr: errors.New("match starting time must be in the future"),
 		},
 		{
-			name:  "it returns an error when home team alias does not exist",
+			name:  "it returns an error when home team alias finding fails",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -107,7 +107,7 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to find home team alias: %w", fmt.Errorf("failed to find team alias: %w", errUnexpected)),
 		},
 		{
-			name:  "it returns an error when away team alias does not exist",
+			name:  "it returns an error when away team alias finding fails",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -119,7 +119,7 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to find away team alias: %w", fmt.Errorf("failed to find team alias: %w", errUnexpected)),
 		},
 		{
-			name:  "it returns an error when alias relation ExternalTeam does not exist",
+			name:  "it returns an error when alias relation with external team does not exist",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -130,7 +130,7 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to find home team alias: %w", errors.New(fmt.Sprintf("alias %s doesn't have external team relation", aliasHomeName))),
 		},
 		{
-			name:  "it returns error when unexpected error from match repository method returned",
+			name:  "it returns an error when match retrieval returns unxepected error",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -152,7 +152,7 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("unexpected error when getting a match: %w", errUnexpected),
 		},
 		{
-			name:  "it returns id if match already exists and is scheduled",
+			name:  "success - it returns id of existing and scheduled match",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -174,7 +174,7 @@ func TestMatchService_Create(t *testing.T) {
 			result: matchID,
 		},
 		{
-			name:  "it returns error if match already exists and has not not_scheduled status",
+			name:  "it returns an error if match exists but its status doesn't allow to proceed",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -196,7 +196,7 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("match already exists with result status: %s", matchResultReceived.ResultStatus),
 		},
 		{
-			name:  "it returns error when external api client method returns unexpected error",
+			name:  "it returns an error when matches retrieval from external api fails",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -224,7 +224,7 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to get matches from external api: %w", errUnexpected),
 		},
 		{
-			name:  "it returns an error when fails to map external api client result",
+			name:  "it returns an error when mapping from external api result fails",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -258,7 +258,7 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: errors.New("failed to map from external api matches: failed to map from client match: unable to parse match starting time invalid time"),
 		},
 		{
-			name:  "it returns an error when there is no match in the response from external api",
+			name:  "it returns an error when external api result doesn't contain expected match",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -292,7 +292,7 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("external match with home team id %d and away team id %d is not found: %w", aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, errors.New("match not found")),
 		},
 		{
-			name:  "it returns error when result scheduling not allowed",
+			name:  "it returns an error when external api match has unexpected status",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -338,7 +338,7 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("result check scheduling is not allowed for this match, external match status is %s", service.StatusMatchUnknown),
 		},
 		{
-			name:  "it returns error when match repository save fails",
+			name:  "it returns an error when match saving fails",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -376,7 +376,7 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to save match with team ids %d and %d starting at %s: %w", aliasHome.TeamID, aliasAway.TeamID, startsAt.UTC(), errUnexpected),
 		},
 		{
-			name:  "it returns error when external match repository save fails",
+			name:  "it returns an error when external match saving fails",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -433,7 +433,7 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to save external match with id %d and match id %d: %w", externalMatchID, matchID, errUnexpected),
 		},
 		{
-			name:  "it returns error when task client ScheduleResultCheck returns unexpected error",
+			name:  "it returns an error when task scheduling results in unexpected error",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -496,7 +496,7 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to schedule result check task: %w", errUnexpected),
 		},
 		{
-			name:  "it returns error when task client ScheduleResultCheck returns error indicating task already exists and GetResultCheckTask returns error",
+			name:  "it returns an error when task scheduling results in error indicating that task already exists and then task retrieval fails",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -560,7 +560,7 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to get result check task: %w", errUnexpected),
 		},
 		{
-			name:  "it returns error when check result task repository Save returns unexpected error",
+			name:  "it returns an error when check result task saving fails",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -628,7 +628,7 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to save result-check task: %w", errUnexpected),
 		},
 		{
-			name:  "it returns error when match repository Update returns error",
+			name:  "it returns an error when match update fails",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -697,7 +697,7 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to set match status to %s: %w", service.Scheduled, errUnexpected),
 		},
 		{
-			name:  "it successfully creates match and schedules result check",
+			name:  "success - it creates match and schedules result check",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -768,7 +768,7 @@ func TestMatchService_Create(t *testing.T) {
 			result: matchID,
 		},
 		{
-			name:  "it successfully creates match and schedules result check - when task already exists",
+			name:  "success - it creates match and schedules result check when task already exists",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
