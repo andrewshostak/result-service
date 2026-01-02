@@ -52,16 +52,12 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	match := fromRepositoryMatch(*m)
 
 	if !s.isScheduled(match) {
-		s.logger.Error().
-			Uint("match_id", matchID).
-			Msg(fmt.Sprintf("expected result status to be %s, actual result status is %s", Scheduled, match.ResultStatus))
+		s.logger.Error().Uint("match_id", matchID).Msg(fmt.Sprintf("expected result status to be %s, actual result status is %s", Scheduled, match.ResultStatus))
 		return nil
 	}
 
 	if match.ExternalMatch == nil {
-		s.logger.Error().
-			Uint("match_id", matchID).
-			Msg("no external match found for the match")
+		s.logger.Error().Uint("match_id", matchID).Msg("match relation external match does not exist")
 		return errors.New("match doesn't have external match")
 	}
 
@@ -87,10 +83,7 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 
 	_, err = s.externalMatchRepository.Save(ctx, &match.ExternalMatch.ID, toRepositoryExternalMatch(match.ID, *externalMatch))
 	if err != nil {
-		s.logger.Error().
-			Uint("match_id", matchID).
-			Err(err)
-		return fmt.Errorf("failed to update external math: %w", err)
+		return fmt.Errorf("failed to update external match: %w", err)
 	}
 
 	switch externalMatch.Status {
@@ -120,7 +113,6 @@ func (s *ResultCheckerService) handleMatchWithUnexpectedStatus(ctx context.Conte
 	s.logger.Error().Uint("match_id", matchID).Msgf("result check cancelled: external match status is %s", externalMatchStatus)
 
 	if err := s.updateMatchResultStatus(ctx, matchID, Cancelled); err != nil {
-		s.logger.Error().Uint("match_id", matchID).Err(err)
 		return fmt.Errorf("failed to update result status of match: %w", err)
 	}
 
@@ -128,6 +120,8 @@ func (s *ResultCheckerService) handleMatchWithUnexpectedStatus(ctx context.Conte
 }
 
 func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match Match) error {
+	s.logger.Debug().Uint("match_id", match.ID).Msg("match is in play, re-scheduling result check task")
+
 	if match.CheckResultTask == nil {
 		return errors.New("match doesn't have a result check task")
 	}
@@ -141,6 +135,7 @@ func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match Matc
 
 	task, err := s.taskClient.ScheduleResultCheck(ctx, match.ID, attemptNumber, scheduleAt)
 	if err != nil {
+		s.logger.Error().Uint("match_id", match.ID).Uint("attempt_number", attemptNumber).Time("schedule_at", scheduleAt).Err(err).Msg("failed to re-schedule check result task")
 		if errUpdate := s.updateMatchResultStatus(ctx, match.ID, SchedulingError); errUpdate != nil {
 			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate)
 		}
@@ -158,6 +153,8 @@ func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match Matc
 }
 
 func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID uint) error {
+	s.logger.Debug().Uint("match_id", matchID).Msg("match is finished, scheduling subscribers notifications")
+
 	subs, err := s.subscriptionRepository.ListByMatchAndStatus(ctx, matchID, string(PendingSub))
 	if err != nil {
 		return fmt.Errorf("failed to get subscriptions: %w", err)
@@ -172,6 +169,7 @@ func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID 
 	for _, subscription := range subscriptions {
 		err := s.taskClient.ScheduleSubscriberNotification(ctx, subscription.ID)
 		if err != nil && !errors.As(err, &errs.ClientTaskAlreadyExistsError{}) {
+			s.logger.Error().Uint("subscription_id", subscription.ID).Err(err).Msg("failed to schedule subscriber notification task")
 			errUpdate := s.subscriptionRepository.Update(ctx, subscription.ID, repository.Subscription{Status: string(SchedulingErrorSub)})
 			if errUpdate != nil {
 				s.logger.Error().Err(errUpdate).Uint("subscription_id", subscription.ID).Msg(fmt.Sprintf("failed to update subscription status to: %s", string(SchedulingErrorSub)))

@@ -94,7 +94,7 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 		return fmt.Errorf("failed to delete subscription: %w", err)
 	}
 
-	s.logger.Info().Uint("subscription_id", subscription.ID).Msg("subscription deleted")
+	s.logger.Debug().Uint("subscription_id", subscription.ID).Msg("subscription deleted")
 
 	otherSubscriptions, errList := s.subscriptionRepository.List(ctx, match.ID)
 	if errList != nil {
@@ -103,7 +103,7 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 	}
 
 	if len(otherSubscriptions) > 0 {
-		s.logger.Info().Uint("match_id", match.ID).Msg("there are other subscriptions for the match")
+		s.logger.Debug().Uint("match_id", match.ID).Msg("there are other subscriptions for the match")
 		return nil
 	}
 
@@ -113,10 +113,10 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 		return nil
 	}
 
-	s.logger.Info().Uint("match_id", match.ID).Msg("match deleted")
+	s.logger.Debug().Uint("match_id", match.ID).Msg("match deleted")
 
 	if match.CheckResultTask == nil {
-		s.logger.Error().Uint("match_id", match.ID).Msg("failed to cancel scheduled task: match relation check result task is not found")
+		s.logger.Error().Uint("match_id", match.ID).Msg("match relation check result task does not exist")
 		return nil
 	}
 
@@ -125,7 +125,7 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 		return nil
 	}
 
-	s.logger.Info().Uint("match_id", match.ID).Msg("result check task deleted")
+	s.logger.Debug().Uint("match_id", match.ID).Msg("result check task deleted")
 
 	return nil
 }

@@ -13,6 +13,26 @@ type Logger struct {
 	mock.Mock
 }
 
+// Debug provides a mock function with no fields
+func (_m *Logger) Debug() *zerolog.Event {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Debug")
+	}
+
+	var r0 *zerolog.Event
+	if rf, ok := ret.Get(0).(func() *zerolog.Event); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*zerolog.Event)
+		}
+	}
+
+	return r0
+}
+
 // Error provides a mock function with no fields
 func (_m *Logger) Error() *zerolog.Event {
 	ret := _m.Called()

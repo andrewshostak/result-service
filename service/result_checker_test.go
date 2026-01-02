@@ -247,7 +247,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(nil, unexpectedErr).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to update external math: %w", unexpectedErr),
+			expectedErr: fmt.Errorf("failed to update external match: %w", unexpectedErr),
 		},
 		{
 			name:  "it returns an error when external match status is cancelled and update fails",

@@ -67,4 +67,5 @@ type SeasonHelper interface {
 type Logger interface {
 	Error() *zerolog.Event
 	Info() *zerolog.Event
+	Debug() *zerolog.Event
 }

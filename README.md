@@ -292,6 +292,6 @@ To back-fill aliases data a separate command is created. The command description
 - [ ] Find a solution for same-time results (i.e. do not process tasks concurrently)
 - [ ] Include signed requests & validate google-auth middleware
 - [ ] Configure max retries
-- [ ] Review logging
+- [X] Review logging
 - [ ] Review Status codes
 - [ ] Add created_at / updated_at columns

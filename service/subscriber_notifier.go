@@ -59,7 +59,7 @@ func (s *SubscriberNotifierService) NotifySubscriber(ctx context.Context, subscr
 		Away: uint(m.ExternalMatch.AwayScore),
 	})
 	if err != nil {
-		s.logger.Error().Err(err).Uint("subscription_id", subscription.ID)
+		s.logger.Error().Err(err).Uint("subscription_id", subscription.ID).Msg("failed to notify subscriber")
 
 		errMessage := err.Error()
 		errUpdate := s.subscriptionRepository.Update(ctx, subscription.ID, repository.Subscription{

@@ -52,7 +52,7 @@ func (s *BackfillAliasesService) getMatches(ctx context.Context, dates []time.Ti
 		jobs <- struct{}{}
 
 		dateOnly := date.Format(time.DateOnly)
-		s.logger.Info().Int("iteration", i).Str("date", dateOnly).Msg("iterating through dates")
+		s.logger.Debug().Int("iteration", i).Str("date", dateOnly).Msg("iterating through dates")
 
 		go func(ctx context.Context, date time.Time) {
 			result, err := s.fotmobClient.GetMatchesByDate(ctx, date)
@@ -63,7 +63,7 @@ func (s *BackfillAliasesService) getMatches(ctx context.Context, dates []time.Ti
 				return
 			}
 
-			s.logger.Info().Int("iteration", i).Str("date", dateOnly).Msg("successfully got matches")
+			s.logger.Debug().Int("iteration", i).Str("date", dateOnly).Msg("successfully got matches")
 
 			mutex.Lock()
 
@@ -79,7 +79,7 @@ func (s *BackfillAliasesService) getMatches(ctx context.Context, dates []time.Ti
 				matches[dateOnly] = append(matches[dateOnly], league.Matches...)
 			}
 
-			s.logger.Info().Int("iteration", i).Str("date", dateOnly).Msg(fmt.Sprintf("found %d matches", len(matches[dateOnly])))
+			s.logger.Debug().Int("iteration", i).Str("date", dateOnly).Msg(fmt.Sprintf("found %d matches", len(matches[dateOnly])))
 
 			mutex.Unlock()
 
@@ -89,7 +89,7 @@ func (s *BackfillAliasesService) getMatches(ctx context.Context, dates []time.Ti
 
 	wg.Wait()
 
-	s.logger.Info().Msg("matches from all dates received")
+	s.logger.Info().Int("number_of_matches", len(matches)).Msg("matches from all dates received")
 
 	return matches, nil
 }
@@ -160,7 +160,7 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []External
 	for i := range teams {
 		_, err := s.aliasRepository.Find(ctx, teams[i].Name)
 		if err == nil {
-			s.logger.Info().
+			s.logger.Debug().
 				Str("alias", teams[i].Name).
 				Int("external_id", teams[i].ID).
 				Msg("alias already exists")
