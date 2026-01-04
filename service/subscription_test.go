@@ -274,7 +274,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 				}, nil).Once()
 				return m
 			},
-			expectedErr: errs.SubscriptionDeleteNotAllowedError{Message: "not allowed to delete successfully notified subscription"},
+			expectedErr: errs.NewUnprocessableContentError(errors.New("not allowed to delete successfully notified subscription")),
 		},
 		{
 			name:  "it returns an error when subscription deletion fails",

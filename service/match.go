@@ -46,7 +46,7 @@ func NewMatchService(
 
 func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (uint, error) {
 	if request.StartsAt.Before(time.Now()) {
-		return 0, errors.New("match starting time must be in the future")
+		return 0, errs.NewUnprocessableContentError(errors.New("match starting time must be in the future"))
 	}
 
 	aliasHome, err := s.findAlias(ctx, request.AliasHome)
@@ -64,7 +64,7 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		HomeTeamID: aliasHome.TeamID,
 		AwayTeamID: aliasAway.TeamID,
 	})
-	if errMatch != nil && !errors.As(errMatch, &errs.MatchNotFoundError{}) {
+	if errMatch != nil && !errors.As(errMatch, &errs.ResourceNotFoundError{}) {
 		return 0, fmt.Errorf("failed to find match: %w", errMatch)
 	}
 
@@ -77,7 +77,7 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		}
 
 		if !s.isResultCheckNotScheduled(*match) {
-			return 0, fmt.Errorf("match already exists with result status: %s", match.ResultStatus)
+			return 0, errs.NewUnprocessableContentError(errors.New(fmt.Sprintf("match already exists with result status: %s", match.ResultStatus)))
 		}
 	}
 
@@ -93,11 +93,11 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 
 	externalMatch, err := s.findExternalMatch(aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, leagues)
 	if err != nil {
-		return 0, fmt.Errorf("external match with home team id %d and away team id %d is not found: %w", aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, err)
+		return 0, errs.NewUnprocessableContentError(errors.New(fmt.Sprintf("external match with home team id %d and away team id %d is not found: %s", aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, err.Error())))
 	}
 
 	if !s.isResultCheckSchedulingAllowed(*externalMatch) {
-		return 0, fmt.Errorf("result check scheduling is not allowed for this match, external match status is %s", externalMatch.Status)
+		return 0, errs.NewUnprocessableContentError(errors.New(fmt.Sprintf("result check scheduling is not allowed for this match, external match status is %s", externalMatch.Status)))
 	}
 
 	var matchID *uint
@@ -123,11 +123,11 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 	match = fromRepositoryMatch(*savedMatch)
 
 	task, err := s.taskClient.ScheduleResultCheck(ctx, match.ID, 1, match.StartsAt.Add(s.config.FirstAttemptDelay))
-	if err != nil && !errors.As(err, &errs.ClientTaskAlreadyExistsError{}) {
+	if err != nil && !errors.As(err, &errs.ResourceAlreadyExistsError{}) {
 		return 0, fmt.Errorf("failed to schedule result check task: %w", err)
 	}
 
-	if errors.As(err, &errs.ClientTaskAlreadyExistsError{}) {
+	if errors.As(err, &errs.ResourceAlreadyExistsError{}) {
 		foundTask, errGetTask := s.taskClient.GetResultCheckTask(ctx, match.ID, 1)
 		if errGetTask != nil {
 			return 0, fmt.Errorf("failed to get result check task: %w", errGetTask)

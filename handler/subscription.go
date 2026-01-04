@@ -19,26 +19,26 @@ func NewSubscriptionHandler(subscriptionService SubscriptionService) *Subscripti
 func (h *SubscriptionHandler) Create(c *gin.Context) {
 	var params CreateSubscriptionRequest
 	if err := c.ShouldBindJSON(&params); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": errs.CodeInvalidRequest})
 
 		return
 	}
 
 	err := h.subscriptionService.Create(c.Request.Context(), params.ToDomain())
-	if errors.As(err, &errs.SubscriptionAlreadyExistsError{}) {
-		c.Status(http.StatusNoContent)
+	if errors.As(err, &errs.ResourceNotFoundError{}) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": errs.CodeResourceNotFound})
 
 		return
 	}
 
-	if errors.As(err, &errs.WrongMatchIDError{}) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if errors.As(err, &errs.UnprocessableContentError{}) {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error(), "code": errs.CodeUnprocessableContent})
 
 		return
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": errs.CodeInternalServerError})
 
 		return
 	}
@@ -49,43 +49,25 @@ func (h *SubscriptionHandler) Create(c *gin.Context) {
 func (h *SubscriptionHandler) Delete(c *gin.Context) {
 	var params DeleteSubscriptionRequest
 	if err := c.ShouldBindQuery(&params); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": errs.CodeInvalidRequest})
 		return
 	}
 
 	err := h.subscriptionService.Delete(c.Request.Context(), params.ToDomain())
-	if errors.As(err, &errs.AliasNotFoundError{}) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if errors.As(err, &errs.ResourceNotFoundError{}) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": errs.CodeResourceNotFound})
 
 		return
 	}
 
-	if errors.As(err, &errs.MatchNotFoundError{}) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-
-		return
-	}
-
-	if errors.As(err, &errs.SubscriptionNotFoundError{}) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-
-		return
-	}
-
-	if errors.As(err, &errs.SubscriptionWrongStatusError{}) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-
-		return
-	}
-
-	if errors.As(err, &errs.SubscriptionDeleteNotAllowedError{}) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if errors.As(err, &errs.UnprocessableContentError{}) {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error(), "code": errs.CodeUnprocessableContent})
 
 		return
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": errs.CodeInternalServerError})
 
 		return
 	}

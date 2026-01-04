@@ -22,10 +22,10 @@ func (r *SubscriptionRepository) Create(ctx context.Context, subscription Subscr
 	result := r.db.WithContext(ctx).Create(&subscription)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrForeignKeyViolated) {
-			return nil, fmt.Errorf("match id does not exist: %w", errs.WrongMatchIDError{Message: result.Error.Error()})
+			return nil, errs.NewUnprocessableContentError(fmt.Errorf("match id does not exist: %w", result.Error))
 		}
 		if isDuplicateError(result.Error) {
-			return nil, fmt.Errorf("subscription already exists: %w", errs.SubscriptionAlreadyExistsError{Message: result.Error.Error()})
+			return nil, errs.NewResourceAlreadyExistsError(fmt.Errorf("subscription already exists: %w", result.Error))
 		}
 
 		return nil, fmt.Errorf("failed to create subscription: %w", result.Error)
@@ -54,6 +54,9 @@ func (r *SubscriptionRepository) Get(ctx context.Context, id uint) (*Subscriptio
 		First(&subscription)
 
 	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, errs.NewResourceNotFoundError(fmt.Errorf("subscription with id %d not found: %w", id, result.Error))
+		}
 		return nil, fmt.Errorf("failed to get subscription by id: %w", result.Error)
 	}
 
@@ -70,7 +73,7 @@ func (r *SubscriptionRepository) One(ctx context.Context, matchID uint, key stri
 
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("subscription is not found: %w", errs.SubscriptionNotFoundError{Message: result.Error.Error()})
+			return nil, errs.NewResourceNotFoundError(fmt.Errorf("subscription is not found: %w", result.Error))
 		}
 
 		return nil, fmt.Errorf("failed to find subscription: %w", result.Error)

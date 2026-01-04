@@ -22,7 +22,7 @@ func (r *AliasRepository) Find(ctx context.Context, alias string) (*Alias, error
 	result := r.db.WithContext(ctx).Joins("ExternalTeam").Where("alias ILIKE ?", alias).First(&a)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("alias %s not found: %w", alias, errs.AliasNotFoundError{Message: result.Error.Error()})
+			return nil, errs.NewResourceNotFoundError(fmt.Errorf("alias %s not found: %w", alias, result.Error))
 		}
 
 		return nil, fmt.Errorf("failed to find alias: %w", result.Error)

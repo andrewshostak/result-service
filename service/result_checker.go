@@ -168,7 +168,7 @@ func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID 
 
 	for _, subscription := range subscriptions {
 		err := s.taskClient.ScheduleSubscriberNotification(ctx, subscription.ID)
-		if err != nil && !errors.As(err, &errs.ClientTaskAlreadyExistsError{}) {
+		if err != nil && !errors.As(err, &errs.ResourceAlreadyExistsError{}) {
 			s.logger.Error().Uint("subscription_id", subscription.ID).Err(err).Msg("failed to schedule subscriber notification task")
 			errUpdate := s.subscriptionRepository.Update(ctx, subscription.ID, repository.Subscription{Status: string(SchedulingErrorSub)})
 			if errUpdate != nil {

@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-
-	"github.com/andrewshostak/result-service/errs"
 )
 
 const notificationAuthHeader = "Authorization"
@@ -55,5 +54,5 @@ func (c *NotifierClient) Notify(ctx context.Context, notification Notification) 
 		return nil
 	}
 
-	return fmt.Errorf("%s: %w", fmt.Sprintf("failed to notify subscribers, status %d", res.StatusCode), errs.ErrUnexpectedNotifierStatusCode)
+	return errors.New(fmt.Sprintf("failed to notify subscribers, status code %d", res.StatusCode))
 }

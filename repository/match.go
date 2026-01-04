@@ -84,8 +84,7 @@ func (r *MatchRepository) One(ctx context.Context, search Match) (*Match, error)
 
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
-			message := fmt.Sprintf("match between teams with ids %d and %d starting at %s is not found", search.HomeTeamID, search.AwayTeamID, search.StartsAt)
-			return nil, fmt.Errorf("%s: %w", message, errs.MatchNotFoundError{Message: result.Error.Error()})
+			return nil, errs.NewResourceNotFoundError(fmt.Errorf("match not found: %w", result.Error))
 		}
 
 		return nil, fmt.Errorf("failed to find match: %w", result.Error)

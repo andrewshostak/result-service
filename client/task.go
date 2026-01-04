@@ -83,7 +83,7 @@ func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, atte
 	createdTask, err := c.client.CreateTask(ctx, req)
 	if err != nil {
 		if c.isTaskAlreadyExistsError(err) {
-			return nil, fmt.Errorf("result-check task already exists: %w", errs.ClientTaskAlreadyExistsError{Message: err.Error()})
+			return nil, errs.NewResourceAlreadyExistsError(fmt.Errorf("result-check task already exists: %w", err))
 		}
 
 		return nil, fmt.Errorf("failed to create result-check task: %w", err)
@@ -136,7 +136,7 @@ func (c *TaskClient) ScheduleSubscriberNotification(ctx context.Context, subscri
 
 	if _, err := c.client.CreateTask(ctx, req); err != nil {
 		if c.isTaskAlreadyExistsError(err) {
-			return fmt.Errorf("subscriber-notification task already exists: %w", errs.ClientTaskAlreadyExistsError{Message: err.Error()})
+			return errs.NewResourceAlreadyExistsError(fmt.Errorf("subscriber-notification task already exists: %w", err))
 		}
 
 		return fmt.Errorf("failed to create subscriber-notification task: %w", err)

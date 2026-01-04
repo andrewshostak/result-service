@@ -30,7 +30,6 @@ type ExternalMatchRepository interface {
 }
 
 type CheckResultTaskRepository interface {
-	GetByMatchID(ctx context.Context, matchID uint) (*repository.CheckResultTask, error)
 	Save(ctx context.Context, checkResultTask repository.CheckResultTask) (*repository.CheckResultTask, error)
 }
 

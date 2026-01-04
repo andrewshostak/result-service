@@ -41,7 +41,7 @@ func (s *SubscriptionService) Create(ctx context.Context, request CreateSubscrip
 	match := fromRepositoryMatch(*m)
 
 	if !s.isMatchResultScheduled(*match) {
-		return errors.New("match result status doesn't allow to create a subscription")
+		return errs.NewUnprocessableContentError(errors.New("match result status doesn't allow to create a subscription"))
 	}
 
 	_, err = s.subscriptionRepository.Create(ctx, repository.Subscription{
@@ -49,6 +49,12 @@ func (s *SubscriptionService) Create(ctx context.Context, request CreateSubscrip
 		Key:     request.SecretKey,
 		Url:     request.URL,
 	})
+
+	// TODO: new test case
+	if errors.As(err, &errs.ResourceAlreadyExistsError{}) {
+		s.logger.Info().Uint("subscription_id", match.ID).Msg("subscription already exists")
+		return nil
+	}
 
 	if err != nil {
 		return fmt.Errorf("failed to create subscription: %w", err)
@@ -86,7 +92,7 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 	subscription := fromRepositorySubscription(*found)
 
 	if s.isSubscriberNotified(subscription) {
-		return errs.SubscriptionDeleteNotAllowedError{Message: "not allowed to delete successfully notified subscription"}
+		return errs.NewUnprocessableContentError(errors.New("not allowed to delete successfully notified subscription"))
 	}
 
 	err = s.subscriptionRepository.Delete(ctx, subscription.ID)

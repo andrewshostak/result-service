@@ -3,11 +3,10 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
-
-	"github.com/andrewshostak/result-service/errs"
 )
 
 const matchesPath = "/api/data/matches"
@@ -59,5 +58,5 @@ func (c *FotmobClient) GetMatchesByDate(ctx context.Context, date time.Time) (*M
 		return &body, nil
 	}
 
-	return nil, fmt.Errorf("%s: %w", fmt.Sprintf("failed to get matches by date, status %d", res.StatusCode), errs.ErrUnexpectedFotmobStatusCode)
+	return nil, errors.New(fmt.Sprintf("failed to get matches by date, status code %d", res.StatusCode))
 }

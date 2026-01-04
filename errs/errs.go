@@ -1,97 +1,50 @@
 package errs
 
-import "errors"
+type code string
 
-var (
-	ErrUnexpectedAPIFootballStatusCode = errors.New("unexpected status code received from api-football")
-	ErrUnexpectedFotmobStatusCode      = errors.New("unexpected status code received from fotmob")
-	ErrUnexpectedNotifierStatusCode    = errors.New("unexpected status code received from notifier")
+const (
+	CodeResourceNotFound      code = "resource_not_found"
+	CodeResourceAlreadyExists code = "resource_already_exists"
+	CodeUnprocessableContent  code = "unprocessable_content"
+	CodeInternalServerError   code = "internal_server_error"
+	CodeInvalidRequest        code = "invalid_request"
 )
 
-type AliasNotFoundError struct {
-	Message string
+func NewResourceNotFoundError(error error) ResourceNotFoundError {
+	return ResourceNotFoundError{Err: error, Code: CodeResourceNotFound}
 }
 
-func (e AliasNotFoundError) Error() string {
-	return e.Message
+type ResourceNotFoundError struct {
+	Err  error
+	Code code
 }
 
-type MatchNotFoundError struct {
-	Message string
+func (e ResourceNotFoundError) Error() string {
+	return e.Err.Error()
 }
 
-func (e MatchNotFoundError) Error() string {
-	return e.Message
+func NewResourceAlreadyExistsError(error error) ResourceAlreadyExistsError {
+	return ResourceAlreadyExistsError{Err: error, Code: CodeResourceAlreadyExists}
 }
 
-type SubscriptionNotFoundError struct {
-	Message string
+type ResourceAlreadyExistsError struct {
+	Err  error
+	Code code
 }
 
-func (e SubscriptionNotFoundError) Error() string {
-	return e.Message
+func (e ResourceAlreadyExistsError) Error() string {
+	return e.Err.Error()
 }
 
-type SubscriptionDeleteNotAllowedError struct {
-	Message string
+func NewUnprocessableContentError(error error) UnprocessableContentError {
+	return UnprocessableContentError{Err: error, Code: CodeUnprocessableContent}
 }
 
-func (e SubscriptionDeleteNotAllowedError) Error() string {
-	return e.Message
+type UnprocessableContentError struct {
+	Err  error
+	Code code
 }
 
-type CheckResultNotFoundError struct {
-	Message string
-}
-
-func (e CheckResultNotFoundError) Error() string {
-	return e.Message
-}
-
-type UnexpectedNumberOfItemsError struct {
-	Message string
-}
-
-func (e UnexpectedNumberOfItemsError) Error() string {
-	return e.Message
-}
-
-type SubscriptionAlreadyExistsError struct {
-	Message string
-}
-
-func (e SubscriptionAlreadyExistsError) Error() string {
-	return e.Message
-}
-
-type CheckResultTaskAlreadyExistsError struct {
-	Message string
-}
-
-func (e CheckResultTaskAlreadyExistsError) Error() string {
-	return e.Message
-}
-
-type ClientTaskAlreadyExistsError struct {
-	Message string
-}
-
-func (e ClientTaskAlreadyExistsError) Error() string {
-	return e.Message
-}
-
-type WrongMatchIDError struct {
-	Message string
-}
-
-func (e WrongMatchIDError) Error() string {
-	return e.Message
-}
-
-type SubscriptionWrongStatusError struct {
-	Message string
-}
-
-func (e SubscriptionWrongStatusError) Error() string {
-	return e.Message
+func (e UnprocessableContentError) Error() string {
+	return e.Err.Error()
 }

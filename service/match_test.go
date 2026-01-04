@@ -212,7 +212,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.MatchNotFoundError{Message: "not found"})).Once()
+				}).Return(nil, errs.NewResourceNotFoundError(errors.New("not found"))).Once()
 				return m
 			},
 			fotmobClient: func(t *testing.T) *mocks.FotmobClient {
@@ -240,7 +240,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.MatchNotFoundError{Message: "not found"})).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				return m
 			},
 			fotmobClient: func(t *testing.T) *mocks.FotmobClient {
@@ -274,7 +274,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.MatchNotFoundError{Message: "not found"})).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				return m
 			},
 			fotmobClient: func(t *testing.T) *mocks.FotmobClient {
@@ -308,7 +308,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.MatchNotFoundError{Message: "not found"})).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				return m
 			},
 			fotmobClient: func(t *testing.T) *mocks.FotmobClient {
@@ -354,7 +354,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.MatchNotFoundError{Message: "not found"})).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), repository.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
@@ -399,7 +399,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.MatchNotFoundError{Message: "not found"})).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), repository.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
@@ -456,7 +456,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.MatchNotFoundError{Message: "not found"})).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), repository.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
@@ -519,7 +519,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.MatchNotFoundError{Message: "not found"})).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), repository.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
@@ -553,7 +553,7 @@ func TestMatchService_Create(t *testing.T) {
 			taskClient: func(t *testing.T) *mocks.TaskClient {
 				t.Helper()
 				m := mocks.NewTaskClient(t)
-				m.On("ScheduleResultCheck", ctx, matchID, uint(1), startsAt.Add(pollingFirstAttemptDelay)).Return(nil, fmt.Errorf("already exists: %w", errs.ClientTaskAlreadyExistsError{Message: "task exists"})).Once()
+				m.On("ScheduleResultCheck", ctx, matchID, uint(1), startsAt.Add(pollingFirstAttemptDelay)).Return(nil, fmt.Errorf("already exists: %w", errs.NewResourceAlreadyExistsError(errors.New("task exists")))).Once()
 				m.On("GetResultCheckTask", ctx, matchID, uint(1)).Return(nil, errUnexpected).Once()
 				return m
 			},
@@ -583,7 +583,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.MatchNotFoundError{Message: "not found"})).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), repository.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
@@ -651,7 +651,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.MatchNotFoundError{Message: "not found"})).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), repository.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
@@ -722,7 +722,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.MatchNotFoundError{Message: "not found"})).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), repository.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
@@ -793,7 +793,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.MatchNotFoundError{Message: "not found"})).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), repository.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
@@ -822,7 +822,7 @@ func TestMatchService_Create(t *testing.T) {
 			taskClient: func(t *testing.T) *mocks.TaskClient {
 				t.Helper()
 				m := mocks.NewTaskClient(t)
-				m.On("ScheduleResultCheck", ctx, matchID, uint(1), startsAt.Add(pollingFirstAttemptDelay)).Return(nil, fmt.Errorf("already exists: %w", errs.ClientTaskAlreadyExistsError{Message: "task exists"})).Once()
+				m.On("ScheduleResultCheck", ctx, matchID, uint(1), startsAt.Add(pollingFirstAttemptDelay)).Return(nil, fmt.Errorf("already exists: %w", errs.NewResourceAlreadyExistsError(errors.New("task exists")))).Once()
 				m.On("GetResultCheckTask", ctx, matchID, uint(1)).Return(&clientTask, nil).Once()
 				return m
 			},
