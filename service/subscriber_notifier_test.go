@@ -153,8 +153,8 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 				m := mocks.NewSubscriptionRepository(t)
 				m.On("Get", ctx, subscriptionID).Return(&subscription, nil).Once()
 				m.On("Update", ctx, subscriptionID, repository.Subscription{
-					Status: string(service.SubscriberErrorSub),
-					Error:  &errorMessage,
+					Status:          string(service.SubscriberErrorSub),
+					SubscriberError: &errorMessage,
 				}).Return(unexpectedErr).Once()
 				return m
 			},
@@ -180,8 +180,8 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 				m := mocks.NewSubscriptionRepository(t)
 				m.On("Get", ctx, subscriptionID).Return(&subscription, nil).Once()
 				m.On("Update", ctx, subscriptionID, repository.Subscription{
-					Status: string(service.SubscriberErrorSub),
-					Error:  &errorMessage,
+					Status:          string(service.SubscriberErrorSub),
+					SubscriberError: &errorMessage,
 				}).Return(nil).Once()
 				return m
 			},
@@ -270,7 +270,7 @@ func fakeClientNotification(options ...Option[client.Notification]) client.Notif
 }
 
 func subscriptionMatchedFunc(actual repository.Subscription) bool {
-	if actual.Error != nil {
+	if actual.SubscriberError != nil {
 		return false
 	}
 

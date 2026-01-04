@@ -47,14 +47,14 @@ type ExternalMatch struct {
 }
 
 type Subscription struct {
-	ID         uint       `gorm:"column:id;primaryKey"`
-	Url        string     `gorm:"column:url;unique"`
-	MatchID    uint       `gorm:"column:match_id"`
-	Key        string     `gorm:"column:key;unique"`
-	CreatedAt  time.Time  `gorm:"column:created_at"`
-	Status     string     `gorm:"column:status;default:pending"`
-	Error      *string    `gorm:"column:error"`
-	NotifiedAt *time.Time `gorm:"column:notified_at"`
+	ID              uint       `gorm:"column:id;primaryKey"`
+	Url             string     `gorm:"column:url;unique"`
+	MatchID         uint       `gorm:"column:match_id"`
+	Key             string     `gorm:"column:key;unique"`
+	CreatedAt       time.Time  `gorm:"column:created_at"`
+	Status          string     `gorm:"column:status;default:pending"`
+	SubscriberError *string    `gorm:"column:subscriber_error"`
+	NotifiedAt      *time.Time `gorm:"column:notified_at"`
 
 	Match *Match `gorm:"foreignKey:MatchID"`
 }

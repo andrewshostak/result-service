@@ -111,7 +111,7 @@ func (r *SubscriptionRepository) ListByMatchAndStatus(ctx context.Context, match
 
 func (r *SubscriptionRepository) Update(ctx context.Context, id uint, subscription Subscription) error {
 	sub := Subscription{ID: id}
-	result := r.db.WithContext(ctx).Model(&sub).Select("Status", "NotifiedAt", "Error").Updates(subscription)
+	result := r.db.WithContext(ctx).Model(&sub).Select("Status", "NotifiedAt", "SubscriberError").Updates(subscription)
 	if result.Error != nil {
 		return fmt.Errorf("failed to update subscription: %w", result.Error)
 	}

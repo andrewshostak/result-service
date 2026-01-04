@@ -38,7 +38,7 @@ erDiagram
         Int id PK
         Int home_team_id FK
         Int away_team_id FK
-        Date started_at
+        Date starts_at
         String result_status
     }
     
@@ -56,7 +56,7 @@ erDiagram
         Int match_id FK
         String key
         String status
-        String error
+        String subscriber_error
         Date notified_at
         Date created_at
     }
@@ -289,10 +289,10 @@ To back-fill aliases data a separate command is created. The command description
     - [X] Delete football_api_team table and its references
 - [X] Standardize test names 
 - [X] Standardize returned error messages: i.e. "failed to"/"unable to"/etc.
-- [ ] Rename structs
+- [X] Rename structs
 - [ ] Find a solution for same-time results (i.e. do not process tasks concurrently)
 - [ ] Include signed requests & validate google-auth middleware
 - [ ] Configure max retries
 - [X] Review logging
-- [ ] Review Status codes
+- [X] Review Status codes
 - [ ] Add created_at / updated_at columns

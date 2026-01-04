@@ -63,8 +63,8 @@ func (s *SubscriberNotifierService) NotifySubscriber(ctx context.Context, subscr
 
 		errMessage := err.Error()
 		errUpdate := s.subscriptionRepository.Update(ctx, subscription.ID, repository.Subscription{
-			Status: string(SubscriberErrorSub),
-			Error:  &errMessage,
+			Status:          string(SubscriberErrorSub),
+			SubscriberError: &errMessage,
 		})
 		if errUpdate != nil {
 			s.logger.Error().Err(errUpdate).Uint("subscription_id", subscription.ID).Msg(fmt.Sprintf("failed to update subscription status to: %s", string(SubscriberErrorSub)))
@@ -75,9 +75,9 @@ func (s *SubscriberNotifierService) NotifySubscriber(ctx context.Context, subscr
 
 	notifiedAt := time.Now()
 	errUpdate := s.subscriptionRepository.Update(ctx, subscription.ID, repository.Subscription{
-		Status:     string(SuccessfulSub),
-		NotifiedAt: &notifiedAt,
-		Error:      nil,
+		Status:          string(SuccessfulSub),
+		NotifiedAt:      &notifiedAt,
+		SubscriberError: nil,
 	})
 	if errUpdate != nil {
 		s.logger.Error().Err(errUpdate).Uint("subscription_id", subscription.ID).Msg(fmt.Sprintf("failed to update subscription status to: %s", string(SuccessfulSub)))
