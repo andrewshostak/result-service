@@ -14,36 +14,6 @@ type ExternalMatchRepository struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, match, data
-func (_m *ExternalMatchRepository) Create(ctx context.Context, match repository.ExternalMatch, data repository.Data) (*repository.ExternalMatch, error) {
-	ret := _m.Called(ctx, match, data)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Create")
-	}
-
-	var r0 *repository.ExternalMatch
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, repository.ExternalMatch, repository.Data) (*repository.ExternalMatch, error)); ok {
-		return rf(ctx, match, data)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, repository.ExternalMatch, repository.Data) *repository.ExternalMatch); ok {
-		r0 = rf(ctx, match, data)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*repository.ExternalMatch)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, repository.ExternalMatch, repository.Data) error); ok {
-		r1 = rf(ctx, match, data)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // Save provides a mock function with given fields: ctx, id, externalMatch
 func (_m *ExternalMatchRepository) Save(ctx context.Context, id *uint, externalMatch repository.ExternalMatch) (*repository.ExternalMatch, error) {
 	ret := _m.Called(ctx, id, externalMatch)

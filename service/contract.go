@@ -25,7 +25,6 @@ type MatchRepository interface {
 }
 
 type ExternalMatchRepository interface {
-	Create(ctx context.Context, match repository.ExternalMatch, data repository.Data) (*repository.ExternalMatch, error)
 	Save(ctx context.Context, id *uint, externalMatch repository.ExternalMatch) (*repository.ExternalMatch, error)
 }
 
