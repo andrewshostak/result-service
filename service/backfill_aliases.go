@@ -39,13 +39,13 @@ func (s *BackfillAliasesService) Backfill(ctx context.Context, dates []time.Time
 	return nil
 }
 
-func (s *BackfillAliasesService) getMatches(ctx context.Context, dates []time.Time) (map[string][]ExternalMatch, error) {
+func (s *BackfillAliasesService) getMatches(ctx context.Context, dates []time.Time) (map[string][]ExternalAPIMatch, error) {
 	const numberOfWorkers = 3
 	jobs := make(chan struct{}, numberOfWorkers)
 	wg := sync.WaitGroup{}
 	var mutex = &sync.RWMutex{}
 
-	matches := map[string][]ExternalMatch{}
+	matches := map[string][]ExternalAPIMatch{}
 
 	for i, date := range dates {
 		wg.Add(1)
@@ -94,8 +94,8 @@ func (s *BackfillAliasesService) getMatches(ctx context.Context, dates []time.Ti
 	return matches, nil
 }
 
-func (s *BackfillAliasesService) filterOutLeagues(allLeagues []ExternalLeague, includedLeagues []ExternalLeague) []ExternalLeague {
-	filtered := make([]ExternalLeague, 0, len(includedLeagues))
+func (s *BackfillAliasesService) filterOutLeagues(allLeagues []ExternalAPILeague, includedLeagues []ExternalAPILeague) []ExternalAPILeague {
+	filtered := make([]ExternalAPILeague, 0, len(includedLeagues))
 	for i := range allLeagues {
 		if isIncludedLeague(allLeagues[i], includedLeagues) {
 			filtered = append(filtered, allLeagues[i])
@@ -105,8 +105,8 @@ func (s *BackfillAliasesService) filterOutLeagues(allLeagues []ExternalLeague, i
 	return filtered
 }
 
-func (s *BackfillAliasesService) getIncludedLeagues() []ExternalLeague {
-	return []ExternalLeague{
+func (s *BackfillAliasesService) getIncludedLeagues() []ExternalAPILeague {
+	return []ExternalAPILeague{
 		// european cups
 		{Name: "Champions League", CountryCode: "INT"},
 		{Name: "Europa League", CountryCode: "INT"},
@@ -143,8 +143,8 @@ func (s *BackfillAliasesService) getIncludedLeagues() []ExternalLeague {
 	}
 }
 
-func (s *BackfillAliasesService) extractTeams(matchesByDate map[string][]ExternalMatch) []ExternalTeam {
-	var teams []ExternalTeam
+func (s *BackfillAliasesService) extractTeams(matchesByDate map[string][]ExternalAPIMatch) []ExternalAPITeam {
+	var teams []ExternalAPITeam
 	for _, date := range matchesByDate {
 		for _, match := range date {
 			teams = append(teams, match.Home)
@@ -155,7 +155,7 @@ func (s *BackfillAliasesService) extractTeams(matchesByDate map[string][]Externa
 	return teams
 }
 
-func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []ExternalTeam) {
+func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []ExternalAPITeam) {
 	numberOfSaved, numberOfExisted := 0, 0
 	for i := range teams {
 		_, err := s.aliasRepository.Find(ctx, teams[i].Name)
@@ -186,7 +186,7 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []External
 		Msg("teams saving finished")
 }
 
-func isIncludedLeague(league ExternalLeague, includedLeagues []ExternalLeague) bool {
+func isIncludedLeague(league ExternalAPILeague, includedLeagues []ExternalAPILeague) bool {
 	for i := range includedLeagues {
 		if (includedLeagues[i].Name == league.Name || includedLeagues[i].ParentLeagueName == league.Name) &&
 			includedLeagues[i].CountryCode == league.CountryCode {

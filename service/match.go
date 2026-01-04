@@ -165,7 +165,7 @@ func (s *MatchService) findAlias(ctx context.Context, alias string) (*Alias, err
 	return &mapped, nil
 }
 
-func (s *MatchService) findExternalMatch(externalHomeTeamID, externalAwayTeamID uint, leagues []ExternalLeague) (*ExternalMatch, error) {
+func (s *MatchService) findExternalMatch(externalHomeTeamID, externalAwayTeamID uint, leagues []ExternalAPILeague) (*ExternalAPIMatch, error) {
 	for _, matches := range leagues {
 		for _, match := range matches.Matches {
 			if match.Home.ID == int(externalHomeTeamID) && match.Away.ID == int(externalAwayTeamID) {
@@ -177,7 +177,7 @@ func (s *MatchService) findExternalMatch(externalHomeTeamID, externalAwayTeamID 
 	return nil, errors.New("match not found")
 }
 
-func (s *MatchService) isResultCheckSchedulingAllowed(externalMatch ExternalMatch) bool {
+func (s *MatchService) isResultCheckSchedulingAllowed(externalMatch ExternalAPIMatch) bool {
 	return externalMatch.Status == StatusMatchNotStarted || externalMatch.Status == StatusMatchInProgress
 }
 

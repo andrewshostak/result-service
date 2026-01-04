@@ -97,7 +97,7 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	}
 }
 
-func (s *ResultCheckerService) findExternalMatch(externalID uint, leagues []ExternalLeague) (*ExternalMatch, error) {
+func (s *ResultCheckerService) findExternalMatch(externalID uint, leagues []ExternalAPILeague) (*ExternalAPIMatch, error) {
 	for _, matches := range leagues {
 		for _, match := range matches.Matches {
 			if match.ID == int(externalID) {

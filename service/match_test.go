@@ -993,7 +993,7 @@ func fakeClientTask(options ...Option[client.Task]) client.Task {
 
 // TODO: remove if unused
 func expectedMatch(repositoryMatch repository.Match) service.Match {
-	var externalMatch *service.ExternalMatchDB
+	var externalMatch *service.ExternalMatch
 	var homeTeam *service.Team
 	var awayTeam *service.Team
 
@@ -1036,7 +1036,7 @@ func expectedMatch(repositoryMatch repository.Match) service.Match {
 	}
 
 	if repositoryMatch.ExternalMatch != nil {
-		externalMatch = &service.ExternalMatchDB{
+		externalMatch = &service.ExternalMatch{
 			ID:        repositoryMatch.ExternalMatch.ID,
 			MatchID:   repositoryMatch.ExternalMatch.MatchID,
 			HomeScore: repositoryMatch.ExternalMatch.HomeScore,

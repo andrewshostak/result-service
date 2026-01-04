@@ -34,8 +34,7 @@ type Team struct {
 	Aliases []Alias
 }
 
-// TODO: find a better name instead of DB suffix
-type ExternalTeamDB struct {
+type ExternalTeam struct {
 	ID     uint
 	TeamID uint
 }
@@ -56,7 +55,7 @@ type Match struct {
 	StartsAt     time.Time
 	ResultStatus ResultStatus
 
-	ExternalMatch   *ExternalMatchDB
+	ExternalMatch   *ExternalMatch
 	CheckResultTask *CheckResultTask
 	HomeTeam        *Team
 	AwayTeam        *Team
@@ -66,7 +65,7 @@ type Alias struct {
 	Alias  string
 	TeamID uint
 
-	ExternalTeam *ExternalTeamDB
+	ExternalTeam *ExternalTeam
 }
 
 type SubscriptionStatus string
@@ -100,8 +99,7 @@ const (
 	StatusMatchUnknown    ExternalMatchStatus = "unknown"
 )
 
-// TODO: find a better name instead of DB suffix
-type ExternalMatchDB struct {
+type ExternalMatch struct {
 	ID        uint
 	MatchID   uint
 	HomeScore int
@@ -117,43 +115,29 @@ type CheckResultTask struct {
 }
 
 type ExternalMatchesResponse struct {
-	Leagues []ExternalLeague
+	Leagues []ExternalAPILeague
 }
 
-type ExternalLeague struct {
+type ExternalAPILeague struct {
 	CountryCode      string
 	Name             string
 	ParentLeagueName string
-	Matches          []ExternalMatch
+	Matches          []ExternalAPIMatch
 }
 
-type ExternalMatch struct {
+type ExternalAPIMatch struct {
 	ID     int
 	Time   time.Time
-	Home   ExternalTeam
-	Away   ExternalTeam
+	Home   ExternalAPITeam
+	Away   ExternalAPITeam
 	Status ExternalMatchStatus
 }
 
-type ExternalTeam struct {
+type ExternalAPITeam struct {
 	ID       int
 	Score    int
 	Name     string
 	LongName string
-}
-
-type LeagueData struct {
-	League  League
-	Country Country
-}
-
-type League struct {
-	ID   uint
-	Name string
-}
-
-type Country struct {
-	Name string
 }
 
 type ClientTask struct {
@@ -161,8 +145,8 @@ type ClientTask struct {
 	ExecuteAt time.Time
 }
 
-func fromRepositoryExternalMatch(f repository.ExternalMatch) *ExternalMatchDB {
-	return &ExternalMatchDB{
+func fromRepositoryExternalMatch(f repository.ExternalMatch) *ExternalMatch {
+	return &ExternalMatch{
 		ID:        f.ID,
 		MatchID:   f.MatchID,
 		HomeScore: f.HomeScore,
@@ -171,10 +155,10 @@ func fromRepositoryExternalMatch(f repository.ExternalMatch) *ExternalMatchDB {
 	}
 }
 
-func fromClientFotmobLeagues(response client.MatchesResponse) ([]ExternalLeague, error) {
-	leagues := make([]ExternalLeague, 0, len(response.Leagues))
+func fromClientFotmobLeagues(response client.MatchesResponse) ([]ExternalAPILeague, error) {
+	leagues := make([]ExternalAPILeague, 0, len(response.Leagues))
 	for _, v := range response.Leagues {
-		matches := make([]ExternalMatch, 0, len(v.Matches))
+		matches := make([]ExternalAPIMatch, 0, len(v.Matches))
 
 		for _, match := range v.Matches {
 			m, err := fromClientFotmobMatch(match)
@@ -185,7 +169,7 @@ func fromClientFotmobLeagues(response client.MatchesResponse) ([]ExternalLeague,
 			matches = append(matches, *m)
 		}
 
-		leagues = append(leagues, ExternalLeague{
+		leagues = append(leagues, ExternalAPILeague{
 			CountryCode:      v.Ccode,
 			Name:             v.Name,
 			ParentLeagueName: v.ParentLeagueName,
@@ -196,13 +180,13 @@ func fromClientFotmobLeagues(response client.MatchesResponse) ([]ExternalLeague,
 	return leagues, nil
 }
 
-func fromClientFotmobMatch(match client.MatchFotmob) (*ExternalMatch, error) {
+func fromClientFotmobMatch(match client.MatchFotmob) (*ExternalAPIMatch, error) {
 	startsAt, err := time.Parse(time.RFC3339, match.Status.UTCTime)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse match starting time %s: %w", match.Status.UTCTime, err)
 	}
 
-	return &ExternalMatch{
+	return &ExternalAPIMatch{
 		ID:     match.ID,
 		Time:   startsAt,
 		Home:   fromClientFotmobTeam(match.Home),
@@ -236,8 +220,8 @@ func fromClientMatchStatus(statusID int) ExternalMatchStatus {
 	}
 }
 
-func fromClientFotmobTeam(team client.TeamFotmob) ExternalTeam {
-	return ExternalTeam{
+func fromClientFotmobTeam(team client.TeamFotmob) ExternalAPITeam {
+	return ExternalAPITeam{
 		ID:       team.ID,
 		Score:    team.Score,
 		Name:     team.Name,
@@ -253,7 +237,7 @@ func fromClientTask(task client.Task) ClientTask {
 }
 
 func fromRepositoryMatch(m repository.Match) *Match {
-	var externalMatch *ExternalMatchDB
+	var externalMatch *ExternalMatch
 	if m.ExternalMatch != nil {
 		externalMatch = fromRepositoryExternalMatch(*m.ExternalMatch)
 	}
@@ -295,25 +279,15 @@ func fromRepositoryMatch(m repository.Match) *Match {
 	return &match
 }
 
-func fromRepositoryMatches(m []repository.Match) []Match {
-	matches := make([]Match, 0, len(m))
-	for i := range m {
-		match := fromRepositoryMatch(m[i])
-		matches = append(matches, *match)
-	}
-
-	return matches
-}
-
-func fromRepositoryExternalTeam(t repository.ExternalTeam) ExternalTeamDB {
-	return ExternalTeamDB{
+func fromRepositoryExternalTeam(t repository.ExternalTeam) ExternalTeam {
+	return ExternalTeam{
 		ID:     t.ID,
 		TeamID: t.TeamID,
 	}
 }
 
 func fromRepositoryAlias(a repository.Alias) Alias {
-	var externalTeam *ExternalTeamDB
+	var externalTeam *ExternalTeam
 
 	if a.ExternalTeam != nil {
 		mapped := fromRepositoryExternalTeam(*a.ExternalTeam)
@@ -364,7 +338,7 @@ func fromRepositoryCheckResultTask(t repository.CheckResultTask) CheckResultTask
 	}
 }
 
-func toRepositoryExternalMatch(matchID uint, externalMatch ExternalMatch) repository.ExternalMatch {
+func toRepositoryExternalMatch(matchID uint, externalMatch ExternalAPIMatch) repository.ExternalMatch {
 	return repository.ExternalMatch{
 		ID:        uint(externalMatch.ID),
 		MatchID:   matchID,
