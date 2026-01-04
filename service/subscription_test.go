@@ -84,6 +84,29 @@ func TestSubscriptionService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to create subscription: %w", errors.New("database error")),
 		},
 		{
+			name:  "it returns nil when subscription creation fails because subscription already exists",
+			input: request,
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, repository.Match{ID: matchID}).Return(&repository.Match{
+					ID:           matchID,
+					ResultStatus: string(service.Scheduled),
+				}, nil).Once()
+				return m
+			},
+			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
+				t.Helper()
+				m := mocks.NewSubscriptionRepository(t)
+				m.On("Create", ctx, repository.Subscription{
+					MatchID: matchID,
+					Key:     secretKey,
+					Url:     url,
+				}).Return(nil, errs.NewResourceAlreadyExistsError(errors.New("already exists"))).Once()
+				return m
+			},
+		},
+		{
 			name:  "success - it creates subscription",
 			input: request,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
@@ -126,7 +149,7 @@ func TestSubscriptionService_Create(t *testing.T) {
 				subscriptionRepository = tt.subscriptionRepository(t)
 			}
 
-			logger := mocks.NewLogger(t)
+			logger := loggerinternal.SetupLogger()
 			aliasRepository := mocks.NewAliasRepository(t)
 			taskClient := mocks.NewTaskClient(t)
 

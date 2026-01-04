@@ -50,7 +50,6 @@ func (s *SubscriptionService) Create(ctx context.Context, request CreateSubscrip
 		Url:     request.URL,
 	})
 
-	// TODO: new test case
 	if errors.As(err, &errs.ResourceAlreadyExistsError{}) {
 		s.logger.Info().Uint("subscription_id", match.ID).Msg("subscription already exists")
 		return nil

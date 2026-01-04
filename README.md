@@ -288,7 +288,8 @@ To back-fill aliases data a separate command is created. The command description
     - [X] Update other endpoints if needed
     - [X] Delete football_api_team table and its references
 - [X] Standardize test names 
-- [ ] Standardize returned error messages: i.e. "failed to"/"unable to"/etc.
+- [X] Standardize returned error messages: i.e. "failed to"/"unable to"/etc.
+- [ ] Rename structs
 - [ ] Find a solution for same-time results (i.e. do not process tasks concurrently)
 - [ ] Include signed requests & validate google-auth middleware
 - [ ] Configure max retries
