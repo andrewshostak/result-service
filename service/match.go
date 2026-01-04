@@ -65,7 +65,7 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		AwayTeamID: aliasAway.TeamID,
 	})
 	if errMatch != nil && !errors.As(errMatch, &errs.MatchNotFoundError{}) {
-		return 0, fmt.Errorf("unexpected error when getting a match: %w", errMatch)
+		return 0, fmt.Errorf("failed to find match: %w", errMatch)
 	}
 
 	var match *Match
@@ -145,7 +145,7 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 
 	_, err = s.matchRepository.Update(ctx, match.ID, string(Scheduled))
 	if err != nil {
-		return 0, fmt.Errorf("failed to set match status to %s: %w", Scheduled, err)
+		return 0, fmt.Errorf("failed to update match status to %s: %w", Scheduled, err)
 	}
 
 	return match.ID, nil

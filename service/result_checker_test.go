@@ -130,7 +130,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("One", ctx, repository.Match{ID: matchID}).Return(&match, nil).Once()
 				return m
 			},
-			expectedErr: errors.New("match doesn't have external match"),
+			expectedErr: errors.New("match relation external match does not exist"),
 		},
 		{
 			name:  "it returns an error when matches retrieval from external api fails and match update fails",
@@ -273,7 +273,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchCancelled).Return(&repository.ExternalMatch{}, nil).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to update result status of match: %w", fmt.Errorf("failed to set result status to %s: %w", "cancelled", unexpectedErr)),
+			expectedErr: fmt.Errorf("failed to update result status of match: %w", fmt.Errorf("failed to update result status to %s: %w", "cancelled", unexpectedErr)),
 		},
 		{
 			name:  "it returns nil when external match status is cancelled and update succeeds",
@@ -354,7 +354,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchInProgress).Return(&repository.ExternalMatch{}, nil).Once()
 				return m
 			},
-			expectedErr: errors.New("match doesn't have a result check task"),
+			expectedErr: errors.New("match relation result check task doesn't exist"),
 		},
 		{
 			name:  "it returns an error when external match status is in progress and task re-scheduling fails",
@@ -572,7 +572,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("ListByMatchAndStatus", ctx, matchID, string(service.PendingSub)).Return([]repository.Subscription{}, nil).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to handle finished match: %w", fmt.Errorf("failed to set result status to %s: %w", "received", unexpectedErr)),
+			expectedErr: fmt.Errorf("failed to handle finished match: %w", fmt.Errorf("failed to update result status to %s: %w", "received", unexpectedErr)),
 		},
 		{
 			name:  "it returns an error when external match status is finished and creation of subscriber notifier task fails",

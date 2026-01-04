@@ -143,7 +143,7 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 				m.On("One", ctx, repository.Match{ID: matchID}).Return(&repository.Match{ID: matchID}, nil).Once()
 				return m
 			},
-			expectedErr: errors.New("no external match found for the match"),
+			expectedErr: errors.New("match relation external match doesn't exist"),
 		},
 		{
 			name:  "it returns an error when notifier fails and subscription update fails",

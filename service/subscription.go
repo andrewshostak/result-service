@@ -74,13 +74,13 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 		AwayTeamID: aliasAway.TeamID,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to find a match: %w", err)
+		return fmt.Errorf("failed to find match: %w", err)
 	}
 	match := fromRepositoryMatch(*m)
 
 	found, err := s.subscriptionRepository.One(ctx, match.ID, request.SecretKey, request.BaseURL)
 	if err != nil {
-		return fmt.Errorf("failed to find a subscription: %w", err)
+		return fmt.Errorf("failed to find subscription: %w", err)
 	}
 
 	subscription := fromRepositorySubscription(*found)

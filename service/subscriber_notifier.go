@@ -49,7 +49,7 @@ func (s *SubscriberNotifierService) NotifySubscriber(ctx context.Context, subscr
 	m := fromRepositoryMatch(*match)
 
 	if m.ExternalMatch == nil {
-		return fmt.Errorf("no external match found for the match")
+		return fmt.Errorf("match relation external match doesn't exist")
 	}
 
 	err = s.notifierClient.Notify(ctx, client.Notification{

@@ -37,7 +37,7 @@ func TestAliasService_Search(t *testing.T) {
 				m.On("Search", ctx, alias).Return(nil, errors.New("repo error")).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to find aliases: %w", errors.New("repo error")),
+			expectedErr: fmt.Errorf("failed to search aliases: %w", errors.New("repo error")),
 		},
 		{
 			name: "it returns mapped aliases when aliases search returns aliases",

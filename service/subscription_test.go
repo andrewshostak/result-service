@@ -224,7 +224,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 				m.On("One", ctx, repository.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(nil, unexpectedErr).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to find a match: %w", unexpectedErr),
+			expectedErr: fmt.Errorf("failed to find match: %w", unexpectedErr),
 		},
 		{
 			name:  "it returns an error when subscription search fails",
@@ -248,7 +248,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 				m.On("One", ctx, match.ID, input.SecretKey, input.BaseURL).Return(nil, unexpectedErr).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to find a subscription: %w", unexpectedErr),
+			expectedErr: fmt.Errorf("failed to find subscription: %w", unexpectedErr),
 		},
 		{
 			name:  "it returns an error when subscription deletion is not allowed",

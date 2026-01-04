@@ -2,9 +2,7 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/andrewshostak/result-service/errs"
 	"gorm.io/gorm"
@@ -27,7 +25,7 @@ func (r *CheckResultTaskRepository) GetByMatchID(ctx context.Context, matchID ui
 			return nil, fmt.Errorf("check result task of match id %d not found: %w", matchID, errs.CheckResultNotFoundError{Message: result.Error.Error()})
 		}
 
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to get check result task by match id: %w", result.Error)
 	}
 
 	return &task, nil
@@ -41,20 +39,8 @@ func (r *CheckResultTaskRepository) Save(ctx context.Context, checkResultTask Ch
 	}).Create(&task)
 
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to save check result task: %w", result.Error)
 	}
 
 	return &task, nil
-}
-
-func isDuplicateError(err error) bool {
-	if errors.Is(err, gorm.ErrDuplicatedKey) {
-		return true
-	}
-
-	if strings.Contains(err.Error(), "duplicate key") {
-		return true
-	}
-
-	return false
 }

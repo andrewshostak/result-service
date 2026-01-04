@@ -58,7 +58,7 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 
 	if match.ExternalMatch == nil {
 		s.logger.Error().Uint("match_id", matchID).Msg("match relation external match does not exist")
-		return errors.New("match doesn't have external match")
+		return errors.New("match relation external match does not exist")
 	}
 
 	matchesByDate, err := s.fotmobClient.GetMatchesByDate(ctx, match.StartsAt)
@@ -123,7 +123,7 @@ func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match Matc
 	s.logger.Debug().Uint("match_id", match.ID).Msg("match is in play, re-scheduling result check task")
 
 	if match.CheckResultTask == nil {
-		return errors.New("match doesn't have a result check task")
+		return errors.New("match relation result check task doesn't exist")
 	}
 
 	scheduleAt := match.StartsAt.Add(s.config.FirstAttemptDelay)
@@ -188,7 +188,7 @@ func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID 
 
 func (s *ResultCheckerService) updateMatchResultStatus(ctx context.Context, matchID uint, status ResultStatus) error {
 	if _, errUpdate := s.matchRepository.Update(ctx, matchID, string(status)); errUpdate != nil {
-		return fmt.Errorf("failed to set result status to %s: %w", status, errUpdate)
+		return fmt.Errorf("failed to update result status to %s: %w", status, errUpdate)
 	}
 
 	return nil

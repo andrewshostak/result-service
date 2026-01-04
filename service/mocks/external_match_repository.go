@@ -74,36 +74,6 @@ func (_m *ExternalMatchRepository) Save(ctx context.Context, id *uint, externalM
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: ctx, id, data
-func (_m *ExternalMatchRepository) Update(ctx context.Context, id uint, data repository.Data) (*repository.ExternalMatch, error) {
-	ret := _m.Called(ctx, id, data)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Update")
-	}
-
-	var r0 *repository.ExternalMatch
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint, repository.Data) (*repository.ExternalMatch, error)); ok {
-		return rf(ctx, id, data)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint, repository.Data) *repository.ExternalMatch); ok {
-		r0 = rf(ctx, id, data)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*repository.ExternalMatch)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, uint, repository.Data) error); ok {
-		r1 = rf(ctx, id, data)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // NewExternalMatchRepository creates a new instance of ExternalMatchRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewExternalMatchRepository(t interface {

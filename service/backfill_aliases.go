@@ -30,7 +30,7 @@ func (s *BackfillAliasesService) Backfill(ctx context.Context, dates []time.Time
 
 	matches, err := s.getMatches(ctx, dates)
 	if err != nil {
-		return fmt.Errorf("failed to get matches: %w", err)
+		return fmt.Errorf("failed to get external matches: %w", err)
 	}
 
 	teams := s.extractTeams(matches)

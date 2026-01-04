@@ -18,7 +18,7 @@ func NewExternalMatchRepository(db *gorm.DB) *ExternalMatchRepository {
 func (r *ExternalMatchRepository) Create(ctx context.Context, externalMatch ExternalMatch, data Data) (*ExternalMatch, error) {
 	result := r.db.WithContext(ctx).Create(&externalMatch)
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to create external match: %w", result.Error)
 	}
 
 	return &externalMatch, nil
@@ -32,25 +32,8 @@ func (r *ExternalMatchRepository) Save(ctx context.Context, id *uint, externalMa
 
 	result := r.db.WithContext(ctx).Save(&toSave)
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to save external match: %w", result.Error)
 	}
 
 	return &toSave, nil
-}
-
-func (r *ExternalMatchRepository) Update(ctx context.Context, id uint, data Data) (*ExternalMatch, error) {
-	return nil, fmt.Errorf("not implemented")
-	// TODO
-	//dataAsJson, err := toJsonB(data)
-	//if err != nil {
-	//	return nil, fmt.Errorf("failed to create jsonb data: %w", err)
-	//}
-	//
-	//fixture := ExternalMatch{ID: id}
-	//result := r.db.WithContext(ctx).Model(&fixture).Updates(ExternalMatch{Data: *dataAsJson})
-	//if result.Error != nil {
-	//	return nil, result.Error
-	//}
-	//
-	//return &fixture, nil
 }

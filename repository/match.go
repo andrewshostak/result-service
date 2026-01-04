@@ -21,7 +21,7 @@ func NewMatchRepository(db *gorm.DB) *MatchRepository {
 func (r *MatchRepository) Create(ctx context.Context, match Match) (*Match, error) {
 	result := r.db.WithContext(ctx).Create(&match)
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to create match: %w", result.Error)
 	}
 
 	return &match, nil
@@ -30,7 +30,7 @@ func (r *MatchRepository) Create(ctx context.Context, match Match) (*Match, erro
 func (r *MatchRepository) Delete(ctx context.Context, id uint) error {
 	result := r.db.WithContext(ctx).Delete(&Match{}, id)
 	if result.Error != nil {
-		return result.Error
+		return fmt.Errorf("failed to delete match: %w", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
@@ -50,7 +50,7 @@ func (r *MatchRepository) List(ctx context.Context, resultStatus string) ([]Matc
 		Find(&matches)
 
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to list matches: %w", result.Error)
 	}
 
 	return matches, nil
@@ -88,7 +88,7 @@ func (r *MatchRepository) One(ctx context.Context, search Match) (*Match, error)
 			return nil, fmt.Errorf("%s: %w", message, errs.MatchNotFoundError{Message: result.Error.Error()})
 		}
 
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to find match: %w", result.Error)
 	}
 
 	return &match, nil
@@ -102,7 +102,7 @@ func (r *MatchRepository) Save(ctx context.Context, id *uint, match Match) (*Mat
 
 	result := r.db.WithContext(ctx).Save(&toSave)
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to save match: %w", result.Error)
 	}
 
 	return &toSave, nil
@@ -112,7 +112,7 @@ func (r *MatchRepository) Update(ctx context.Context, id uint, resultStatus stri
 	match := Match{ID: id}
 	result := r.db.WithContext(ctx).Model(&match).Updates(Match{ResultStatus: resultStatus})
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to update match: %w", result.Error)
 	}
 
 	return &match, nil

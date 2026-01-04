@@ -149,7 +149,7 @@ func TestMatchService_Create(t *testing.T) {
 				}).Return(nil, errUnexpected).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("unexpected error when getting a match: %w", errUnexpected),
+			expectedErr: fmt.Errorf("failed to find match: %w", errUnexpected),
 		},
 		{
 			name:  "success - it returns id of existing and scheduled match",
@@ -694,7 +694,7 @@ func TestMatchService_Create(t *testing.T) {
 				}).Return(&repository.CheckResultTask{}, nil).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to set match status to %s: %w", service.Scheduled, errUnexpected),
+			expectedErr: fmt.Errorf("failed to update match status to %s: %w", service.Scheduled, errUnexpected),
 		},
 		{
 			name:  "success - it creates match and schedules result check",
