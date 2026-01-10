@@ -11,12 +11,8 @@ import (
 	taskspb "cloud.google.com/go/cloudtasks/apiv2/cloudtaskspb"
 	"github.com/andrewshostak/result-service/config"
 	"github.com/andrewshostak/result-service/errs"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
-)
-
-const (
-	checkResultQueue      = "check-result"
-	notifySubscriberQueue = "notify-subscriber"
 )
 
 const (
@@ -29,16 +25,17 @@ const (
 )
 
 type TaskClient struct {
-	client *cloudtasks.Client
-	config config.GoogleCloud
+	client           *cloudtasks.Client
+	config           config.GoogleCloud
+	dispatchDeadline time.Duration
 }
 
-func NewClient(config config.GoogleCloud, client *cloudtasks.Client) *TaskClient {
-	return &TaskClient{config: config, client: client}
+func NewClient(config config.GoogleCloud, dispatchDeadline time.Duration, client *cloudtasks.Client) *TaskClient {
+	return &TaskClient{config: config, dispatchDeadline: dispatchDeadline, client: client}
 }
 
 func (c *TaskClient) GetResultCheckTask(ctx context.Context, matchID uint, attempt uint) (*Task, error) {
-	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", c.config.ProjectID, c.config.Region, checkResultQueue)
+	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", c.config.ProjectID, c.config.Region, c.config.CheckResultQueueName)
 	name := fmt.Sprintf("%s/tasks/match-%d-attempt-%d", queuePath, matchID, attempt)
 
 	req := &taskspb.GetTaskRequest{Name: name}
@@ -54,7 +51,7 @@ func (c *TaskClient) GetResultCheckTask(ctx context.Context, matchID uint, attem
 func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*Task, error) {
 	targetURL := fmt.Sprintf("%s%s", c.config.TasksBaseURL, checkResultPath)
 
-	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", c.config.ProjectID, c.config.Region, checkResultQueue)
+	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", c.config.ProjectID, c.config.Region, c.config.CheckResultQueueName)
 
 	payload := map[string]uint{"match_id": matchID}
 	body, err := json.Marshal(payload)
@@ -65,8 +62,9 @@ func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, atte
 	req := &taskspb.CreateTaskRequest{
 		Parent: queuePath,
 		Task: &taskspb.Task{
-			Name:         fmt.Sprintf("%s/tasks/match-%d-attempt-%d", queuePath, matchID, attempt),
-			ScheduleTime: timestamppb.New(scheduleAt),
+			Name:             fmt.Sprintf("%s/tasks/match-%d-attempt-%d", queuePath, matchID, attempt),
+			ScheduleTime:     timestamppb.New(scheduleAt),
+			DispatchDeadline: durationpb.New(c.dispatchDeadline),
 			MessageType: &taskspb.Task_HttpRequest{
 				HttpRequest: &taskspb.HttpRequest{
 					HttpMethod: taskspb.HttpMethod_POST,
@@ -109,7 +107,7 @@ func (c *TaskClient) DeleteResultCheckTask(ctx context.Context, taskName string)
 func (c *TaskClient) ScheduleSubscriberNotification(ctx context.Context, subscriptionID uint) error {
 	targetURL := fmt.Sprintf("%s%s", c.config.TasksBaseURL, notifySubscriberPath)
 
-	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", c.config.ProjectID, c.config.Region, notifySubscriberQueue)
+	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", c.config.ProjectID, c.config.Region, c.config.NotifySubscriberQueueName)
 
 	payload := map[string]uint{"subscription_id": subscriptionID}
 	body, err := json.Marshal(payload)
@@ -120,7 +118,8 @@ func (c *TaskClient) ScheduleSubscriberNotification(ctx context.Context, subscri
 	req := &taskspb.CreateTaskRequest{
 		Parent: queuePath,
 		Task: &taskspb.Task{
-			Name: fmt.Sprintf("%s/tasks/subscription-%d", queuePath, subscriptionID),
+			Name:             fmt.Sprintf("%s/tasks/subscription-%d", queuePath, subscriptionID),
+			DispatchDeadline: durationpb.New(c.dispatchDeadline),
 			MessageType: &taskspb.Task_HttpRequest{
 				HttpRequest: &taskspb.HttpRequest{
 					HttpMethod: taskspb.HttpMethod_POST,

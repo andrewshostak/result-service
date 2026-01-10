@@ -24,13 +24,15 @@ type Migrate struct {
 }
 
 type App struct {
-	Port          string   `env:"PORT" envDefault:"8080"`
-	HashedAPIKeys []string `env:"HASHED_API_KEYS" envSeparator:","`
-	SecretKey     string   `env:"SECRET_KEY,required"`
+	Port            string        `env:"PORT" envDefault:"8080"`
+	HashedAPIKeys   []string      `env:"HASHED_API_KEYS" envSeparator:","`
+	SecretKey       string        `env:"SECRET_KEY,required"`
+	Timeout         time.Duration `env:"TIMEOUT" envDefault:"10s"`
+	TriggersTimeout time.Duration `env:"TRIGGERS_TIMEOUT" envDefault:"20s"`
 }
 
 type ExternalAPI struct {
-	FotmobAPIBaseURL string `env:"FOOTMOB_API_BASE_URL" envDefault:"https://www.fotmob.com"`
+	FotmobAPIBaseURL string `env:"FOTMOB_API_BASE_URL" envDefault:"https://www.fotmob.com"`
 }
 
 type ResultCheck struct {
@@ -51,6 +53,9 @@ type GoogleCloud struct {
 	ProjectID    string `env:"GOOGLE_CLOUD_PROJECT_ID,required"`
 	Region       string `env:"GOOGLE_CLOUD_REGION,required"`
 	TasksBaseURL string `env:"GOOGLE_CLOUD_BASE_URL,required"` // Base URL to be passed as 'audience' param when creating a cloud task. Then cloud tasks will call this URL.
+
+	CheckResultQueueName      string `env:"GOOGLE_CLOUD_CHECK_RESULT_QUEUE_NAME,required" envDefault:"check-result"`
+	NotifySubscriberQueueName string `env:"GOOGLE_CLOUD_NOTIFY_SUBSCRIBER_QUEUE_NAME,required" envDefault:"notify-subscriber"`
 }
 
 func Parse[T any]() T {

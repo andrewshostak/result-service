@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
 	"github.com/andrewshostak/result-service/client"
@@ -38,7 +39,7 @@ func startServer(_ *cobra.Command, _ []string) {
 	r := gin.Default()
 
 	db := repository.EstablishDatabaseConnection(cfg.PG)
-	httpClient := http.Client{}
+	httpClient := http.Client{Timeout: cfg.App.TriggersTimeout - (2 * time.Second)}
 
 	ctx := context.Background()
 	cloudTasksClient, err := cloudtasks.NewClient(ctx)
@@ -50,7 +51,7 @@ func startServer(_ *cobra.Command, _ []string) {
 
 	fotmobClient := client.NewFotmobClient(&httpClient, logger, cfg.ExternalAPI.FotmobAPIBaseURL)
 	notifierClient := client.NewNotifierClient(&httpClient, logger)
-	taskClient := client.NewClient(cfg.GoogleCloud, cloudTasksClient)
+	taskClient := client.NewClient(cfg.GoogleCloud, cfg.App.TriggersTimeout+(2*time.Second), cloudTasksClient)
 
 	aliasRepository := repository.NewAliasRepository(db)
 	matchRepository := repository.NewMatchRepository(db)
@@ -88,8 +89,15 @@ func startServer(_ *cobra.Command, _ []string) {
 	triggerHandler := handler.NewTriggerHandler(resultCheckerService, subscriberNotifierService)
 
 	v1 := r.Group("/v1")
-	apiKey := v1.Group("").Use(middleware.APIKeyAuth(cfg.App.HashedAPIKeys, cfg.App.SecretKey))
-	googleAuth := v1.Group("").Use(middleware.ValidateGoogleAuth(cfg.GoogleCloud.TasksBaseURL))
+	apiKey := v1.Group("").
+		Use(middleware.APIKeyAuth(cfg.App.HashedAPIKeys, cfg.App.SecretKey)).
+		Use(middleware.Timeout(cfg.App.Timeout))
+
+	//googleAuth := v1.Group("").
+	//	Use(middleware.ValidateGoogleAuth(cfg.GoogleCloud.TasksBaseURL)).
+	//	Use(middleware.Timeout(cfg.App.TriggersTimeout))
+	googleAuth := v1.Group("").
+		Use(middleware.Timeout(cfg.App.TriggersTimeout))
 
 	apiKey.POST("/matches", matchHandler.Create)
 	apiKey.POST("/subscriptions", subscriptionHandler.Create)
