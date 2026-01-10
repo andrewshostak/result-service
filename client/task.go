@@ -73,6 +73,12 @@ func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, atte
 					Headers: map[string]string{
 						"Content-Type": "application/json",
 					},
+					AuthorizationHeader: &taskspb.HttpRequest_OidcToken{
+						OidcToken: &taskspb.OidcToken{
+							ServiceAccountEmail: c.config.ServiceAccountEmail,
+							Audience:            c.config.TasksBaseURL,
+						},
+					},
 				},
 			},
 		},
@@ -127,6 +133,12 @@ func (c *TaskClient) ScheduleSubscriberNotification(ctx context.Context, subscri
 					Body:       body,
 					Headers: map[string]string{
 						"Content-Type": "application/json",
+					},
+					AuthorizationHeader: &taskspb.HttpRequest_OidcToken{
+						OidcToken: &taskspb.OidcToken{
+							ServiceAccountEmail: c.config.ServiceAccountEmail,
+							Audience:            c.config.TasksBaseURL,
+						},
 					},
 				},
 			},

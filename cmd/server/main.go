@@ -93,10 +93,8 @@ func startServer(_ *cobra.Command, _ []string) {
 		Use(middleware.APIKeyAuth(cfg.App.HashedAPIKeys, cfg.App.SecretKey)).
 		Use(middleware.Timeout(cfg.App.Timeout))
 
-	//googleAuth := v1.Group("").
-	//	Use(middleware.ValidateGoogleAuth(cfg.GoogleCloud.TasksBaseURL)).
-	//	Use(middleware.Timeout(cfg.App.TriggersTimeout))
 	googleAuth := v1.Group("").
+		Use(middleware.ValidateGoogleAuth(cfg.GoogleCloud.TasksBaseURL)).
 		Use(middleware.Timeout(cfg.App.TriggersTimeout))
 
 	apiKey.POST("/matches", matchHandler.Create)
