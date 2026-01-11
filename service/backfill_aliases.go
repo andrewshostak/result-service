@@ -4,111 +4,98 @@ import (
 	"context"
 	"fmt"
 	"sync"
-
-	"github.com/andrewshostak/result-service/client"
+	"time"
 )
 
 type BackfillAliasesService struct {
-	aliasRepository   AliasRepository
-	footballAPIClient FootballAPIClient
-	logger            Logger
+	aliasRepository AliasRepository
+	fotmobClient    FotmobClient
+	logger          Logger
 }
 
 func NewBackfillAliasesService(
 	aliasRepository AliasRepository,
-	footballAPIClient FootballAPIClient,
+	fotmobClient FotmobClient,
 	logger Logger,
 ) *BackfillAliasesService {
 	return &BackfillAliasesService{
-		aliasRepository:   aliasRepository,
-		footballAPIClient: footballAPIClient,
-		logger:            logger,
+		aliasRepository: aliasRepository,
+		fotmobClient:    fotmobClient,
+		logger:          logger,
 	}
 }
 
-func (s *BackfillAliasesService) Backfill(ctx context.Context, season uint) error {
-	s.logger.Info().Msg("starting aliases backfill")
-	s.logger.Info().Uint("season", season).Msg("searching leagues")
+func (s *BackfillAliasesService) Backfill(ctx context.Context, dates []time.Time) error {
+	s.logger.Info().Times("dates", dates).Msg("starting aliases backfill")
 
-	result, err := s.footballAPIClient.SearchLeagues(ctx, season)
+	matches, err := s.getMatches(ctx, dates)
 	if err != nil {
-		return fmt.Errorf("failed to search leagues: %w", err)
+		return fmt.Errorf("failed to get external matches: %w", err)
 	}
 
-	s.logger.Info().Int("length", len(result.Response)).Msg("leagues found")
-
-	allLeagues := make([]LeagueData, 0, len(result.Response))
-	for i := range result.Response {
-		allLeagues = append(allLeagues, fromClientFootballAPILeague(result.Response[i]))
-	}
-
-	leagues := s.filterOutLeagues(allLeagues, s.getIncludedLeagues())
-
-	s.logger.Info().Int("length", len(leagues)).Msg("leagues filtering is done")
-
-	leaguesTeams, err := s.getLeaguesTeams(ctx, leagues, season)
-	if err != nil {
-		return fmt.Errorf("failed to get teams: %w", err)
-	}
-
-	s.saveTeams(ctx, leaguesTeams)
+	teams := s.extractTeams(matches)
+	s.saveTeams(ctx, teams)
 
 	return nil
 }
 
-func (s *BackfillAliasesService) getLeaguesTeams(ctx context.Context, leagues []LeagueData, season uint) (map[LeagueData][]TeamExternal, error) {
+func (s *BackfillAliasesService) getMatches(ctx context.Context, dates []time.Time) (map[string][]ExternalAPIMatch, error) {
 	const numberOfWorkers = 3
 	jobs := make(chan struct{}, numberOfWorkers)
 	wg := sync.WaitGroup{}
 	var mutex = &sync.RWMutex{}
 
-	teams := map[LeagueData][]TeamExternal{}
+	matches := map[string][]ExternalAPIMatch{}
 
-	for i := range leagues {
+	for i, date := range dates {
 		wg.Add(1)
 		jobs <- struct{}{}
 
-		s.logger.Info().
-			Int("number", i).
-			Str("league_name", leagues[i].League.Name).
-			Str("country_name", leagues[i].Country.Name).
-			Msg("iterating leagues")
+		dateOnly := date.Format(time.DateOnly)
+		s.logger.Debug().Int("iteration", i).Str("date", dateOnly).Msg("iterating through dates")
 
-		go func(ctx context.Context, league LeagueData) {
-			result, err := s.footballAPIClient.SearchTeams(ctx, client.TeamsSearch{Season: season, League: league.League.ID})
+		go func(ctx context.Context, date time.Time) {
+			result, err := s.fotmobClient.GetMatchesByDate(ctx, date)
 			<-jobs
 
 			if err != nil {
-				s.logger.Error().Err(err).
-					Str("league_name", league.League.Name).
-					Str("country_name", league.Country.Name).
-					Msg("failed to get teams")
+				s.logger.Error().Err(err).Int("iteration", i).Str("date", dateOnly).Msg("failed to get matches")
 				return
 			}
 
-			s.logger.Info().
-				Str("league_name", league.League.Name).
-				Str("country_name", league.Country.Name).
-				Int("number_of_teams", len(result.Response)).
-				Msg("successfully get teams")
+			s.logger.Debug().Int("iteration", i).Str("date", dateOnly).Msg("successfully got matches")
 
 			mutex.Lock()
-			teams[league] = fromClientFootballAPITeams(result.Response)
+
+			allLeagues, err := fromClientFotmobLeagues(*result)
+			if err != nil {
+				mutex.Unlock()
+				s.logger.Error().Err(err).Int("iteration", i).Str("date", dateOnly).Msg("failed to map from client result")
+				return
+			}
+
+			filteredLeagues := s.filterOutLeagues(allLeagues, s.getIncludedLeagues())
+			for _, league := range filteredLeagues {
+				matches[dateOnly] = append(matches[dateOnly], league.Matches...)
+			}
+
+			s.logger.Debug().Int("iteration", i).Str("date", dateOnly).Msg(fmt.Sprintf("found %d matches", len(matches[dateOnly])))
+
 			mutex.Unlock()
 
 			defer wg.Done()
-		}(ctx, leagues[i])
+		}(ctx, date)
 	}
 
 	wg.Wait()
 
-	s.logger.Info().Int("number_of_leagues", len(teams)).Msg("all teams received")
+	s.logger.Info().Int("number_of_matches", len(matches)).Msg("matches from all dates received")
 
-	return teams, nil
+	return matches, nil
 }
 
-func (s *BackfillAliasesService) filterOutLeagues(allLeagues []LeagueData, includedLeagues []league) []LeagueData {
-	filtered := make([]LeagueData, 0, len(includedLeagues))
+func (s *BackfillAliasesService) filterOutLeagues(allLeagues []ExternalAPILeague, includedLeagues []ExternalAPILeague) []ExternalAPILeague {
+	filtered := make([]ExternalAPILeague, 0, len(includedLeagues))
 	for i := range allLeagues {
 		if isIncludedLeague(allLeagues[i], includedLeagues) {
 			filtered = append(filtered, allLeagues[i])
@@ -118,107 +105,95 @@ func (s *BackfillAliasesService) filterOutLeagues(allLeagues []LeagueData, inclu
 	return filtered
 }
 
-func (s *BackfillAliasesService) getIncludedLeagues() []league {
-	return []league{
-		// all
+func (s *BackfillAliasesService) getIncludedLeagues() []ExternalAPILeague {
+	return []ExternalAPILeague{
 		// european cups
-		{name: "UEFA Champions League", country: "World"},
-		{name: "UEFA Europa League", country: "World"},
-		{name: "UEFA Europa Conference League", country: "World"},
-		// national teams competitions
-		{name: "Euro Championship - Qualification", country: "World"},
-		{name: "Euro Championship", country: "World"},
-		{name: "World Cup - Qualification South America", country: "World"},
-		{name: "World Cup", country: "World"},
-		{name: "Copa America", country: "World"},
-		{name: "Africa Cup of Nations", country: "World"},
+		{Name: "Champions League", CountryCode: "INT"},
+		{Name: "Europa League", CountryCode: "INT"},
+		{Name: "Conference League", CountryCode: "INT"},
+		// national teams
+		{Name: "World Cup Qualification UEFA", CountryCode: "INT"},
+		{Name: "World Cup Qualification CONMEBOL", CountryCode: "INT"},
+		{Name: "Copa America", CountryCode: "INT"},
+		{Name: "World Cup", CountryCode: "INT"},
+		{Name: "Africa Cup of Nations", CountryCode: "INT"},
+		{Name: "Africa Cup of Nations Final Stage", CountryCode: "INT"},
 		// top leagues + ukrainian league
-		{name: "Premier League", country: "Ukraine"},
-		{name: "Premier League", country: "England"},
-		{name: "La Liga", country: "Spain"},
-		{name: "Serie A", country: "Italy"},
-		{name: "Bundesliga", country: "Germany"},
-		{name: "Ligue 1", country: "France"},
-		{name: "Eredivisie", country: "Netherlands"},
-		{name: "Primeira Liga", country: "Portugal"},
-		{name: "Jupiler Pro League", country: "Belgium"},
+		{Name: "Premier League", CountryCode: "UKR"},
+		{Name: "Premier League", CountryCode: "ENG"},
+		{Name: "LaLiga", CountryCode: "ESP"},
+		{Name: "Serie A", CountryCode: "ITA"},
+		{Name: "Bundesliga", CountryCode: "GER"},
+		{Name: "Ligue 1", CountryCode: "FRA"},
+		{Name: "Eredivisie", CountryCode: "NED"},
+		{Name: "Liga Portugal", CountryCode: "POR"},
+		{Name: "Belgian Pro League", CountryCode: "BEL"},
 		// only intersected with euro cups: Champions/Europa/Conference League
-		//{name: "Süper Lig", country: "Turkey"},
-		//{name: "Premiership", country: "Scotland"},
-		//{name: "Czech Liga", country: "Czech-Republic"},
-		//{name: "Super League", country: "Switzerland"},
-		//{name: "Bundesliga", country: "Austria"},
-		//{name: "Superliga", country: "Denmark"},
-		//{name: "Eliteserien", country: "Norway"},
-		//{name: "Ligat Ha'al", country: "Israel"},
-		//{name: "Super League 1", country: "Greece"},
-		//{name: "Super Liga", country: "Serbia"},
-		//{name: "Ekstraklasa", country: "Poland"},
-		//{name: "HNL", country: "Croatia"},
+		//{Name: "1. Lig", CountryCode: "TUR"},
+		//{Name: "Premiership", CountryCode: "SCO"},
+		//{Name: "1. Liga", CountryCode: "CZE"},
+		//{Name: "Super League", CountryCode: "SUI"},
+		//{Name: "Bundesliga", CountryCode: "AUT"},
+		//{Name: "Superligaen", CountryCode: "DEN"},
+		//{Name: "Eliteserien", CountryCode: "NOR"},
+		//{Name: "Ligat Ha'al", CountryCode: "ISR"},
+		//{Name: "Super League", CountryCode: "GRE"},
+		//{Name: "Super Liga", CountryCode: "SRB"},
+		//{Name: "Ekstraklasa", CountryCode: "POL"},
+		//{Name: "HNL", CountryCode: "CRO"},
 	}
 }
 
-func (s *BackfillAliasesService) saveTeams(ctx context.Context, leaguesTeams map[LeagueData][]TeamExternal) {
-	const numberOfWorkers = 3
-	jobs := make(chan struct{}, numberOfWorkers)
-	wg := sync.WaitGroup{}
-
-	for league, teams := range leaguesTeams {
-		wg.Add(1)
-		jobs <- struct{}{}
-
-		go func(league LeagueData, teams []TeamExternal) {
-			numberOfSaved, numberOfExisted := 0, 0
-			for i := range teams {
-				_, err := s.aliasRepository.Find(ctx, teams[i].Name)
-				if err == nil {
-					s.logger.Info().
-						Str("alias", teams[i].Name).
-						Uint("football_api_team_id", teams[i].ID).
-						Msg("alias already exists")
-					numberOfExisted++
-					continue
-				}
-
-				errTrx := s.aliasRepository.SaveInTrx(ctx, teams[i].Name, teams[i].ID)
-				if errTrx != nil {
-					s.logger.Error().
-						Str("alias", teams[i].Name).
-						Uint("football_api_team_id", teams[i].ID).
-						Err(errTrx).
-						Msg("failed to save alias")
-					continue
-				}
-				numberOfSaved++
-			}
-
-			<-jobs
-
-			s.logger.Info().
-				Str("league_name", league.League.Name).
-				Str("country_name", league.Country.Name).
-				Int("number_of_saved", numberOfSaved).
-				Int("number_of_existed", numberOfExisted).
-				Msg("league teams saving finished")
-
-			defer wg.Done()
-		}(league, teams)
+func (s *BackfillAliasesService) extractTeams(matchesByDate map[string][]ExternalAPIMatch) []ExternalAPITeam {
+	var teams []ExternalAPITeam
+	for _, date := range matchesByDate {
+		for _, match := range date {
+			teams = append(teams, match.Home)
+			teams = append(teams, match.Away)
+		}
 	}
 
-	wg.Wait()
+	return teams
 }
 
-func isIncludedLeague(league LeagueData, includedLeagues []league) bool {
+func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []ExternalAPITeam) {
+	numberOfSaved, numberOfExisted := 0, 0
+	for i := range teams {
+		_, err := s.aliasRepository.Find(ctx, teams[i].Name)
+		if err == nil {
+			s.logger.Debug().
+				Str("alias", teams[i].Name).
+				Int("external_id", teams[i].ID).
+				Msg("alias already exists")
+			numberOfExisted++
+			continue
+		}
+
+		errTrx := s.aliasRepository.SaveInTrx(ctx, teams[i].Name, uint(teams[i].ID))
+		if errTrx != nil {
+			s.logger.Error().
+				Str("alias", teams[i].Name).
+				Int("external_id", teams[i].ID).
+				Err(errTrx).
+				Msg("failed to save alias")
+			continue
+		}
+		numberOfSaved++
+	}
+
+	s.logger.Info().
+		Int("number_of_saved", numberOfSaved).
+		Int("number_of_existed", numberOfExisted).
+		Msg("teams saving finished")
+}
+
+func isIncludedLeague(league ExternalAPILeague, includedLeagues []ExternalAPILeague) bool {
 	for i := range includedLeagues {
-		if includedLeagues[i].name == league.League.Name && includedLeagues[i].country == league.Country.Name {
+		if (includedLeagues[i].Name == league.Name || includedLeagues[i].ParentLeagueName == league.Name) &&
+			includedLeagues[i].CountryCode == league.CountryCode {
 			return true
 		}
 	}
 
 	return false
-}
-
-type league struct {
-	name    string
-	country string
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/andrewshostak/result-service/errs"
 	"gorm.io/gorm"
@@ -21,13 +22,13 @@ func (r *SubscriptionRepository) Create(ctx context.Context, subscription Subscr
 	result := r.db.WithContext(ctx).Create(&subscription)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrForeignKeyViolated) {
-			return nil, fmt.Errorf("match id does not exist: %w", errs.WrongMatchIDError{Message: result.Error.Error()})
+			return nil, errs.NewUnprocessableContentError(fmt.Errorf("match id does not exist: %w", result.Error))
 		}
-		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
-			return nil, fmt.Errorf("subscription already exists: %w", errs.SubscriptionAlreadyExistsError{Message: result.Error.Error()})
+		if isDuplicateError(result.Error) {
+			return nil, errs.NewResourceAlreadyExistsError(fmt.Errorf("subscription already exists: %w", result.Error))
 		}
 
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to create subscription: %w", result.Error)
 	}
 
 	return &subscription, nil
@@ -36,7 +37,7 @@ func (r *SubscriptionRepository) Create(ctx context.Context, subscription Subscr
 func (r *SubscriptionRepository) Delete(ctx context.Context, id uint) error {
 	result := r.db.WithContext(ctx).Delete(&Subscription{}, id)
 	if result.Error != nil {
-		return result.Error
+		return fmt.Errorf("failed to delete subscription: %w", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
@@ -44,6 +45,22 @@ func (r *SubscriptionRepository) Delete(ctx context.Context, id uint) error {
 	}
 
 	return nil
+}
+
+func (r *SubscriptionRepository) Get(ctx context.Context, id uint) (*Subscription, error) {
+	var subscription Subscription
+	result := r.db.WithContext(ctx).
+		Where("id = ?", id).
+		First(&subscription)
+
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, errs.NewResourceNotFoundError(fmt.Errorf("subscription with id %d not found: %w", id, result.Error))
+		}
+		return nil, fmt.Errorf("failed to get subscription by id: %w", result.Error)
+	}
+
+	return &subscription, nil
 }
 
 func (r *SubscriptionRepository) One(ctx context.Context, matchID uint, key string, baseURL string) (*Subscription, error) {
@@ -56,10 +73,10 @@ func (r *SubscriptionRepository) One(ctx context.Context, matchID uint, key stri
 
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("subscription is not found: %w", errs.SubscriptionNotFoundError{Message: result.Error.Error()})
+			return nil, errs.NewResourceNotFoundError(fmt.Errorf("subscription is not found: %w", result.Error))
 		}
 
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to find subscription: %w", result.Error)
 	}
 
 	return &subscription, nil
@@ -72,23 +89,21 @@ func (r *SubscriptionRepository) List(ctx context.Context, matchID uint) ([]Subs
 		Find(&subscriptions)
 
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to list subscriptions by match id: %w", result.Error)
 	}
 
 	return subscriptions, nil
 }
 
-func (r *SubscriptionRepository) ListUnNotified(ctx context.Context) ([]Subscription, error) {
+func (r *SubscriptionRepository) ListByMatchAndStatus(ctx context.Context, matchID uint, status string) ([]Subscription, error) {
 	var subscriptions []Subscription
 	result := r.db.WithContext(ctx).
-		Where("status = ?", PendingSub).
-		Joins("Match").
-		Where("result_status = ?", Successful).
-		Preload("Match.FootballApiFixtures").
+		Where("status = ?", status).
+		Where("match_id = ?", matchID).
 		Find(&subscriptions)
 
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to list subscriptions by match id and status: %w", result.Error)
 	}
 
 	return subscriptions, nil
@@ -96,10 +111,22 @@ func (r *SubscriptionRepository) ListUnNotified(ctx context.Context) ([]Subscrip
 
 func (r *SubscriptionRepository) Update(ctx context.Context, id uint, subscription Subscription) error {
 	sub := Subscription{ID: id}
-	result := r.db.WithContext(ctx).Model(&sub).Updates(subscription)
+	result := r.db.WithContext(ctx).Model(&sub).Select("Status", "NotifiedAt", "SubscriberError").Updates(subscription)
 	if result.Error != nil {
-		return result.Error
+		return fmt.Errorf("failed to update subscription: %w", result.Error)
 	}
 
 	return nil
+}
+
+func isDuplicateError(err error) bool {
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return true
+	}
+
+	if strings.Contains(err.Error(), "duplicate key") {
+		return true
+	}
+
+	return false
 }

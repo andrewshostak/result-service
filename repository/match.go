@@ -21,7 +21,7 @@ func NewMatchRepository(db *gorm.DB) *MatchRepository {
 func (r *MatchRepository) Create(ctx context.Context, match Match) (*Match, error) {
 	result := r.db.WithContext(ctx).Create(&match)
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to create match: %w", result.Error)
 	}
 
 	return &match, nil
@@ -30,7 +30,7 @@ func (r *MatchRepository) Create(ctx context.Context, match Match) (*Match, erro
 func (r *MatchRepository) Delete(ctx context.Context, id uint) error {
 	result := r.db.WithContext(ctx).Delete(&Match{}, id)
 	if result.Error != nil {
-		return result.Error
+		return fmt.Errorf("failed to delete match: %w", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
@@ -40,17 +40,17 @@ func (r *MatchRepository) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
-func (r *MatchRepository) List(ctx context.Context, resultStatus ResultStatus) ([]Match, error) {
+func (r *MatchRepository) List(ctx context.Context, resultStatus string) ([]Match, error) {
 	var matches []Match
 	result := r.db.WithContext(ctx).
 		Where(&Match{ResultStatus: resultStatus}).
-		Preload("FootballApiFixtures").
+		Preload("ExternalMatch").
 		Preload("HomeTeam.Aliases").
 		Preload("AwayTeam.Aliases").
 		Find(&matches)
 
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to list matches: %w", result.Error)
 	}
 
 	return matches, nil
@@ -60,7 +60,8 @@ func (r *MatchRepository) One(ctx context.Context, search Match) (*Match, error)
 	var match Match
 
 	query := r.db.WithContext(ctx).
-		Preload("FootballApiFixtures")
+		Preload("ExternalMatch").
+		Preload("CheckResultTask")
 
 	if search.ID != 0 {
 		query = query.Where(&Match{ID: search.ID})
@@ -83,21 +84,34 @@ func (r *MatchRepository) One(ctx context.Context, search Match) (*Match, error)
 
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
-			message := fmt.Sprintf("match between teams with ids %d and %d starting at %s is not found", search.HomeTeamID, search.AwayTeamID, search.StartsAt)
-			return nil, fmt.Errorf("%s: %w", message, errs.MatchNotFoundError{Message: result.Error.Error()})
+			return nil, errs.NewResourceNotFoundError(fmt.Errorf("match not found: %w", result.Error))
 		}
 
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to find match: %w", result.Error)
 	}
 
 	return &match, nil
 }
 
-func (r *MatchRepository) Update(ctx context.Context, id uint, resultStatus ResultStatus) (*Match, error) {
+func (r *MatchRepository) Save(ctx context.Context, id *uint, match Match) (*Match, error) {
+	toSave := match
+	if id != nil {
+		toSave.ID = *id
+	}
+
+	result := r.db.WithContext(ctx).Save(&toSave)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to save match: %w", result.Error)
+	}
+
+	return &toSave, nil
+}
+
+func (r *MatchRepository) Update(ctx context.Context, id uint, resultStatus string) (*Match, error) {
 	match := Match{ID: id}
 	result := r.db.WithContext(ctx).Model(&match).Updates(Match{ResultStatus: resultStatus})
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to update match: %w", result.Error)
 	}
 
 	return &match, nil

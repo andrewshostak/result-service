@@ -20,7 +20,7 @@ func NewAliasService(aliasRepository AliasRepository, logger Logger) *AliasServi
 func (s *AliasService) Search(ctx context.Context, alias string) ([]string, error) {
 	result, err := s.aliasRepository.Search(ctx, alias)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find aliases: %w", err)
+		return nil, fmt.Errorf("failed to search aliases: %w", err)
 	}
 
 	aliases := make([]string, 0, len(result))

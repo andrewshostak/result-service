@@ -2,8 +2,6 @@ package repository
 
 import (
 	"time"
-
-	"github.com/jackc/pgtype"
 )
 
 type Alias struct {
@@ -11,7 +9,7 @@ type Alias struct {
 	TeamID uint   `gorm:"column:team_id"`
 	Alias  string `gorm:"column:alias;unique"`
 
-	FootballApiTeam *FootballApiTeam `gorm:"foreignKey:TeamID;references:TeamID"`
+	ExternalTeam *ExternalTeam `gorm:"foreignKey:TeamID;references:TeamID"`
 }
 
 type Team struct {
@@ -20,89 +18,54 @@ type Team struct {
 	Aliases []Alias
 }
 
-type FootballApiTeam struct {
+type ExternalTeam struct {
 	ID     uint `gorm:"column:id;primaryKey"`
 	TeamID uint `gorm:"column:team_id"`
 }
 
 type Match struct {
-	ID           uint         `gorm:"column:id;primaryKey"`
-	HomeTeamID   uint         `gorm:"column:home_team_id"`
-	AwayTeamID   uint         `gorm:"column:away_team_id"`
-	StartsAt     time.Time    `gorm:"column:starts_at"`
-	ResultStatus ResultStatus `gorm:"column:result_status;default:not_scheduled"`
+	ID           uint      `gorm:"column:id;primaryKey"`
+	HomeTeamID   uint      `gorm:"column:home_team_id"`
+	AwayTeamID   uint      `gorm:"column:away_team_id"`
+	StartsAt     time.Time `gorm:"column:starts_at"`
+	ResultStatus string    `gorm:"column:result_status;default:not_scheduled"`
 
-	FootballApiFixtures []FootballApiFixture
-	HomeTeam            *Team `gorm:"foreignKey:HomeTeamID"`
-	AwayTeam            *Team `gorm:"foreignKey:AwayTeamID"`
+	ExternalMatch   *ExternalMatch
+	CheckResultTask *CheckResultTask
+	HomeTeam        *Team `gorm:"foreignKey:HomeTeamID"`
+	AwayTeam        *Team `gorm:"foreignKey:AwayTeamID"`
 }
 
-type FootballApiFixture struct {
-	ID      uint         `gorm:"column:id;primaryKey"`
-	MatchID uint         `gorm:"column:match_id"`
-	Data    pgtype.JSONB `gorm:"column:data"`
+type ExternalMatch struct {
+	ID        uint   `gorm:"column:id;primaryKey"`
+	MatchID   uint   `gorm:"column:match_id"`
+	HomeScore int    `gorm:"column:home_score"`
+	AwayScore int    `gorm:"column:away_score"`
+	Status    string `gorm:"column:status"`
 
 	Match *Match `gorm:"foreignKey:MatchID"`
 }
 
 type Subscription struct {
-	ID         uint               `gorm:"column:id;primaryKey"`
-	Url        string             `gorm:"column:url;unique"`
-	MatchID    uint               `gorm:"column:match_id"`
-	Key        string             `gorm:"column:key;unique"`
-	CreatedAt  time.Time          `gorm:"column:created_at"`
-	Status     SubscriptionStatus `gorm:"column:status;default:pending"`
-	NotifiedAt *time.Time         `gorm:"column:notified_at"`
+	ID              uint       `gorm:"column:id;primaryKey"`
+	Url             string     `gorm:"column:url;unique"`
+	MatchID         uint       `gorm:"column:match_id"`
+	Key             string     `gorm:"column:key;unique"`
+	CreatedAt       time.Time  `gorm:"column:created_at"`
+	Status          string     `gorm:"column:status;default:pending"`
+	SubscriberError *string    `gorm:"column:subscriber_error"`
+	NotifiedAt      *time.Time `gorm:"column:notified_at"`
 
 	Match *Match `gorm:"foreignKey:MatchID"`
 }
 
-type ResultStatus string
+type CheckResultTask struct {
+	ID            uint      `gorm:"column:id;primaryKey"`
+	MatchID       uint      `gorm:"column:match_id;unique"`
+	Name          string    `gorm:"column:name;unique"`
+	AttemptNumber uint      `gorm:"column:attempt_number;default:1"`
+	ExecuteAt     time.Time `gorm:"column:execute_at"`
+	CreatedAt     time.Time `gorm:"column:created_at"`
 
-const (
-	NotScheduled    ResultStatus = "not_scheduled"
-	Scheduled       ResultStatus = "scheduled"
-	SchedulingError ResultStatus = "scheduling_error"
-	Error           ResultStatus = "error"
-	Successful      ResultStatus = "successful"
-)
-
-type SubscriptionStatus string
-
-const (
-	PendingSub    SubscriptionStatus = "pending"
-	ErrorSub      SubscriptionStatus = "error"
-	SuccessfulSub SubscriptionStatus = "successful"
-)
-
-type Data struct {
-	Fixture Fixture       `json:"fixture"`
-	Teams   TeamsExternal `json:"teams"`
-	Goals   Goals         `json:"goals"`
-}
-
-type Fixture struct {
-	ID     uint   `json:"id"`
-	Status Status `json:"status"`
-	Date   string `json:"date"`
-}
-
-type TeamsExternal struct {
-	Home TeamExternal `json:"home"`
-	Away TeamExternal `json:"away"`
-}
-
-type TeamExternal struct {
-	ID   uint   `json:"id"`
-	Name string `json:"name"`
-}
-
-type Goals struct {
-	Home uint `json:"home"`
-	Away uint `json:"away"`
-}
-
-type Status struct {
-	Short string `json:"short"`
-	Long  string `json:"long"`
+	Match *Match `gorm:"foreignKey:MatchID"`
 }

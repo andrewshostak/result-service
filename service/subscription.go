@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/andrewshostak/result-service/errs"
 	"github.com/andrewshostak/result-service/repository"
@@ -14,7 +13,7 @@ type SubscriptionService struct {
 	subscriptionRepository SubscriptionRepository
 	matchRepository        MatchRepository
 	aliasRepository        AliasRepository
-	taskScheduler          TaskScheduler
+	taskClient             TaskClient
 	logger                 Logger
 }
 
@@ -22,34 +21,39 @@ func NewSubscriptionService(
 	subscriptionRepository SubscriptionRepository,
 	matchRepository MatchRepository,
 	aliasRepository AliasRepository,
-	taskScheduler TaskScheduler,
+	taskClient TaskClient,
 	logger Logger,
 ) *SubscriptionService {
 	return &SubscriptionService{
 		subscriptionRepository: subscriptionRepository,
 		matchRepository:        matchRepository,
 		aliasRepository:        aliasRepository,
-		taskScheduler:          taskScheduler,
+		taskClient:             taskClient,
 		logger:                 logger,
 	}
 }
 
 func (s *SubscriptionService) Create(ctx context.Context, request CreateSubscriptionRequest) error {
-	match, err := s.matchRepository.One(ctx, repository.Match{ID: request.MatchID})
+	m, err := s.matchRepository.One(ctx, repository.Match{ID: request.MatchID})
 	if err != nil {
 		return fmt.Errorf("failed to get a match: %w", err)
 	}
+	match := fromRepositoryMatch(*m)
 
-	if match.ResultStatus != repository.Scheduled {
-		return errors.New("match status is not scheduled")
+	if !s.isMatchResultScheduled(*match) {
+		return errs.NewUnprocessableContentError(errors.New("match result status doesn't allow to create a subscription"))
 	}
 
 	_, err = s.subscriptionRepository.Create(ctx, repository.Subscription{
-		MatchID:   request.MatchID,
-		Key:       request.SecretKey,
-		CreatedAt: time.Now(),
-		Url:       request.URL,
+		MatchID: request.MatchID,
+		Key:     request.SecretKey,
+		Url:     request.URL,
 	})
+
+	if errors.As(err, &errs.ResourceAlreadyExistsError{}) {
+		s.logger.Info().Uint("subscription_id", match.ID).Msg("subscription already exists")
+		return nil
+	}
 
 	if err != nil {
 		return fmt.Errorf("failed to create subscription: %w", err)
@@ -69,27 +73,25 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 		return fmt.Errorf("failed to find away team alias: %w", err)
 	}
 
-	match, err := s.matchRepository.One(ctx, repository.Match{
+	m, err := s.matchRepository.One(ctx, repository.Match{
 		StartsAt:   request.StartsAt.UTC(),
 		HomeTeamID: aliasHome.TeamID,
 		AwayTeamID: aliasAway.TeamID,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to find a match: %w", err)
+		return fmt.Errorf("failed to find match: %w", err)
 	}
+	match := fromRepositoryMatch(*m)
 
 	found, err := s.subscriptionRepository.One(ctx, match.ID, request.SecretKey, request.BaseURL)
 	if err != nil {
-		return fmt.Errorf("failed to find a subscription: %w", err)
+		return fmt.Errorf("failed to find subscription: %w", err)
 	}
 
-	subscription, err := fromRepositorySubscription(*found)
-	if err != nil {
-		return fmt.Errorf("failed to map from repository subscription: %w", err)
-	}
+	subscription := fromRepositorySubscription(*found)
 
-	if subscription.Status != "pending" {
-		return errs.SubscriptionNotFoundError{Message: fmt.Sprintf("subscription %d has status %s instead of %s", subscription.ID, subscription.Status, "pending")}
+	if s.isSubscriberNotified(subscription) {
+		return errs.NewUnprocessableContentError(errors.New("not allowed to delete successfully notified subscription"))
 	}
 
 	err = s.subscriptionRepository.Delete(ctx, subscription.ID)
@@ -97,7 +99,7 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 		return fmt.Errorf("failed to delete subscription: %w", err)
 	}
 
-	s.logger.Info().Uint("subscription_id", subscription.ID).Msg("subscription deleted")
+	s.logger.Debug().Uint("subscription_id", subscription.ID).Msg("subscription deleted")
 
 	otherSubscriptions, errList := s.subscriptionRepository.List(ctx, match.ID)
 	if errList != nil {
@@ -106,7 +108,7 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 	}
 
 	if len(otherSubscriptions) > 0 {
-		s.logger.Info().Uint("match_id", match.ID).Msg("there are other subscriptions for the match. no need to cancel result acquiring task")
+		s.logger.Debug().Uint("match_id", match.ID).Msg("there are other subscriptions for the match")
 		return nil
 	}
 
@@ -116,14 +118,27 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 		return nil
 	}
 
-	s.logger.Info().Uint("match_id", match.ID).Msg("match deleted")
+	s.logger.Debug().Uint("match_id", match.ID).Msg("match deleted")
 
-	if len(match.FootballApiFixtures) < 1 {
-		s.logger.Error().Uint("match_id", match.ID).Msg("failed to cancel scheduled task: match relation football api fixtures is not found")
+	if match.CheckResultTask == nil {
+		s.logger.Error().Uint("match_id", match.ID).Msg("match relation check result task does not exist")
 		return nil
 	}
 
-	s.taskScheduler.Cancel(fmt.Sprintf("%d-%d", match.ID, match.FootballApiFixtures[0].ID))
+	if err := s.taskClient.DeleteResultCheckTask(ctx, match.CheckResultTask.Name); err != nil {
+		s.logger.Error().Err(err).Uint("match_id", match.ID).Msg("failed to delete result-check task")
+		return nil
+	}
+
+	s.logger.Debug().Uint("match_id", match.ID).Msg("result check task deleted")
 
 	return nil
+}
+
+func (s *SubscriptionService) isMatchResultScheduled(match Match) bool {
+	return match.ResultStatus == Scheduled
+}
+
+func (s *SubscriptionService) isSubscriberNotified(subscription Subscription) bool {
+	return subscription.Status == SuccessfulSub
 }

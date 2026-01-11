@@ -4,19 +4,18 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
+	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
 	"github.com/andrewshostak/result-service/client"
 	"github.com/andrewshostak/result-service/config"
 	"github.com/andrewshostak/result-service/handler"
-	"github.com/andrewshostak/result-service/initializer"
 	loggerinternal "github.com/andrewshostak/result-service/logger"
 	"github.com/andrewshostak/result-service/middleware"
 	"github.com/andrewshostak/result-service/repository"
-	"github.com/andrewshostak/result-service/scheduler"
 	"github.com/andrewshostak/result-service/service"
 	"github.com/gin-gonic/gin"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/procyon-projects/chrono"
 	"github.com/spf13/cobra"
 )
 
@@ -33,65 +32,78 @@ func main() {
 }
 
 func startServer(_ *cobra.Command, _ []string) {
-	cfg := config.Parse()
+	cfg := config.Parse[config.Server]()
 
 	logger := loggerinternal.SetupLogger()
 
 	r := gin.Default()
 
-	db := repository.EstablishDatabaseConnection(cfg)
-	httpClient := http.Client{}
-	chronoTaskScheduler := chrono.NewDefaultTaskScheduler()
+	db := repository.EstablishDatabaseConnection(cfg.PG)
+	httpClient := http.Client{Timeout: cfg.App.TriggersTimeout - (2 * time.Second)}
 
-	r.GET("/_ah/start", func(c *gin.Context) {
-		c.Status(http.StatusOK)
-	})
+	ctx := context.Background()
+	cloudTasksClient, err := cloudtasks.NewClient(ctx)
+	if err != nil {
+		panic(err)
+	}
 
-	r.Use(middleware.Authorization(cfg.App.HashedAPIKeys, cfg.App.SecretKey))
+	defer cloudTasksClient.Close()
 
-	v1 := r.Group("/v1")
-
-	footballAPIClient := client.NewFootballAPIClient(&httpClient, logger, cfg.ExternalAPI.FootballAPIBaseURL, cfg.ExternalAPI.RapidAPIKey)
+	fotmobClient := client.NewFotmobClient(&httpClient, logger, cfg.ExternalAPI.FotmobAPIBaseURL)
 	notifierClient := client.NewNotifierClient(&httpClient, logger)
+	taskClient := client.NewClient(cfg.GoogleCloud, cfg.App.TriggersTimeout+(2*time.Second), cloudTasksClient)
 
 	aliasRepository := repository.NewAliasRepository(db)
 	matchRepository := repository.NewMatchRepository(db)
-	footballAPIFixtureRepository := repository.NewFootballAPIFixtureRepository(db)
+	externalMatchRepository := repository.NewExternalMatchRepository(db)
 	subscriptionRepository := repository.NewSubscriptionRepository(db)
-
-	taskScheduler := scheduler.NewTaskScheduler(chronoTaskScheduler)
+	checkResultTaskRepository := repository.NewCheckResultTaskRepository(db)
 
 	matchService := service.NewMatchService(
+		cfg.Result,
 		aliasRepository,
 		matchRepository,
-		footballAPIFixtureRepository,
-		footballAPIClient,
-		taskScheduler,
+		externalMatchRepository,
+		checkResultTaskRepository,
+		fotmobClient,
+		taskClient,
 		logger,
-		cfg.Result.PollingMaxRetries,
-		cfg.Result.PollingInterval,
-		cfg.Result.PollingFirstAttemptDelay,
 	)
-	subscriptionService := service.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, taskScheduler, logger)
-	notifierService := service.NewNotifierService(subscriptionRepository, notifierClient, logger)
+	subscriptionService := service.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, taskClient, logger)
 	aliasService := service.NewAliasService(aliasRepository, logger)
+	resultCheckerService := service.NewResultCheckerService(
+		cfg.Result,
+		matchRepository,
+		externalMatchRepository,
+		subscriptionRepository,
+		checkResultTaskRepository,
+		taskClient,
+		fotmobClient,
+		logger,
+	)
+	subscriberNotifierService := service.NewSubscriberNotifierService(subscriptionRepository, matchRepository, notifierClient, logger)
 
 	matchHandler := handler.NewMatchHandler(matchService)
 	subscriptionHandler := handler.NewSubscriptionHandler(subscriptionService)
 	aliasHandler := handler.NewAliasHandler(aliasService)
-	v1.POST("/matches", matchHandler.Create)
-	v1.POST("/subscriptions", subscriptionHandler.Create)
-	v1.DELETE("/subscriptions", subscriptionHandler.Delete)
-	v1.GET("/aliases", aliasHandler.Search)
+	triggerHandler := handler.NewTriggerHandler(resultCheckerService, subscriberNotifierService)
 
-	ctx := context.Background()
-	matchResultScheduleInitializer := initializer.NewMatchResultScheduleInitializer(matchService, logger)
-	if err := matchResultScheduleInitializer.ReSchedule(ctx); err != nil {
-		panic(err)
-	}
+	v1 := r.Group("/v1")
+	apiKey := v1.Group("").
+		Use(middleware.APIKeyAuth(cfg.App.HashedAPIKeys, cfg.App.SecretKey)).
+		Use(middleware.Timeout(cfg.App.Timeout))
 
-	notifierInitializer := initializer.NewNotifierInitializer(notifierService)
-	notifierInitializer.Start()
+	googleAuth := v1.Group("").
+		Use(middleware.ValidateGoogleAuth(cfg.GoogleCloud.TasksBaseURL)).
+		Use(middleware.Timeout(cfg.App.TriggersTimeout))
+
+	apiKey.POST("/matches", matchHandler.Create)
+	apiKey.POST("/subscriptions", subscriptionHandler.Create)
+	apiKey.DELETE("/subscriptions", subscriptionHandler.Delete)
+	apiKey.GET("/aliases", aliasHandler.Search)
+
+	googleAuth.POST("/triggers/result_check", triggerHandler.CheckResult)
+	googleAuth.POST("/triggers/subscriber_notification", triggerHandler.NotifySubscriber)
 
 	_ = r.Run(fmt.Sprintf(":%s", cfg.App.Port))
 }

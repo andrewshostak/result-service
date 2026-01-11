@@ -19,26 +19,26 @@ func NewMatchHandler(matchService MatchService) *MatchHandler {
 func (h *MatchHandler) Create(c *gin.Context) {
 	var params CreateMatchRequest
 	if err := c.ShouldBindJSON(&params); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": errs.CodeInvalidRequest})
 
 		return
 	}
 
 	result, err := h.matchService.Create(c.Request.Context(), params.ToDomain())
-	if errors.As(err, &errs.AliasNotFoundError{}) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if errors.As(err, &errs.UnprocessableContentError{}) {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error(), "code": errs.CodeUnprocessableContent})
 
 		return
 	}
 
-	if errors.As(err, &errs.UnexpectedNumberOfItemsError{}) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if errors.As(err, &errs.ResourceNotFoundError{}) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": errs.CodeResourceNotFound})
 
 		return
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": errs.CodeInternalServerError})
 
 		return
 	}

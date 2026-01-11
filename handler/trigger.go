@@ -8,31 +8,29 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type SubscriptionHandler struct {
-	subscriptionService SubscriptionService
+type TriggerHandler struct {
+	checkResultService        ResultCheckerService
+	subscriberNotifierService SubscriberNotifierService
 }
 
-func NewSubscriptionHandler(subscriptionService SubscriptionService) *SubscriptionHandler {
-	return &SubscriptionHandler{subscriptionService: subscriptionService}
+func NewTriggerHandler(checkResultService ResultCheckerService, subscriberNotifierService SubscriberNotifierService) *TriggerHandler {
+	return &TriggerHandler{
+		checkResultService:        checkResultService,
+		subscriberNotifierService: subscriberNotifierService,
+	}
 }
 
-func (h *SubscriptionHandler) Create(c *gin.Context) {
-	var params CreateSubscriptionRequest
+func (h *TriggerHandler) CheckResult(c *gin.Context) {
+	var params TriggerResultCheckRequest
 	if err := c.ShouldBindJSON(&params); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": errs.CodeInvalidRequest})
 
 		return
 	}
 
-	err := h.subscriptionService.Create(c.Request.Context(), params.ToDomain())
+	err := h.checkResultService.CheckResult(c.Request.Context(), params.MatchID)
 	if errors.As(err, &errs.ResourceNotFoundError{}) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": errs.CodeResourceNotFound})
-
-		return
-	}
-
-	if errors.As(err, &errs.UnprocessableContentError{}) {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error(), "code": errs.CodeUnprocessableContent})
 
 		return
 	}
@@ -46,22 +44,16 @@ func (h *SubscriptionHandler) Create(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func (h *SubscriptionHandler) Delete(c *gin.Context) {
-	var params DeleteSubscriptionRequest
-	if err := c.ShouldBindQuery(&params); err != nil {
+func (h *TriggerHandler) NotifySubscriber(c *gin.Context) {
+	var params TriggerSubscriptionNotificationRequest
+	if err := c.ShouldBindJSON(&params); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": errs.CodeInvalidRequest})
 		return
 	}
 
-	err := h.subscriptionService.Delete(c.Request.Context(), params.ToDomain())
+	err := h.subscriberNotifierService.NotifySubscriber(c.Request.Context(), params.SubscriptionID)
 	if errors.As(err, &errs.ResourceNotFoundError{}) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": errs.CodeResourceNotFound})
-
-		return
-	}
-
-	if errors.As(err, &errs.UnprocessableContentError{}) {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error(), "code": errs.CodeUnprocessableContent})
 
 		return
 	}

@@ -14,9 +14,9 @@ Feel free to use this service for your needs.
 (Integration with `prognoz` project as an example)
 
 - Football Result Service / `result-service` - This service.
-- Football Results API / `football-api` - The source of the football matches results: [documentation](https://www.api-football.com/documentation-v3).
-- Prognoz API Server / `prognoz-api` - The service which wants to receive the results.
-- Prognoz Web Application / `web-app` - The client app of the `prognoz-api` through which administrators manage football matches data. 
+- External Results API (Fotmob) / `fotmob-api` - The source of the football matches results.
+- Prognoz API Server / `prognoz-api` - The service that wants to receive the results.
+- Google Cloud Tasks / `cloud-tasks` - The service that schedules tasks to check match results and notify subscribers.
 
 ### Data persistence
 
@@ -38,14 +38,16 @@ erDiagram
         Int id PK
         Int home_team_id FK
         Int away_team_id FK
-        Date started_at
+        Date starts_at
         String result_status
     }
     
-    FootballAPIFixture {
+    ExternalMatch {
         Int id PK
         Int match_id FK
-        Json data
+        Int home_score
+        Int away_score
+        String status
     }
     
     Subscription {
@@ -53,158 +55,181 @@ erDiagram
         String url UK
         Int match_id FK
         String key
-        Date created_at
-        String subscription_status
+        String status
+        String subscriber_error
         Date notified_at
+        Date created_at
     }
     
-    FootballAPITeam {
+    ExternalTeam {
         Int id PK
         Int team_id FK
     }
     
+    CheckResultTask {
+        Int id PK
+        Int match_id FK
+        String name UK
+        Int attempt_number
+        Date execute_at
+        Date created_at
+    }
+    
     Team ||--o{ Alias : has 
     Team ||--o{ Match : has
-    Match ||--|| FootballAPIFixture : has
+    Match ||--|| ExternalMatch : has
     Match ||--o{ Subscription : has
-    Team ||--|| FootballAPITeam : has
+    Team ||--|| ExternalTeam : has
+    Match ||--|| CheckResultTask : has
 ```
 
-Table names are pluralized. The tables `teams`, `aliases`, `football_api_teams` are pre-filled with the data of `prognoz-api` and `football-api`.
+Table names are pluralized. The tables `teams`, `aliases`, `external-teams` are pre-filled with the data of `fotmob-api`.
 
-### Create or get a match ID
+#### Description of possible match `result_status` values:
 
-When `prognoz-api` receives a request to create a match, the next actions happen:
-1) `prognoz-api` gets both clubs from DB
-2) `prognoz-api` sends a request to `result-service` with the next payload:  
-   Starting date (`started_at`) of the `match`, home `club` `link`, away `club` `link`.
-3) `result-service` receives a request and performs a search in `aliases` table
-4) `result-service` does a search in `matches` table. If match exists, the service returns `match_id`, and skips all following steps.
-5) `result-service` sends a request to `football-api` with `team` (`footbal_api_team_id`), `date` (only date from `started_at` datetime), `season`, `timezone`
-6) `football-api` returns a fixtures array with one element having id in it.
-7) `result-service` creates a new `match` and `football_api_fixture` in the database.
-8) `result-service` schedules a job to get the result
-9) `result-service` returns a `match_id` in the response.
+| `result_status`    | Description                                                                                                                                           |
+|--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `not_scheduled`    | Match is created, but fixture creation or task scheduling fails                                                                                       |
+| `scheduled`        | Match is created and a task is scheduled. If there was an attempt to get a result but a match was not ended the status `scheduled` remains unchanged. |
+| `scheduling_error` | An attempt to reschedule task was unsuccessful.                                                                                                       |
+| `received`         | Match result is received.                                                                                                                             |
+| `api_error`        | Request to fotmob-api to get match result was unsuccessful.                                                                                           |
+| `cancelled`        | Received a status from fotmob-api indicates that match was canceled. No new task is rescheduled.                                                      |
+
+#### Description of possible subscription `subscription_status` values:
+
+| `subscription_status` | Description                                                          |
+|-----------------------|----------------------------------------------------------------------|
+| `pending`             | Subscription is created, but match result is not yet received.       |
+| `scheduling_error`    | Attempt to create a task was unsuccessful.                           |
+| `successful`          | Subscriber successfully notified. Column `notified_at` gets a value. |
+| `subscriber_error`    | Subscriber returned an error. Column `error` gets a value.           |
+
+## Flow diagrams
+
+### Overall
+
+```mermaid
+flowchart TD
+    subgraph Group 1
+        A[Create a match] --> B[Subscribe on result receiving]
+    end
+
+    subgraph Group 2
+        C[Receive trigger to check match result] --> D[Notify subscribers]
+    end
+
+    E[Delete a subscription]
+
+    B --> C
+    B --> E
+```
+
+### Create a match
 
 ```mermaid
 sequenceDiagram
-participant API
-participant ResultService
-participant FootballAPI
-Activate API
-API->>ResultService: Sends a request to create/get a match ID
+participant API as prognoz-api
+participant ResultService as result-service
+participant Fotmob as fotmob-api
+participant CloudTasks as cloud-tasks
+API->>ResultService: Sends a request to create a match
 Activate ResultService
-ResultService->>ResultService: Gets team ids by aliases from the database (DB)
+ResultService->>ResultService: Gets team ids by aliases from the DB
 ResultService->>ResultService: Gets match by team ids and starting time from the DB
-alt match is found
-    ResultService-->>API: Returns match id
+alt match is found and result status is scheduled
+    ResultService-->>API: Returns match response
 end
-ResultService->>+FootballAPI: Sends a request with season, timezone, date, team id
-FootballAPI-->>-ResultService: Returns fixture data
-ResultService->>ResultService: Saves match and fixture to the DB
-ResultService->>ResultService: Schedules match result acquiring
-ResultService-->>API: Returns match id
+ResultService->>+Fotmob: Sends a request with date
+Fotmob-->>-ResultService: Returns all matches for the date
+ResultService->>ResultService: Finds a match in the response by aliases and starting time
+ResultService->>ResultService: Saves match with status not_scheduled and external match to the DB
+ResultService->>CloudTasks: Creates a task to check result with schedule-time (starting time + 115 minutes)
+Activate CloudTasks
+CloudTasks-->>ResultService: Returns task id
+Deactivate CloudTasks
+ResultService->>ResultService: Saves check result task to the DB
+ResultService->>ResultService: Updates match status to scheduled
+ResultService-->>API: Returns match response
 Deactivate ResultService
-Deactivate API
 ```
 
 ### Subscribe on result receiving
-Context: `prognoz-api` has `match_id` from the response of above request.
-1) `prognoz-api` sends a second request to `result-service` to create a subscription with the next payload: `match_id`, `url`, `secret_key`
-2) `result-service` gets match from the DB and validates its status 
-3) `result-service` creates a subscription in the DB
-4) `result-service` returns successful empty response
 
 ```mermaid
 sequenceDiagram
-participant API
-participant ResultService
-Activate API
+participant API as prognoz-api
+participant ResultService as result-service
 API->>ResultService: Sends a request to create subscription
 Activate ResultService
-ResultService->>ResultService: Gets match from the DB and verifies its status
+ResultService->>ResultService: Gets match from the DB
+alt Match result status in not scheduled
+ResultService-->>API: Returns error
+end
 ResultService->>ResultService: Saves subscription to the DB
 ResultService-->>API: Returns success
 Deactivate ResultService
-Deactivate API
 ```
 
-### Get match result
-
-1) the scheduled task sends a request to `football-api` to get a fixture data by fixture id. Scheduled job spec:
-- the scheduled task in `result-service` starts in 115 minutes after the match starting date.
-- if the fixture status is not finished, `result-service` will send more requests to `football-api`, until receives the finished status.
-- the interval between calls to `football-api` is 15 minutes.
-- max number of retries is 5.
-2) when `result-service` receives ended match it cancels scheduled task and updates fixture/match in the DB
-3) when max number of retries reached it updates match status in the DB to `error`
+### Receive trigger to check match result
 
 ```mermaid
 sequenceDiagram
-participant ResultService
-participant FootballAPI
-Note over ResultService: Task to get result is scheduled
-Activate ResultService
-loop Until match is ended (has results)
-  ResultService->>FootballAPI: Sends a request to get match details
-  Activate ResultService
-  Activate FootballAPI
-  FootballAPI-->>ResultService: Returns a match
-  Deactivate FootballAPI
-  Deactivate ResultService
-end
-ResultService->>ResultService: Updates match and a fixture in the DB
-ResultService->>ResultService: Cancels scheduled task
-Deactivate ResultService
+    participant CloudTasks as cloud-tasks
+    participant ResultService as result-service
+    participant Fotmob as fotmob-api
+    CloudTasks->>+ResultService: Sends a request to check match result
+    ResultService->>+Fotmob: Sends a request with date
+    Fotmob-->>-ResultService: Returns all matches for the date
+    ResultService->>ResultService: Finds a match in the response by id
+    ResultService->>ResultService: Updates external match data
+    alt match is not yet ended
+        ResultService->>CloudTasks: Creates a new task to check result with backoff
+        ResultService-->>CloudTasks: Returns success
+    end
+    ResultService->>ResultService: Gets all subscriptions of the match from the DB 
+    loop Each subscription
+        ResultService->>CloudTasks: Create a task to notify subscriber
+    end
+    ResultService-->>-CloudTasks: Returns success
 ```
 
 ### Notify subscribers
 
-1) `result-service` polls database every 1 minute to get unnotified subscriptions of ended matches.
-2) `result-service` iterates through subscriptions and notifies them by making an HTTP-call to a URL
-3) depending on successfulness of HTTP-call `result-service` updates subscription status
-
 ```mermaid
 sequenceDiagram
-participant ResultService
-participant API
-Activate ResultService
-ResultService->>ResultService: Gets unnotified subscriptions from DB every N-minute
-loop Iterates through subscriptions
-    ResultService->>API: Sends a request with the match result
-    Activate API
-    API-->>ResultService: Returns success
-    alt error in API
-        API-->>ResultService: Returns error
-    end
-    Deactivate API
+    participant CloudTasks as cloud-tasks
+    participant ResultService as result-service
+    participant API as prognoz-api
+    CloudTasks->>+ResultService: Sends a request to notify subscriber
+    ResultService->>ResultService: Gets a subscription and a match from the DB
+    ResultService->>+API: Sends a request with the match result
+    API-->>-ResultService: Returns success
     ResultService->>ResultService: Updates subscription status
-end
-Deactivate ResultService
+    ResultService-->>-CloudTasks: Returns success
+    
 ```
 
-### Delete a match
-
-1) `prognoz-api` gets both clubs from DB
-2) `prognoz-api` sends a request to `result-service` to delete a subscription job with the next payload:  
-   Starting date `started_at` of the `match`, home `club` `link`, away `club` `link`.
-3) `result-service` receives a request and performs a search in `aliases`, `teams`, `matches` table
-4) `result-service` finds a `match` `id` and removes a subscription.
-5) if there is no more subscriptions `result-service` cancels scheduled job and removes `match` and `football_api_fixture`
+### Delete a subscription
 
 ```mermaid
 sequenceDiagram
-participant WebApp
-participant API
-participant ResultService
-WebApp->>API: Match deletion request
-Activate API
+participant API as prognoz-api
+participant ResultService as result-service
+participant CloudTasks as cloud-tasks
 API->>ResultService: Sends a request to remove subscription
 Activate ResultService
+ResultService->>ResultService: Deletes subscription from DB
+alt other subscriptions for this match exist
+ResultService-->>API: Returns success
+end
+ResultService->>CloudTasks: Sends a request to remove scheduled task
+Activate CloudTasks
+CloudTasks-->>ResultService: Returns success
+Deactivate CloudTasks
+ResultService->>ResultService: Removes match and fixture from DB
 ResultService-->>API: Returns success
 Deactivate ResultService
-API-->>WebApp: Returns success
-Deactivate API
 ```
 
 ### Authorization
@@ -219,17 +244,13 @@ Deactivate API
 2) Secret-key is saved in `subscriptions` table for each subscription  
 3) When `result-service` calls subscription `url` it attaches secret-key to the request
 
-`result-service` => `football-api`
-1) An env variable `RAPID_API_KEY` is stored in env variables and attached to each request 
-
 ### Back-fill aliases data
 
 To back-fill aliases data a separate command is created. The command description:
-- Accepts season as a parameter
+- Accepts dates as a parameter
 - Command has predefined list of league and country names (for example: Premier League - Ukraine, La Liga - Spain, etc.)
-- Calls `football-api`s `leagues` endpoint with `season` param
-- Extracts appropriate league ids from the response of `league` endpoint
-- Concurrently calls `teams` endpoint with the `season` and `league` param
+- For each date param calls `fotmob-api`s `matches` endpoint
+- Extracts team names from the matches list
 - For each team the command does the next actions in database 
   - checks if `alias` already exists
-  - if not, creates a `team`, `alias`, `football_api_team` in transaction
+  - if not, creates a `team`, `alias`, `external_team` in transaction

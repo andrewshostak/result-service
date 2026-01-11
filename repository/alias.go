@@ -19,19 +19,19 @@ func NewAliasRepository(db *gorm.DB) *AliasRepository {
 func (r *AliasRepository) Find(ctx context.Context, alias string) (*Alias, error) {
 	var a Alias
 
-	result := r.db.WithContext(ctx).Joins("FootballApiTeam").Where("alias ILIKE ?", alias).First(&a)
+	result := r.db.WithContext(ctx).Joins("ExternalTeam").Where("alias ILIKE ?", alias).First(&a)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("alias %s not found: %w", alias, errs.AliasNotFoundError{Message: result.Error.Error()})
+			return nil, errs.NewResourceNotFoundError(fmt.Errorf("alias %s not found: %w", alias, result.Error))
 		}
 
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to find alias: %w", result.Error)
 	}
 
 	return &a, nil
 }
 
-func (r *AliasRepository) SaveInTrx(ctx context.Context, alias string, footballAPITeamID uint) error {
+func (r *AliasRepository) SaveInTrx(ctx context.Context, alias string, externalTeamID uint) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		team := Team{}
 		if err := tx.Create(&team).Error; err != nil {
@@ -43,8 +43,8 @@ func (r *AliasRepository) SaveInTrx(ctx context.Context, alias string, footballA
 			return fmt.Errorf("failed to create alias: %w", err)
 		}
 
-		if err := tx.Create(&FootballApiTeam{ID: footballAPITeamID, TeamID: team.ID}).Error; err != nil {
-			return fmt.Errorf("failed to create football api team: %w", err)
+		if err := tx.Create(&ExternalTeam{ID: externalTeamID, TeamID: team.ID}).Error; err != nil {
+			return fmt.Errorf("failed to create external team: %w", err)
 		}
 
 		return nil
@@ -56,7 +56,7 @@ func (r *AliasRepository) Search(ctx context.Context, alias string) ([]Alias, er
 	result := r.db.WithContext(ctx).Where("alias ILIKE ?", "%"+alias+"%").Limit(10).Find(&aliases)
 
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to search aliases: %w", result.Error)
 	}
 
 	return aliases, nil

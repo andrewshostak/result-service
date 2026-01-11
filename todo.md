@@ -1,0 +1,20 @@
+### List of improvements after first release
+- configure timeout (should be less than or equal to GCP configured timeout)
+- hide secrets from `app.yaml` & commit `app.yaml` with hidden secrets (or example.app.yaml)
+- replace gorm with sqlc
+- configure CI
+- fix concurrent map reads/writes
+- graceful shutdown
+- make gin and zerolog friends
+- make gin and gorm friends
+- get two aliases on match creation endpoint concurrently
+- notify subscribers concurrently
+- create match and external match in transaction
+- fix broken gorm errors checks
+- update external match and match in transaction
+- add response bodies from API calls to error messages
+- add unit tests for the project
+- add linter
+- make sure docker-compose works and commit changes
+- make it work with multiple instances
+- errs.go: use one type ItemNotFoundError instead of AliasNotFoundError MatchNotFoundError SubscriptionNotFoundError
