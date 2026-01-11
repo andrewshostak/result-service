@@ -2,7 +2,10 @@
 gcloud builds submit --tag gcr.io/prognoz-478721/result-service:latest
 
 -- deploy cloud service
-gcloud run services replace service.yaml --region europe-west3
+gcloud run services replace service.yaml --region europe-west3 --allow-unauthenticated
+
+-- build and deploy
+gcloud run deploy result-service --image gcr.io/prognoz-478721/result-service:latest --region europe-west3 --allow-unauthenticated
 
 -- enable cloud tasks for the project
 gcloud services enable cloudtasks.googleapis.com
