@@ -117,6 +117,7 @@ func (s *BackfillAliasesService) getIncludedLeagues() []ExternalAPILeague {
 		{Name: "Copa America", CountryCode: "INT"},
 		{Name: "World Cup", CountryCode: "INT"},
 		{Name: "Africa Cup of Nations", CountryCode: "INT"},
+		{Name: "Africa Cup of Nations Final Stage", CountryCode: "INT"},
 		// top leagues + ukrainian league
 		{Name: "Premier League", CountryCode: "UKR"},
 		{Name: "Premier League", CountryCode: "ENG"},

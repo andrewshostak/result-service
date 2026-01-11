@@ -22,7 +22,7 @@ func main() {
 		Run:   run,
 	}
 
-	rootCmd.Flags().StringSlice("dates", []string{"2025-12-11"}, "query param in leagues endpoint of football-api")
+	rootCmd.Flags().StringSlice("dates", []string{"2025-12-11"}, "query param in leagues endpoint of external api")
 
 	if err := rootCmd.Execute(); err != nil {
 		panic(err)

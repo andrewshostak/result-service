@@ -37,7 +37,7 @@ type ExternalAPI struct {
 
 type ResultCheck struct {
 	MaxRetries        uint          `env:"MAX_RETRIES" envDefault:"5"`
-	Interval          time.Duration `env:"INTERVAL" envDefault:"15m"`
+	Interval          time.Duration `env:"INTERVAL" envDefault:"5m"`
 	FirstAttemptDelay time.Duration `env:"FIRST_ATTEMPT_DELAY" envDefault:"115m"`
 }
 
