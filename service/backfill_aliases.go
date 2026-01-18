@@ -108,39 +108,37 @@ func (s *BackfillAliasesService) filterOutLeagues(allLeagues []ExternalAPILeague
 func (s *BackfillAliasesService) getIncludedLeagues() []ExternalAPILeague {
 	return []ExternalAPILeague{
 		// european cups
-		{Name: "Champions League", CountryCode: "INT"},
-		{Name: "Europa League", CountryCode: "INT"},
-		{Name: "Conference League", CountryCode: "INT"},
+		{Name: "Champions League", CountryCode: "INT"},  // 2025-12-09,2025-12-10
+		{Name: "Europa League", CountryCode: "INT"},     // 2025-12-11
+		{Name: "Conference League", CountryCode: "INT"}, // 2025-12-11
 		// national teams
-		{Name: "World Cup Qualification UEFA", CountryCode: "INT"},
-		{Name: "World Cup Qualification CONMEBOL", CountryCode: "INT"},
-		{Name: "Copa America", CountryCode: "INT"},
-		{Name: "World Cup", CountryCode: "INT"},
-		{Name: "Africa Cup of Nations", CountryCode: "INT"},
-		{Name: "Africa Cup of Nations Final Stage", CountryCode: "INT"},
+		{Name: "World Cup Qualification UEFA", CountryCode: "INT"},     // 2025-11-18,2025-11-17,2025-11-16,2025-11-15,2025-11-14,2025-11-13
+		{Name: "World Cup Qualification CONMEBOL", CountryCode: "INT"}, // 2025-09-09,
+		{Name: "Copa America", CountryCode: "INT"},                     // 2024-06-21,2024-06-22,2024-06-23,2024-06-24,2024-06-25,2024-06-26
+		{Name: "World Cup", CountryCode: "INT"},                        // 2022-11-20,2022-11-21,2022-11-22,2022-11-23,2022-11-24
+		{Name: "Africa Cup of Nations", CountryCode: "INT"},            // 2025-12-21,2025-12-22,2025-12-23,2025-12-24
 		// top leagues + ukrainian league
-		{Name: "Premier League", CountryCode: "UKR"},
-		{Name: "Premier League", CountryCode: "ENG"},
-		{Name: "LaLiga", CountryCode: "ESP"},
-		{Name: "Serie A", CountryCode: "ITA"},
-		{Name: "Bundesliga", CountryCode: "GER"},
-		{Name: "Ligue 1", CountryCode: "FRA"},
-		{Name: "Eredivisie", CountryCode: "NED"},
-		{Name: "Liga Portugal", CountryCode: "POR"},
-		{Name: "Belgian Pro League", CountryCode: "BEL"},
+		{Name: "Premier League", CountryCode: "UKR"},     // 2025-12-12,2025-12-13,2025-12-14
+		{Name: "Premier League", CountryCode: "ENG"},     // 2026-01-06,2026-01-07,2026-01-08
+		{Name: "LaLiga", CountryCode: "ESP"},             // 2025-12-19,2025-12-20,2025-12-21,2025-12-22
+		{Name: "Serie A", CountryCode: "ITA"},            // 2026-01-10,2026-01-11,2026-01-12
+		{Name: "Bundesliga", CountryCode: "GER"},         // 2025-12-19,2025-12-20,2025-12-21
+		{Name: "Ligue 1", CountryCode: "FRA"},            // 2026-01-02,2026-01-03,2026-01-04
+		{Name: "Eredivisie", CountryCode: "NED"},         // 2026-01-09,2026-01-10,2026-01-11
+		{Name: "Belgian Pro League", CountryCode: "BEL"}, // 2025-12-19,2025-12-20,2025-12-21
 		// only intersected with euro cups: Champions/Europa/Conference League
-		//{Name: "1. Lig", CountryCode: "TUR"},
-		//{Name: "Premiership", CountryCode: "SCO"},
-		//{Name: "1. Liga", CountryCode: "CZE"},
-		//{Name: "Super League", CountryCode: "SUI"},
-		//{Name: "Bundesliga", CountryCode: "AUT"},
-		//{Name: "Superligaen", CountryCode: "DEN"},
-		//{Name: "Eliteserien", CountryCode: "NOR"},
-		//{Name: "Ligat Ha'al", CountryCode: "ISR"},
-		//{Name: "Super League", CountryCode: "GRE"},
-		//{Name: "Super Liga", CountryCode: "SRB"},
-		//{Name: "Ekstraklasa", CountryCode: "POL"},
-		//{Name: "HNL", CountryCode: "CRO"},
+		{Name: "Super Lig", CountryCode: "TUR"},    // 2025-12-19,2025-12-20,2025-12-21,2025-12-22
+		{Name: "Premiership", CountryCode: "SCO"},  // 2026-01-10,2026-01-11
+		{Name: "1. Liga", CountryCode: "CZE"},      // 2025-12-13,2025-12-14
+		{Name: "Super League", CountryCode: "SUI"}, // 2025-12-13,2025-12-14
+		{Name: "Bundesliga", CountryCode: "AUT"},   // 2025-12-13,2025-12-14
+		{Name: "Superligaen", CountryCode: "DEN"},  // 2025-12-05,2025-12-07,2025-12-08
+		{Name: "Eliteserien", CountryCode: "NOR"},  // 2025-11-30
+		{Name: "Ligat Ha'al", CountryCode: "ISR"},  // 2026-01-09,2026-01-10,2026-01-11
+		{Name: "Super League", CountryCode: "GRE"}, // 2026-01-10,2026-01-11
+		{Name: "Super Liga", CountryCode: "SRB"},   // 2025-12-20,2025-12-21,2025-12-22
+		{Name: "Ekstraklasa", CountryCode: "POL"},  // 2025-12-05,2025-12-06,2025-12-07,2025-12-08
+		{Name: "HNL", CountryCode: "CRO"},          // 2025-12-19,2025-12-20,2025-12-21
 	}
 }
 
@@ -189,7 +187,7 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []External
 
 func isIncludedLeague(league ExternalAPILeague, includedLeagues []ExternalAPILeague) bool {
 	for i := range includedLeagues {
-		if (includedLeagues[i].Name == league.Name || includedLeagues[i].ParentLeagueName == league.Name) &&
+		if (includedLeagues[i].Name == league.Name || includedLeagues[i].Name == league.ParentLeagueName) &&
 			includedLeagues[i].CountryCode == league.CountryCode {
 			return true
 		}
