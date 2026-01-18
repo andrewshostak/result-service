@@ -14,7 +14,6 @@ type NotificationBody struct {
 	Away uint `json:"away"`
 }
 
-// TODO: rename after removing football-api
 type MatchesResponse struct {
 	Leagues []LeagueFotmob `json:"leagues"`
 }

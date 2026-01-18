@@ -33,10 +33,11 @@ type App struct {
 
 type ExternalAPI struct {
 	FotmobAPIBaseURL string `env:"FOTMOB_API_BASE_URL" envDefault:"https://www.fotmob.com"`
+	Timezone         string `env:"FOTMOB_API_TIMEZONE" envDefault:"Europe/London"`
 }
 
 type ResultCheck struct {
-	MaxRetries        uint          `env:"MAX_RETRIES" envDefault:"5"`
+	MaxRetries        uint          `env:"MAX_RETRIES" envDefault:"10"`
 	Interval          time.Duration `env:"INTERVAL" envDefault:"5m"`
 	FirstAttemptDelay time.Duration `env:"FIRST_ATTEMPT_DELAY" envDefault:"115m"`
 }

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/andrewshostak/result-service/config"
 )
 
 const matchesPath = "/api/data/matches"
@@ -16,15 +18,15 @@ const dateFormat = "20060102"
 type FotmobClient struct {
 	httpClient *http.Client
 	logger     Logger
-	baseURL    string
+	config     config.ExternalAPI
 }
 
-func NewFotmobClient(httpClient *http.Client, logger Logger, baseURL string) *FotmobClient {
-	return &FotmobClient{httpClient: httpClient, logger: logger, baseURL: baseURL}
+func NewFotmobClient(httpClient *http.Client, logger Logger, config config.ExternalAPI) *FotmobClient {
+	return &FotmobClient{httpClient: httpClient, logger: logger, config: config}
 }
 
 func (c *FotmobClient) GetMatchesByDate(ctx context.Context, date time.Time) (*MatchesResponse, error) {
-	url := c.baseURL + matchesPath
+	url := c.config.FotmobAPIBaseURL + matchesPath
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -33,6 +35,7 @@ func (c *FotmobClient) GetMatchesByDate(ctx context.Context, date time.Time) (*M
 
 	q := req.URL.Query()
 	q.Add("date", date.Format(dateFormat))
+	q.Add("timezone", c.config.Timezone)
 	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("User-Agent", "golang-app")
