@@ -191,18 +191,18 @@ func fromClientFotmobMatch(match client.MatchFotmob) (*ExternalAPIMatch, error) 
 		Time:   startsAt,
 		Home:   fromClientFotmobTeam(match.Home),
 		Away:   fromClientFotmobTeam(match.Away),
-		Status: fromClientMatchStatus(match.StatusID),
+		Status: fromClientMatchStatus(match.ID, match.StatusID),
 	}, nil
 }
 
-func fromClientMatchStatus(statusID int) ExternalMatchStatus {
+func fromClientMatchStatus(matchID int, statusID int) ExternalMatchStatus {
 	switch statusID {
 	// 1 - Not started
 	case 1:
 		return StatusMatchNotStarted
 	// 5 - Postponed
 	// 17 - Abandoned
-	case 5, 17:
+	case 5, 17, 106:
 		return StatusMatchCancelled
 	// 2 - Live 1st half
 	// 3 - Live 2nd half
@@ -216,6 +216,7 @@ func fromClientMatchStatus(statusID int) ExternalMatchStatus {
 		return StatusMatchFinished
 	// 4, 7, 8, 9, 12, 14, 15, 16
 	default:
+		fmt.Printf("match with id %d has unknown status status: %d\n", matchID, statusID)
 		return StatusMatchUnknown
 	}
 }
