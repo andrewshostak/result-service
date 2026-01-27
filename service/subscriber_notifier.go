@@ -38,6 +38,7 @@ func (s *SubscriberNotifierService) NotifySubscriber(ctx context.Context, subscr
 
 	sub := fromRepositorySubscription(*subscription)
 	if s.isNotified(sub) {
+		s.logger.Error().Uint("subscription_id", subscription.ID).Msg("subscription is already notified")
 		return nil
 	}
 
@@ -83,6 +84,8 @@ func (s *SubscriberNotifierService) NotifySubscriber(ctx context.Context, subscr
 		s.logger.Error().Err(errUpdate).Uint("subscription_id", subscription.ID).Msg(fmt.Sprintf("failed to update subscription status to: %s", string(SuccessfulSub)))
 		return fmt.Errorf("failed to update subscription status to %s: %w", string(SuccessfulSub), errUpdate)
 	}
+
+	s.logger.Debug().Uint("subscription_id", subscription.ID).Msg("subscriber notified")
 
 	return nil
 }

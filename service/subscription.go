@@ -51,13 +51,15 @@ func (s *SubscriptionService) Create(ctx context.Context, request CreateSubscrip
 	})
 
 	if errors.As(err, &errs.ResourceAlreadyExistsError{}) {
-		s.logger.Info().Uint("subscription_id", match.ID).Msg("subscription already exists")
+		s.logger.Error().Uint("subscription_id", match.ID).Msg("subscription already exists")
 		return nil
 	}
 
 	if err != nil {
 		return fmt.Errorf("failed to create subscription: %w", err)
 	}
+
+	s.logger.Debug().Uint("subscription_id", match.ID).Msg("subscription created")
 
 	return nil
 }
@@ -118,8 +120,6 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 		return nil
 	}
 
-	s.logger.Debug().Uint("match_id", match.ID).Msg("match deleted")
-
 	if match.CheckResultTask == nil {
 		s.logger.Error().Uint("match_id", match.ID).Msg("match relation check result task does not exist")
 		return nil
@@ -130,7 +130,7 @@ func (s *SubscriptionService) Delete(ctx context.Context, request DeleteSubscrip
 		return nil
 	}
 
-	s.logger.Debug().Uint("match_id", match.ID).Msg("result check task deleted")
+	s.logger.Debug().Uint("match_id", match.ID).Msg("match & result check task deleted")
 
 	return nil
 }

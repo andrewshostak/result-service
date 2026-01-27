@@ -110,15 +110,11 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		return 0, fmt.Errorf("failed to save match with team ids %d and %d starting at %s: %w", aliasHome.TeamID, aliasAway.TeamID, externalMatch.Time, err)
 	}
 
-	s.logger.Debug().Uint("match_id", savedMatch.ID).Msg("match saved")
-
 	externalMatchID := uint(externalMatch.ID)
 	_, err = s.externalMatchRepository.Save(ctx, &externalMatchID, toRepositoryExternalMatch(savedMatch.ID, *externalMatch))
 	if err != nil {
 		return 0, fmt.Errorf("failed to save external match with id %d and match id %d: %w", externalMatchID, savedMatch.ID, err)
 	}
-
-	s.logger.Debug().Uint("match_id", savedMatch.ID).Msg("external match saved")
 
 	match = fromRepositoryMatch(*savedMatch)
 
@@ -141,7 +137,7 @@ func (s *MatchService) Create(ctx context.Context, request CreateMatchRequest) (
 		return 0, fmt.Errorf("failed to save result-check task: %w", err)
 	}
 
-	s.logger.Debug().Uint("match_id", match.ID).Time("execute_at", scheduledTask.ExecuteAt).Msg("check result task scheduled")
+	s.logger.Debug().Uint("match_id", match.ID).Time("execute_at", scheduledTask.ExecuteAt).Msg("match saved & check result task scheduled")
 
 	_, err = s.matchRepository.Update(ctx, match.ID, string(Scheduled))
 	if err != nil {
