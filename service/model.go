@@ -206,15 +206,21 @@ func fromClientMatchStatus(matchID int, statusID int) ExternalMatchStatus {
 		return StatusMatchCancelled
 	// 2 - Live 1st half
 	// 3 - Live 2nd half
+	// 8 - Live extra time 1st half
+	// 9 - Live extra time 2nd half
 	// 10 - Half-Time
-	case 2, 3, 10:
+	// 12 - Interrupted (Short)
+	// 14 - Waiting for extra time
+	// 231 - Pause extra time
+	case 2, 3, 8, 9, 10, 12, 14, 231:
 		return StatusMatchInProgress
 	// 6 - Full-Time
 	// 11 - After extra time
 	// 13 - Finished after Penalties
 	case 6, 11, 13:
 		return StatusMatchFinished
-	// 4, 7, 8, 9, 12, 14, 15, 16
+	// 93 - Will be continued after interruption
+	// 4, 7, 9, 14, 15, 16
 	default:
 		fmt.Printf("match with id %d has unknown status status: %d\n", matchID, statusID)
 		return StatusMatchUnknown
