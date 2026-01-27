@@ -126,6 +126,7 @@ func (s *BackfillAliasesService) getIncludedLeagues() []ExternalAPILeague {
 		{Name: "Ligue 1", CountryCode: "FRA"},            // 2026-01-02,2026-01-03,2026-01-04
 		{Name: "Eredivisie", CountryCode: "NED"},         // 2026-01-09,2026-01-10,2026-01-11
 		{Name: "Belgian Pro League", CountryCode: "BEL"}, // 2025-12-19,2025-12-20,2025-12-21
+		{Name: "Liga Portugal", CountryCode: "POR"},      // 2026-01-16,2026-01-17,2026-01-18,2026-01-19
 		// only intersected with euro cups: Champions/Europa/Conference League
 		{Name: "Super Lig", CountryCode: "TUR"},    // 2025-12-19,2025-12-20,2025-12-21,2025-12-22
 		{Name: "Premiership", CountryCode: "SCO"},  // 2026-01-10,2026-01-11
@@ -139,6 +140,18 @@ func (s *BackfillAliasesService) getIncludedLeagues() []ExternalAPILeague {
 		{Name: "Super Liga", CountryCode: "SRB"},   // 2025-12-20,2025-12-21,2025-12-22
 		{Name: "Ekstraklasa", CountryCode: "POL"},  // 2025-12-05,2025-12-06,2025-12-07,2025-12-08
 		{Name: "HNL", CountryCode: "CRO"},          // 2025-12-19,2025-12-20,2025-12-21
+		{Name: "Superliga", CountryCode: "ROU"},    // 2025-12-19,2025-12-20,2025-12-21,2025-12-22
+		{Name: "Allsvenskan", CountryCode: "SWE"},  // 2025-11-09
+		// second leagues
+		{Name: "2. Bundesliga", CountryCode: "GER"}, // 2026-01-16,2026-01-17,2026-01-18
+		{Name: "Championship", CountryCode: "ENG"},  // 2026-01-16,2026-01-17
+		{Name: "LaLiga2", CountryCode: "ESP"},       // 2026-01-16,2026-01-17,2026-01-18,2026-01-19
+		{Name: "Ligue 2", CountryCode: "FRA"},       // 2026-01-16,2026-01-17,2026-01-18,2026-01-19
+		{Name: "Serie B", CountryCode: "ITA"},       // 2026-01-16,2026-01-17,2026-01-18
+		// other
+		{Name: "Cup", CountryCode: "UKR"},                          // 2026-03-03
+		{Name: "Premier League Qualification", CountryCode: "UKR"}, // 2025-05-29,2025-06-01
+
 	}
 }
 
