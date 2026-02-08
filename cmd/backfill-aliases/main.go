@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/andrewshostak/result-service/client"
 	"github.com/andrewshostak/result-service/config"
+	"github.com/andrewshostak/result-service/internal/adapters/http/client/fotmob"
+	"github.com/andrewshostak/result-service/internal/adapters/repository"
+	"github.com/andrewshostak/result-service/internal/app/alias"
 	loggerinternal "github.com/andrewshostak/result-service/logger"
-	"github.com/andrewshostak/result-service/repository"
-	"github.com/andrewshostak/result-service/service"
 	"github.com/spf13/cobra"
 )
 
@@ -58,9 +58,9 @@ func run(cmd *cobra.Command, _ []string) {
 
 	aliasRepository := repository.NewAliasRepository(db)
 
-	fotmobClient := client.NewFotmobClient(&httpClient, logger, cfg.ExternalAPI)
+	fotmobClient := fotmob.NewFotmobClient(&httpClient, logger, cfg.ExternalAPI)
 
-	backfillAliasesService := service.NewBackfillAliasesService(aliasRepository, fotmobClient, logger)
+	backfillAliasesService := alias.NewBackfillAliasesService(aliasRepository, fotmobClient, logger)
 
 	ctx := context.Background()
 

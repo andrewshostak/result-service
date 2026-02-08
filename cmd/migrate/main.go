@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	"github.com/andrewshostak/result-service/config"
+	"github.com/andrewshostak/result-service/internal/adapters/repository"
 	loggerinternal "github.com/andrewshostak/result-service/logger"
-	"github.com/andrewshostak/result-service/repository"
 	"github.com/golang-migrate/migrate/v4"
 	migratepg "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/rs/zerolog"
