@@ -74,7 +74,7 @@ func TestMatchService_Create(t *testing.T) {
 	})
 
 	createdTaskName := gofakeit.Word()
-	clientTask := testutils.FakeClientTask(func(t *models.ClientTask) {
+	clientTask := testutils.FakeTask(func(t *models.Task) {
 		t.Name = createdTaskName
 		t.ExecuteAt = startsAt.Add(pollingFirstAttemptDelay)
 	})

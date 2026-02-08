@@ -140,8 +140,7 @@ type ExternalAPITeam struct {
 	LongName string
 }
 
-// TODO: can it be one model with CheckResultTask?
-type ClientTask struct {
+type Task struct {
 	Name      string
 	ExecuteAt time.Time
 }

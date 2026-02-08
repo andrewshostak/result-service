@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/andrewshostak/result-service/internal/adapters/http/client/fotmob"
-	"github.com/andrewshostak/result-service/internal/adapters/http/client/task"
 	"github.com/brianvoe/gofakeit/v6"
 )
 
@@ -35,15 +34,4 @@ func FakeClientTeam(options ...Option[fotmob.TeamFotmob]) fotmob.TeamFotmob {
 	applyOptions(&team, options...)
 
 	return team
-}
-
-func FakeClientClientTask(options ...Option[task.Task]) task.Task {
-	task := task.Task{
-		Name:      gofakeit.Name(),
-		ExecuteAt: time.Now().Add(time.Duration(gofakeit.RandomInt([]int{1, 2, 4, 8})) * time.Hour),
-	}
-
-	applyOptions(&task, options...)
-
-	return task
 }

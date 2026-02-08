@@ -35,7 +35,7 @@ func NewClient(config config.GoogleCloud, dispatchDeadline time.Duration, client
 	return &TaskClient{config: config, dispatchDeadline: dispatchDeadline, client: client}
 }
 
-func (c *TaskClient) GetResultCheckTask(ctx context.Context, matchID uint, attempt uint) (*models.ClientTask, error) {
+func (c *TaskClient) GetResultCheckTask(ctx context.Context, matchID uint, attempt uint) (*models.Task, error) {
 	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", c.config.ProjectID, c.config.Region, c.config.CheckResultQueueName)
 	name := fmt.Sprintf("%s/tasks/match-%d-attempt-%d", queuePath, matchID, attempt)
 
@@ -46,10 +46,10 @@ func (c *TaskClient) GetResultCheckTask(ctx context.Context, matchID uint, attem
 		return nil, fmt.Errorf("failed to get result-check task: %w", err)
 	}
 
-	return &models.ClientTask{Name: task.Name, ExecuteAt: task.ScheduleTime.AsTime()}, nil
+	return &models.Task{Name: task.Name, ExecuteAt: task.ScheduleTime.AsTime()}, nil
 }
 
-func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*models.ClientTask, error) {
+func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*models.Task, error) {
 	targetURL := fmt.Sprintf("%s%s", c.config.TasksBaseURL, checkResultPath)
 
 	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", c.config.ProjectID, c.config.Region, c.config.CheckResultQueueName)
@@ -94,7 +94,7 @@ func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, atte
 		return nil, fmt.Errorf("failed to create result-check task: %w", err)
 	}
 
-	return &models.ClientTask{
+	return &models.Task{
 		Name:      createdTask.Name,
 		ExecuteAt: createdTask.ScheduleTime.AsTime(),
 	}, nil

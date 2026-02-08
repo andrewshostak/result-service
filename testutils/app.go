@@ -108,8 +108,8 @@ func FakeExternalAPITeam(options ...Option[models.ExternalAPITeam]) models.Exter
 	return externalTeam
 }
 
-func FakeClientTask(options ...Option[models.ClientTask]) models.ClientTask {
-	task := models.ClientTask{
+func FakeTask(options ...Option[models.Task]) models.Task {
+	task := models.Task{
 		Name:      gofakeit.Name(),
 		ExecuteAt: time.Now().Add(time.Duration(gofakeit.RandomInt([]int{1, 2, 4, 8})) * time.Hour),
 	}

@@ -57,7 +57,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 	externalMatchClientInProgress := externalMatchClient
 	externalMatchClientInProgress.Status = models.StatusMatchInProgress
 
-	clientTask := testutils.FakeClientTask()
+	clientTask := testutils.FakeTask()
 	repositorySubscription := testutils.FakeSubscription()
 
 	expectedRepositoryMatch := models.ExternalMatch{

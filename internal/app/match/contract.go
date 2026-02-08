@@ -36,8 +36,8 @@ type ExternalAPIClient interface {
 }
 
 type TaskClient interface {
-	GetResultCheckTask(ctx context.Context, matchID uint, attempt uint) (*models.ClientTask, error)
-	ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*models.ClientTask, error)
+	GetResultCheckTask(ctx context.Context, matchID uint, attempt uint) (*models.Task, error)
+	ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*models.Task, error)
 	ScheduleSubscriberNotification(ctx context.Context, subscriptionID uint) error
 }
 
