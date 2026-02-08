@@ -19,15 +19,6 @@ func NewMatchRepository(db *gorm.DB) *MatchRepository {
 	return &MatchRepository{db: db}
 }
 
-func (r *MatchRepository) Create(ctx context.Context, match Match) (*Match, error) {
-	result := r.db.WithContext(ctx).Create(&match)
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to create match: %w", result.Error)
-	}
-
-	return &match, nil
-}
-
 func (r *MatchRepository) Delete(ctx context.Context, id uint) error {
 	result := r.db.WithContext(ctx).Delete(&Match{}, id)
 	if result.Error != nil {
@@ -39,22 +30,6 @@ func (r *MatchRepository) Delete(ctx context.Context, id uint) error {
 	}
 
 	return nil
-}
-
-func (r *MatchRepository) List(ctx context.Context, resultStatus string) ([]Match, error) {
-	var matches []Match
-	result := r.db.WithContext(ctx).
-		Where(&Match{ResultStatus: resultStatus}).
-		Preload("ExternalMatch").
-		Preload("HomeTeam.Aliases").
-		Preload("AwayTeam.Aliases").
-		Find(&matches)
-
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to list matches: %w", result.Error)
-	}
-
-	return matches, nil
 }
 
 func (r *MatchRepository) One(ctx context.Context, search models.Match) (*models.Match, error) {
