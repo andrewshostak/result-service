@@ -97,10 +97,9 @@ func FakeExternalAPIMatch(options ...Option[models.ExternalAPIMatch]) models.Ext
 
 func FakeExternalAPITeam(options ...Option[models.ExternalAPITeam]) models.ExternalAPITeam {
 	externalTeam := models.ExternalAPITeam{
-		ID:       int(gofakeit.Int8()),
-		Score:    gofakeit.IntRange(0, 9),
-		Name:     gofakeit.Name(),
-		LongName: gofakeit.Name(),
+		ID:    int(gofakeit.Int8()),
+		Score: gofakeit.IntRange(0, 9),
+		Name:  gofakeit.Name(),
 	}
 
 	applyOptions(&externalTeam, options...)

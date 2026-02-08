@@ -134,10 +134,9 @@ type ExternalAPIMatch struct {
 }
 
 type ExternalAPITeam struct {
-	ID       int
-	Score    int
-	Name     string
-	LongName string
+	ID    int
+	Score int
+	Name  string
 }
 
 type Task struct {

@@ -8,29 +8,29 @@ import (
 )
 
 type MatchesResponse struct {
-	Leagues []LeagueFotmob `json:"leagues"`
+	Leagues []League `json:"leagues"`
 }
 
-type LeagueFotmob struct {
-	Ccode            string        `json:"ccode"`
-	Name             string        `json:"name"`
-	ParentLeagueName string        `json:"parentLeagueName"`
-	Matches          []MatchFotmob `json:"matches"`
+type League struct {
+	Ccode            string  `json:"ccode"`
+	Name             string  `json:"name"`
+	ParentLeagueName string  `json:"parentLeagueName"`
+	Matches          []Match `json:"matches"`
 }
 
-type MatchFotmob struct {
-	ID       int          `json:"id"`
-	Home     TeamFotmob   `json:"home"`
-	Away     TeamFotmob   `json:"away"`
-	StatusID int          `json:"statusId"`
-	Status   StatusFotmob `json:"status"`
+type Match struct {
+	ID       int    `json:"id"`
+	Home     Team   `json:"home"`
+	Away     Team   `json:"away"`
+	StatusID int    `json:"statusId"`
+	Status   Status `json:"status"`
 }
 
-type StatusFotmob struct {
+type Status struct {
 	UTCTime string `json:"utcTime"`
 }
 
-type TeamFotmob struct {
+type Team struct {
 	ID       int    `json:"id"`
 	Score    int    `json:"score"`
 	Name     string `json:"name"`
@@ -62,7 +62,7 @@ func toDomainExternalAPIResult(response MatchesResponse) ([]models.ExternalAPILe
 	return leagues, nil
 }
 
-func toDomainExternalAPIMatch(match MatchFotmob) (*models.ExternalAPIMatch, error) {
+func toDomainExternalAPIMatch(match Match) (*models.ExternalAPIMatch, error) {
 	startsAt, err := time.Parse(time.RFC3339, match.Status.UTCTime)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse match starting time %s: %w", match.Status.UTCTime, err)
@@ -77,12 +77,11 @@ func toDomainExternalAPIMatch(match MatchFotmob) (*models.ExternalAPIMatch, erro
 	}, nil
 }
 
-func toDomainExternalAPITeam(team TeamFotmob) models.ExternalAPITeam {
+func toDomainExternalAPITeam(team Team) models.ExternalAPITeam {
 	return models.ExternalAPITeam{
-		ID:       team.ID,
-		Score:    team.Score,
-		Name:     team.Name,
-		LongName: team.LongName,
+		ID:    team.ID,
+		Score: team.Score,
+		Name:  team.Name,
 	}
 }
 
