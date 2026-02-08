@@ -24,12 +24,6 @@ type DeleteSubscriptionRequest struct {
 	SecretKey string
 }
 
-type Team struct {
-	ID uint
-
-	Aliases []Alias
-}
-
 type ExternalTeam struct {
 	ID     uint
 	TeamID uint

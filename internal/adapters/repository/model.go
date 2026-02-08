@@ -137,14 +137,6 @@ func toDomainMatch(m Match) models.Match {
 		match.ExternalMatch = &externalMatch
 	}
 
-	if m.HomeTeam != nil {
-		match.HomeTeam = &models.Team{ID: m.HomeTeam.ID, Aliases: toDomainAliases(m.HomeTeam.Aliases)}
-	}
-
-	if m.AwayTeam != nil {
-		match.AwayTeam = &models.Team{ID: m.AwayTeam.ID, Aliases: toDomainAliases(m.AwayTeam.Aliases)}
-	}
-
 	if m.CheckResultTask != nil {
 		checkResultTask := toDomainCheckResultTask(*m.CheckResultTask)
 		match.CheckResultTask = &checkResultTask

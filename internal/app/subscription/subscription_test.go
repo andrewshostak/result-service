@@ -188,8 +188,8 @@ func TestSubscriptionService_Delete(t *testing.T) {
 	})
 	match := testutils.FakeMatch(func(m *models.Match) {
 		m.StartsAt = input.StartsAt.UTC()
-		m.HomeTeam = &models.Team{ID: aliasHome.TeamID}
-		m.AwayTeam = &models.Team{ID: aliasAway.TeamID}
+		m.HomeTeamID = aliasHome.TeamID
+		m.AwayTeamID = aliasAway.TeamID
 	})
 	subscription := testutils.FakeSubscription(func(s *models.Subscription) {
 		s.MatchID = match.ID
