@@ -246,7 +246,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
-				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeam: &models.Team{ID: aliasHome.TeamID}, AwayTeam: &models.Team{ID: aliasAway.TeamID}}).Return(nil, unexpectedErr).Once()
+				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(nil, unexpectedErr).Once()
 				return m
 			},
 			expectedErr: fmt.Errorf("failed to find match: %w", unexpectedErr),
@@ -264,7 +264,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
-				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeam: &models.Team{ID: aliasHome.TeamID}, AwayTeam: &models.Team{ID: aliasAway.TeamID}}).Return(&match, nil).Once()
+				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&match, nil).Once()
 				return m
 			},
 			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
@@ -288,7 +288,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
-				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeam: &models.Team{ID: aliasHome.TeamID}, AwayTeam: &models.Team{ID: aliasAway.TeamID}}).Return(&match, nil).Once()
+				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&match, nil).Once()
 				return m
 			},
 			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
@@ -314,7 +314,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
-				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeam: &models.Team{ID: aliasHome.TeamID}, AwayTeam: &models.Team{ID: aliasAway.TeamID}}).Return(&match, nil).Once()
+				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&match, nil).Once()
 				return m
 			},
 			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
@@ -339,7 +339,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
-				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeam: &models.Team{ID: aliasHome.TeamID}, AwayTeam: &models.Team{ID: aliasAway.TeamID}}).Return(&match, nil).Once()
+				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&match, nil).Once()
 				return m
 			},
 			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
@@ -364,7 +364,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
-				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeam: &models.Team{ID: aliasHome.TeamID}, AwayTeam: &models.Team{ID: aliasAway.TeamID}}).Return(&match, nil).Once()
+				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&match, nil).Once()
 				return m
 			},
 			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
@@ -389,7 +389,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
-				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeam: &models.Team{ID: aliasHome.TeamID}, AwayTeam: &models.Team{ID: aliasAway.TeamID}}).Return(&match, nil).Once()
+				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&match, nil).Once()
 				m.On("Delete", ctx, match.ID).Return(unexpectedErr).Once()
 				return m
 			},
@@ -415,7 +415,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
-				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeam: &models.Team{ID: aliasHome.TeamID}, AwayTeam: &models.Team{ID: aliasAway.TeamID}}).Return(&match, nil).Once()
+				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&match, nil).Once()
 				m.On("Delete", ctx, match.ID).Return(nil).Once()
 				return m
 			},
@@ -443,7 +443,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 				m := mocks.NewMatchRepository(t)
 				matchWithTask := match
 				matchWithTask.CheckResultTask = &checkResultTask
-				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeam: &models.Team{ID: aliasHome.TeamID}, AwayTeam: &models.Team{ID: aliasAway.TeamID}}).Return(&matchWithTask, nil).Once()
+				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&matchWithTask, nil).Once()
 				m.On("Delete", ctx, match.ID).Return(nil).Once()
 				return m
 			},
@@ -477,7 +477,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 				m := mocks.NewMatchRepository(t)
 				matchWithTask := match
 				matchWithTask.CheckResultTask = &checkResultTask
-				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeam: &models.Team{ID: aliasHome.TeamID}, AwayTeam: &models.Team{ID: aliasAway.TeamID}}).Return(&matchWithTask, nil).Once()
+				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&matchWithTask, nil).Once()
 				m.On("Delete", ctx, match.ID).Return(nil).Once()
 				return m
 			},

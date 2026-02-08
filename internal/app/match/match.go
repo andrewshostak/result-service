@@ -60,9 +60,9 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 	}
 
 	match, errMatch := s.matchRepository.One(ctx, models.Match{
-		StartsAt: request.StartsAt.UTC(),
-		HomeTeam: &models.Team{ID: aliasHome.TeamID},
-		AwayTeam: &models.Team{ID: aliasAway.TeamID},
+		StartsAt:   request.StartsAt.UTC(),
+		HomeTeamID: aliasHome.TeamID,
+		AwayTeamID: aliasAway.TeamID,
 	})
 	if errMatch != nil && !errors.As(errMatch, &errs.ResourceNotFoundError{}) {
 		return 0, fmt.Errorf("failed to find match: %w", errMatch)
@@ -98,8 +98,8 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 	}
 
 	match, err = s.matchRepository.Save(ctx, matchID, models.Match{
-		HomeTeam:     &models.Team{ID: aliasHome.TeamID},
-		AwayTeam:     &models.Team{ID: aliasAway.TeamID},
+		HomeTeamID:   aliasHome.TeamID,
+		AwayTeamID:   aliasAway.TeamID,
 		StartsAt:     externalMatch.Time,
 		ResultStatus: models.NotScheduled,
 	})

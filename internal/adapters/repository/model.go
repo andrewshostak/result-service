@@ -127,6 +127,8 @@ func toDomainMatch(m Match) models.Match {
 	match := models.Match{
 		ID:           m.ID,
 		StartsAt:     m.StartsAt,
+		HomeTeamID:   m.HomeTeamID,
+		AwayTeamID:   m.AwayTeamID,
 		ResultStatus: models.ResultStatus(m.ResultStatus),
 	}
 

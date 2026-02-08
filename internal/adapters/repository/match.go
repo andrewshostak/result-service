@@ -43,12 +43,12 @@ func (r *MatchRepository) One(ctx context.Context, search models.Match) (*models
 		query = query.Where(&Match{ID: search.ID})
 	}
 
-	if search.HomeTeam != nil && search.HomeTeam.ID != 0 {
-		query = query.Where(&Match{HomeTeamID: search.HomeTeam.ID})
+	if search.HomeTeamID != 0 {
+		query = query.Where(&Match{HomeTeamID: search.HomeTeamID})
 	}
 
-	if search.AwayTeam != nil && search.AwayTeam.ID != 0 {
-		query = query.Where(&Match{AwayTeamID: search.AwayTeam.ID})
+	if search.AwayTeamID != 0 {
+		query = query.Where(&Match{AwayTeamID: search.AwayTeamID})
 	}
 
 	if !search.StartsAt.IsZero() {
@@ -73,8 +73,8 @@ func (r *MatchRepository) One(ctx context.Context, search models.Match) (*models
 func (r *MatchRepository) Save(ctx context.Context, id *uint, match models.Match) (*models.Match, error) {
 	toSave := Match{
 		ID:           match.ID,
-		HomeTeamID:   match.HomeTeam.ID,
-		AwayTeamID:   match.AwayTeam.ID,
+		HomeTeamID:   match.HomeTeamID,
+		AwayTeamID:   match.AwayTeamID,
 		StartsAt:     match.StartsAt,
 		ResultStatus: string(match.ResultStatus),
 	}

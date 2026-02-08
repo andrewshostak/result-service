@@ -144,9 +144,9 @@ func TestMatchService_Create(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{
-					HomeTeam: &models.Team{ID: aliasHome.TeamID},
-					AwayTeam: &models.Team{ID: aliasAway.TeamID},
-					StartsAt: startsAt.UTC(),
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
 				}).Return(nil, errUnexpected).Once()
 				return m
 			},
@@ -166,9 +166,9 @@ func TestMatchService_Create(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{
-					HomeTeam: &models.Team{ID: aliasHome.TeamID},
-					AwayTeam: &models.Team{ID: aliasAway.TeamID},
-					StartsAt: startsAt.UTC(),
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
 				}).Return(&matchResultScheduled, nil).Once()
 				return m
 			},
@@ -188,9 +188,9 @@ func TestMatchService_Create(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{
-					HomeTeam: &models.Team{ID: aliasHome.TeamID},
-					AwayTeam: &models.Team{ID: aliasAway.TeamID},
-					StartsAt: startsAt.UTC(),
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
 				}).Return(&matchResultReceived, nil).Once()
 				return m
 			},
@@ -210,9 +210,9 @@ func TestMatchService_Create(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{
-					HomeTeam: &models.Team{ID: aliasHome.TeamID},
-					AwayTeam: &models.Team{ID: aliasAway.TeamID},
-					StartsAt: startsAt.UTC(),
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
 				}).Return(nil, errs.NewResourceNotFoundError(errors.New("not found"))).Once()
 				return m
 			},
@@ -238,9 +238,9 @@ func TestMatchService_Create(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{
-					HomeTeam: &models.Team{ID: aliasHome.TeamID},
-					AwayTeam: &models.Team{ID: aliasAway.TeamID},
-					StartsAt: startsAt.UTC(),
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
 				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				return m
 			},
@@ -272,9 +272,9 @@ func TestMatchService_Create(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{
-					HomeTeam: &models.Team{ID: aliasHome.TeamID},
-					AwayTeam: &models.Team{ID: aliasAway.TeamID},
-					StartsAt: startsAt.UTC(),
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
 				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				return m
 			},
@@ -316,13 +316,13 @@ func TestMatchService_Create(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{
-					HomeTeam: &models.Team{ID: aliasHome.TeamID},
-					AwayTeam: &models.Team{ID: aliasAway.TeamID},
-					StartsAt: startsAt.UTC(),
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
 				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
-					HomeTeam:     &models.Team{ID: aliasHome.TeamID},
-					AwayTeam:     &models.Team{ID: aliasAway.TeamID},
+					HomeTeamID:   aliasHome.TeamID,
+					AwayTeamID:   aliasAway.TeamID,
 					StartsAt:     startsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(nil, errUnexpected).Once()
@@ -353,19 +353,19 @@ func TestMatchService_Create(t *testing.T) {
 				m := mocks.NewMatchRepository(t)
 				savedMatch := testutils.FakeMatch(func(r *models.Match) {
 					r.ID = matchID
-					r.HomeTeam = &models.Team{ID: aliasHome.TeamID}
-					r.AwayTeam = &models.Team{ID: aliasAway.TeamID}
+					r.HomeTeamID = aliasHome.TeamID
+					r.AwayTeamID = aliasAway.TeamID
 					r.StartsAt = startsAt.UTC()
 					r.ResultStatus = models.NotScheduled
 				})
 				m.On("One", ctx, models.Match{
-					HomeTeam: &models.Team{ID: aliasHome.TeamID},
-					AwayTeam: &models.Team{ID: aliasAway.TeamID},
-					StartsAt: startsAt.UTC(),
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
 				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
-					HomeTeam:     &models.Team{ID: aliasHome.TeamID},
-					AwayTeam:     &models.Team{ID: aliasAway.TeamID},
+					HomeTeamID:   aliasHome.TeamID,
+					AwayTeamID:   aliasAway.TeamID,
 					StartsAt:     startsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(&savedMatch, nil).Once()
@@ -408,19 +408,19 @@ func TestMatchService_Create(t *testing.T) {
 				m := mocks.NewMatchRepository(t)
 				savedMatch := testutils.FakeMatch(func(r *models.Match) {
 					r.ID = matchID
-					r.HomeTeam = &models.Team{ID: aliasHome.TeamID}
-					r.AwayTeam = &models.Team{ID: aliasAway.TeamID}
+					r.HomeTeamID = aliasHome.TeamID
+					r.AwayTeamID = aliasAway.TeamID
 					r.StartsAt = startsAt.UTC()
 					r.ResultStatus = models.NotScheduled
 				})
 				m.On("One", ctx, models.Match{
-					HomeTeam: &models.Team{ID: aliasHome.TeamID},
-					AwayTeam: &models.Team{ID: aliasAway.TeamID},
-					StartsAt: startsAt.UTC(),
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
 				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
-					HomeTeam:     &models.Team{ID: aliasHome.TeamID},
-					AwayTeam:     &models.Team{ID: aliasAway.TeamID},
+					HomeTeamID:   aliasHome.TeamID,
+					AwayTeamID:   aliasAway.TeamID,
 					StartsAt:     startsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(&savedMatch, nil).Once()
@@ -469,19 +469,19 @@ func TestMatchService_Create(t *testing.T) {
 				m := mocks.NewMatchRepository(t)
 				savedMatch := testutils.FakeMatch(func(r *models.Match) {
 					r.ID = matchID
-					r.HomeTeam = &models.Team{ID: aliasHome.TeamID}
-					r.AwayTeam = &models.Team{ID: aliasAway.TeamID}
+					r.HomeTeamID = aliasHome.TeamID
+					r.AwayTeamID = aliasAway.TeamID
 					r.StartsAt = startsAt.UTC()
 					r.ResultStatus = models.NotScheduled
 				})
 				m.On("One", ctx, models.Match{
-					HomeTeam: &models.Team{ID: aliasHome.TeamID},
-					AwayTeam: &models.Team{ID: aliasAway.TeamID},
-					StartsAt: startsAt.UTC(),
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
 				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
-					HomeTeam:     &models.Team{ID: aliasHome.TeamID},
-					AwayTeam:     &models.Team{ID: aliasAway.TeamID},
+					HomeTeamID:   aliasHome.TeamID,
+					AwayTeamID:   aliasAway.TeamID,
 					StartsAt:     startsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(&savedMatch, nil).Once()
@@ -531,19 +531,19 @@ func TestMatchService_Create(t *testing.T) {
 				m := mocks.NewMatchRepository(t)
 				savedMatch := testutils.FakeMatch(func(r *models.Match) {
 					r.ID = matchID
-					r.HomeTeam = &models.Team{ID: aliasHome.TeamID}
-					r.AwayTeam = &models.Team{ID: aliasAway.TeamID}
+					r.HomeTeamID = aliasHome.TeamID
+					r.AwayTeamID = aliasAway.TeamID
 					r.StartsAt = startsAt.UTC()
 					r.ResultStatus = models.NotScheduled
 				})
 				m.On("One", ctx, models.Match{
-					HomeTeam: &models.Team{ID: aliasHome.TeamID},
-					AwayTeam: &models.Team{ID: aliasAway.TeamID},
-					StartsAt: startsAt.UTC(),
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
 				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
-					HomeTeam:     &models.Team{ID: aliasHome.TeamID},
-					AwayTeam:     &models.Team{ID: aliasAway.TeamID},
+					HomeTeamID:   aliasHome.TeamID,
+					AwayTeamID:   aliasAway.TeamID,
 					StartsAt:     startsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(&savedMatch, nil).Once()
@@ -597,19 +597,19 @@ func TestMatchService_Create(t *testing.T) {
 				m := mocks.NewMatchRepository(t)
 				savedMatch := testutils.FakeMatch(func(r *models.Match) {
 					r.ID = matchID
-					r.HomeTeam = &models.Team{ID: aliasHome.TeamID}
-					r.AwayTeam = &models.Team{ID: aliasAway.TeamID}
+					r.HomeTeamID = aliasHome.TeamID
+					r.AwayTeamID = aliasAway.TeamID
 					r.StartsAt = startsAt.UTC()
 					r.ResultStatus = models.NotScheduled
 				})
 				m.On("One", ctx, models.Match{
-					HomeTeam: &models.Team{ID: aliasHome.TeamID},
-					AwayTeam: &models.Team{ID: aliasAway.TeamID},
-					StartsAt: startsAt.UTC(),
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
 				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
-					HomeTeam:     &models.Team{ID: aliasHome.TeamID},
-					AwayTeam:     &models.Team{ID: aliasAway.TeamID},
+					HomeTeamID:   aliasHome.TeamID,
+					AwayTeamID:   aliasAway.TeamID,
 					StartsAt:     startsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(&savedMatch, nil).Once()
@@ -664,21 +664,21 @@ func TestMatchService_Create(t *testing.T) {
 				m := mocks.NewMatchRepository(t)
 				savedMatch := testutils.FakeMatch(func(r *models.Match) {
 					r.ID = matchID
-					r.HomeTeam = &models.Team{ID: aliasHome.TeamID}
-					r.AwayTeam = &models.Team{ID: aliasAway.TeamID}
+					r.HomeTeamID = aliasHome.TeamID
+					r.AwayTeamID = aliasAway.TeamID
 					r.StartsAt = startsAt.UTC()
 					r.ResultStatus = models.NotScheduled
 				})
 				updatedMatch := savedMatch
 				updatedMatch.ResultStatus = models.Scheduled
 				m.On("One", ctx, models.Match{
-					HomeTeam: &models.Team{ID: aliasHome.TeamID},
-					AwayTeam: &models.Team{ID: aliasAway.TeamID},
-					StartsAt: startsAt.UTC(),
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
 				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
-					HomeTeam:     &models.Team{ID: aliasHome.TeamID},
-					AwayTeam:     &models.Team{ID: aliasAway.TeamID},
+					HomeTeamID:   aliasHome.TeamID,
+					AwayTeamID:   aliasAway.TeamID,
 					StartsAt:     startsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(&savedMatch, nil).Once()
@@ -733,21 +733,21 @@ func TestMatchService_Create(t *testing.T) {
 				m := mocks.NewMatchRepository(t)
 				savedMatch := testutils.FakeMatch(func(r *models.Match) {
 					r.ID = matchID
-					r.HomeTeam = &models.Team{ID: aliasHome.TeamID}
-					r.AwayTeam = &models.Team{ID: aliasAway.TeamID}
+					r.HomeTeamID = aliasHome.TeamID
+					r.AwayTeamID = aliasAway.TeamID
 					r.StartsAt = startsAt.UTC()
 					r.ResultStatus = models.NotScheduled
 				})
 				updatedMatch := savedMatch
 				updatedMatch.ResultStatus = models.Scheduled
 				m.On("One", ctx, models.Match{
-					HomeTeam: &models.Team{ID: aliasHome.TeamID},
-					AwayTeam: &models.Team{ID: aliasAway.TeamID},
-					StartsAt: startsAt.UTC(),
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
 				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
-					HomeTeam:     &models.Team{ID: aliasHome.TeamID},
-					AwayTeam:     &models.Team{ID: aliasAway.TeamID},
+					HomeTeamID:   aliasHome.TeamID,
+					AwayTeamID:   aliasAway.TeamID,
 					StartsAt:     startsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(&savedMatch, nil).Once()

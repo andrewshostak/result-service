@@ -42,6 +42,8 @@ func FakeMatch(options ...Option[models.Match]) models.Match {
 	m := models.Match{
 		ID:            uint(gofakeit.Uint8()),
 		StartsAt:      gofakeit.Date(),
+		HomeTeamID:    uint(gofakeit.Uint8()),
+		AwayTeamID:    uint(gofakeit.Uint8()),
 		ResultStatus:  statuses[gofakeit.IntRange(0, len(statuses)-1)],
 		ExternalMatch: &externalMatch,
 	}

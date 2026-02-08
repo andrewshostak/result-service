@@ -75,9 +75,9 @@ func (s *SubscriptionService) Delete(ctx context.Context, request models.DeleteS
 	}
 
 	match, err := s.matchRepository.One(ctx, models.Match{
-		StartsAt: request.StartsAt.UTC(),
-		HomeTeam: &models.Team{ID: aliasHome.TeamID},
-		AwayTeam: &models.Team{ID: aliasAway.TeamID},
+		StartsAt:   request.StartsAt.UTC(),
+		HomeTeamID: aliasHome.TeamID,
+		AwayTeamID: aliasAway.TeamID,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to find match: %w", err)

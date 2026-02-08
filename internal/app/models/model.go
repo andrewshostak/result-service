@@ -49,6 +49,8 @@ const (
 type Match struct {
 	ID           uint
 	StartsAt     time.Time
+	HomeTeamID   uint
+	AwayTeamID   uint
 	ResultStatus ResultStatus
 
 	ExternalMatch   *ExternalMatch
