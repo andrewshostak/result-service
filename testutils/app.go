@@ -85,28 +85,18 @@ func FakeExternalAPIMatch(options ...Option[models.ExternalAPIMatch]) models.Ext
 	}
 
 	externalMatch := models.ExternalAPIMatch{
-		ID:     int(gofakeit.Int8()),
-		Time:   gofakeit.Date(),
-		Home:   FakeExternalAPITeam(),
-		Away:   FakeExternalAPITeam(),
-		Status: statuses[gofakeit.IntRange(0, len(statuses)-1)],
+		ID:        int(gofakeit.Int8()),
+		HomeID:    int(gofakeit.Int8()),
+		AwayID:    int(gofakeit.Int8()),
+		HomeScore: gofakeit.IntRange(0, 9),
+		AwayScore: gofakeit.IntRange(0, 9),
+		Time:      gofakeit.Date(),
+		Status:    statuses[gofakeit.IntRange(0, len(statuses)-1)],
 	}
 
 	applyOptions(&externalMatch, options...)
 
 	return externalMatch
-}
-
-func FakeExternalAPITeam(options ...Option[models.ExternalAPITeam]) models.ExternalAPITeam {
-	externalTeam := models.ExternalAPITeam{
-		ID:    int(gofakeit.Int8()),
-		Score: gofakeit.IntRange(0, 9),
-		Name:  gofakeit.Name(),
-	}
-
-	applyOptions(&externalTeam, options...)
-
-	return externalTeam
 }
 
 func FakeTask(options ...Option[models.Task]) models.Task {

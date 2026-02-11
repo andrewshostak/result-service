@@ -49,8 +49,6 @@ type Match struct {
 
 	ExternalMatch   *ExternalMatch
 	CheckResultTask *CheckResultTask
-	HomeTeam        *Team
-	AwayTeam        *Team
 }
 
 type Alias struct {
@@ -108,31 +106,26 @@ type CheckResultTask struct {
 	ExecuteAt     time.Time
 }
 
-// TODO: match domain model doesn't care about leagues
-// TODO: backfill aliases domain model needs leagues for filtering
-type ExternalMatchesResponse struct {
-	Leagues []ExternalAPILeague
-}
-
-type ExternalAPILeague struct {
-	CountryCode      string
-	Name             string
-	ParentLeagueName string
-	Matches          []ExternalAPIMatch
-}
-
-type ExternalAPIMatch struct {
-	ID     int
-	Time   time.Time
-	Home   ExternalAPITeam
-	Away   ExternalAPITeam
-	Status ExternalMatchStatus
+type League struct {
+	CountryCode string
+	Name        string
 }
 
 type ExternalAPITeam struct {
-	ID    int
-	Score int
-	Name  string
+	ID          int
+	Name        string
+	LeagueNames []string
+	CountryCode string
+}
+
+type ExternalAPIMatch struct {
+	ID        int
+	HomeID    int
+	AwayID    int
+	HomeScore int
+	AwayScore int
+	Time      time.Time
+	Status    ExternalMatchStatus
 }
 
 type Task struct {
@@ -151,8 +144,8 @@ func (m *ExternalAPIMatch) ToExternalMatch(matchID uint) ExternalMatch {
 	return ExternalMatch{
 		ID:        uint(m.ID),
 		MatchID:   matchID,
-		HomeScore: m.Home.Score,
-		AwayScore: m.Away.Score,
+		HomeScore: m.HomeScore,
+		AwayScore: m.AwayScore,
 		Status:    m.Status,
 	}
 }

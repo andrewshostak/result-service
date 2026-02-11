@@ -15,7 +15,7 @@ type AliasRepository interface {
 }
 
 type ExternalAPIClient interface {
-	GetMatchesByDate(ctx context.Context, date time.Time) ([]models.ExternalAPILeague, error)
+	GetTeams(ctx context.Context, date time.Time) ([]models.ExternalAPITeam, error)
 }
 
 type Logger interface {

@@ -17,24 +17,24 @@ type ExternalAPIClient struct {
 	mock.Mock
 }
 
-// GetMatchesByDate provides a mock function with given fields: ctx, date
-func (_m *ExternalAPIClient) GetMatchesByDate(ctx context.Context, date time.Time) ([]models.ExternalAPILeague, error) {
+// GetMatches provides a mock function with given fields: ctx, date
+func (_m *ExternalAPIClient) GetMatches(ctx context.Context, date time.Time) ([]models.ExternalAPIMatch, error) {
 	ret := _m.Called(ctx, date)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetMatchesByDate")
+		panic("no return value specified for GetMatches")
 	}
 
-	var r0 []models.ExternalAPILeague
+	var r0 []models.ExternalAPIMatch
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, time.Time) ([]models.ExternalAPILeague, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, time.Time) ([]models.ExternalAPIMatch, error)); ok {
 		return rf(ctx, date)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, time.Time) []models.ExternalAPILeague); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, time.Time) []models.ExternalAPIMatch); ok {
 		r0 = rf(ctx, date)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.ExternalAPILeague)
+			r0 = ret.Get(0).([]models.ExternalAPIMatch)
 		}
 	}
 

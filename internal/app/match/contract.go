@@ -32,7 +32,7 @@ type SubscriptionRepository interface {
 }
 
 type ExternalAPIClient interface {
-	GetMatchesByDate(ctx context.Context, date time.Time) ([]models.ExternalAPILeague, error)
+	GetMatches(ctx context.Context, date time.Time) ([]models.ExternalAPIMatch, error)
 }
 
 type TaskClient interface {

@@ -78,12 +78,12 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 		}
 	}
 
-	leagues, err := s.externalAPIClient.GetMatchesByDate(ctx, request.StartsAt.UTC())
+	matches, err := s.externalAPIClient.GetMatches(ctx, request.StartsAt.UTC())
 	if err != nil {
 		return 0, fmt.Errorf("failed to get matches from external api: %w", err)
 	}
 
-	externalMatch, err := s.findExternalMatch(aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, leagues)
+	externalMatch, err := s.findExternalMatch(aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, matches)
 	if err != nil {
 		return 0, errs.NewUnprocessableContentError(errors.New(fmt.Sprintf("external match with home team id %d and away team id %d is not found: %s", aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, err.Error())))
 	}
@@ -159,12 +159,10 @@ func (s *MatchService) findAlias(ctx context.Context, alias string) (*models.Ali
 	return foundAlias, nil
 }
 
-func (s *MatchService) findExternalMatch(externalHomeTeamID, externalAwayTeamID uint, leagues []models.ExternalAPILeague) (*models.ExternalAPIMatch, error) {
-	for _, matches := range leagues {
-		for _, match := range matches.Matches {
-			if match.Home.ID == int(externalHomeTeamID) && match.Away.ID == int(externalAwayTeamID) {
-				return &match, nil
-			}
+func (s *MatchService) findExternalMatch(externalHomeTeamID, externalAwayTeamID uint, matches []models.ExternalAPIMatch) (*models.ExternalAPIMatch, error) {
+	for _, match := range matches {
+		if match.HomeID == int(externalHomeTeamID) && match.AwayID == int(externalAwayTeamID) {
+			return &match, nil
 		}
 	}
 

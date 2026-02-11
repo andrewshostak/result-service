@@ -3,6 +3,7 @@ package alias
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -30,24 +31,25 @@ func NewBackfillAliasesService(
 func (s *BackfillAliasesService) Backfill(ctx context.Context, dates []time.Time) error {
 	s.logger.Info().Times("dates", dates).Msg("starting aliases backfill")
 
-	matches, err := s.getMatches(ctx, dates)
+	teams, err := s.getTeams(ctx, dates)
 	if err != nil {
 		return fmt.Errorf("failed to get external matches: %w", err)
 	}
 
-	teams := s.extractTeams(matches)
+	teams = deduplicateByTeamID(teams)
+
 	s.saveTeams(ctx, teams)
 
 	return nil
 }
 
-func (s *BackfillAliasesService) getMatches(ctx context.Context, dates []time.Time) (map[string][]models.ExternalAPIMatch, error) {
+func (s *BackfillAliasesService) getTeams(ctx context.Context, dates []time.Time) ([]models.ExternalAPITeam, error) {
 	const numberOfWorkers = 3
 	jobs := make(chan struct{}, numberOfWorkers)
 	wg := sync.WaitGroup{}
-	var mutex = &sync.RWMutex{}
+	var mutex = &sync.Mutex{}
 
-	matches := map[string][]models.ExternalAPIMatch{}
+	teams := []models.ExternalAPITeam{}
 
 	for i, date := range dates {
 		wg.Add(1)
@@ -57,26 +59,25 @@ func (s *BackfillAliasesService) getMatches(ctx context.Context, dates []time.Ti
 		s.logger.Debug().Int("iteration", i).Str("date", dateOnly).Msg("iterating through dates")
 
 		go func(ctx context.Context, date time.Time) {
-			allLeagues, err := s.externalAPIClient.GetMatchesByDate(ctx, date)
+			allTeams, err := s.externalAPIClient.GetTeams(ctx, date)
 			<-jobs
 
 			if err != nil {
-				s.logger.Error().Err(err).Int("iteration", i).Str("date", dateOnly).Msg("failed to get matches")
+				s.logger.Error().Err(err).Int("iteration", i).Str("date", dateOnly).Msg("failed to get teams")
 				return
 			}
 
-			s.logger.Debug().Int("iteration", i).Str("date", dateOnly).Msg("successfully got matches")
+			s.logger.Debug().Int("iteration", i).Str("date", dateOnly).Msg(fmt.Sprintf("number of all teams: %d", len(allTeams)))
+
+			filteredTeams := filterTeamsByIncludedLeagues(allTeams, s.getIncludedLeagues())
 
 			mutex.Lock()
 
-			filteredLeagues := s.filterOutLeagues(allLeagues, s.getIncludedLeagues())
-			for _, league := range filteredLeagues {
-				matches[dateOnly] = append(matches[dateOnly], league.Matches...)
-			}
-
-			s.logger.Debug().Int("iteration", i).Str("date", dateOnly).Msg(fmt.Sprintf("found %d matches", len(matches[dateOnly])))
+			teams = append(teams, filteredTeams...)
 
 			mutex.Unlock()
+
+			s.logger.Debug().Int("iteration", i).Str("date", dateOnly).Msg(fmt.Sprintf("number of filtered teams: %d", len(filteredTeams)))
 
 			defer wg.Done()
 		}(ctx, date)
@@ -84,24 +85,11 @@ func (s *BackfillAliasesService) getMatches(ctx context.Context, dates []time.Ti
 
 	wg.Wait()
 
-	s.logger.Info().Int("number_of_matches", len(matches)).Msg("matches from all dates received")
-
-	return matches, nil
+	return teams, nil
 }
 
-func (s *BackfillAliasesService) filterOutLeagues(allLeagues []models.ExternalAPILeague, includedLeagues []models.ExternalAPILeague) []models.ExternalAPILeague {
-	filtered := make([]models.ExternalAPILeague, 0, len(includedLeagues))
-	for i := range allLeagues {
-		if isIncludedLeague(allLeagues[i], includedLeagues) {
-			filtered = append(filtered, allLeagues[i])
-		}
-	}
-
-	return filtered
-}
-
-func (s *BackfillAliasesService) getIncludedLeagues() []models.ExternalAPILeague {
-	return []models.ExternalAPILeague{
+func (s *BackfillAliasesService) getIncludedLeagues() []models.League {
+	return []models.League{
 		// european cups
 		{Name: "Champions League", CountryCode: "INT"},  // 2025-12-09,2025-12-10
 		{Name: "Europa League", CountryCode: "INT"},     // 2025-12-11
@@ -150,18 +138,6 @@ func (s *BackfillAliasesService) getIncludedLeagues() []models.ExternalAPILeague
 	}
 }
 
-func (s *BackfillAliasesService) extractTeams(matchesByDate map[string][]models.ExternalAPIMatch) []models.ExternalAPITeam {
-	var teams []models.ExternalAPITeam
-	for _, date := range matchesByDate {
-		for _, match := range date {
-			teams = append(teams, match.Home)
-			teams = append(teams, match.Away)
-		}
-	}
-
-	return teams
-}
-
 func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.ExternalAPITeam) {
 	numberOfSaved, numberOfExisted := 0, 0
 	for i := range teams {
@@ -193,13 +169,43 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.E
 		Msg("teams saving finished")
 }
 
-func isIncludedLeague(league models.ExternalAPILeague, includedLeagues []models.ExternalAPILeague) bool {
+func deduplicateByTeamID(teams []models.ExternalAPITeam) []models.ExternalAPITeam {
+	if len(teams) == 0 {
+		return teams
+	}
+
+	uniqueByID := make(map[int]models.ExternalAPITeam, len(teams))
+	for _, team := range teams {
+		uniqueByID[team.ID] = team
+	}
+
+	result := make([]models.ExternalAPITeam, 0, len(uniqueByID))
+	for _, team := range uniqueByID {
+		result = append(result, team)
+	}
+
+	return result
+}
+
+func filterTeamsByIncludedLeagues(allTeams []models.ExternalAPITeam, includedLeagues []models.League) []models.ExternalAPITeam {
+	filtered := make([]models.ExternalAPITeam, 0, len(allTeams))
+	for i := range allTeams {
+		if teamBelongsToIncludedLeague(allTeams[i], includedLeagues) {
+			filtered = append(filtered, allTeams[i])
+		}
+	}
+	return filtered
+}
+
+func teamBelongsToIncludedLeague(team models.ExternalAPITeam, includedLeagues []models.League) bool {
 	for i := range includedLeagues {
-		if (includedLeagues[i].Name == league.Name || includedLeagues[i].Name == league.ParentLeagueName) &&
-			includedLeagues[i].CountryCode == league.CountryCode {
+		if isLeagueTeam(includedLeagues[i], team) {
 			return true
 		}
 	}
-
 	return false
+}
+
+func isLeagueTeam(league models.League, team models.ExternalAPITeam) bool {
+	return team.CountryCode == league.CountryCode && slices.Contains(team.LeagueNames, league.Name)
 }

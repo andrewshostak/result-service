@@ -37,52 +37,59 @@ type Team struct {
 	LongName string `json:"longName"`
 }
 
-func toDomainExternalAPIResult(response MatchesResponse) ([]models.ExternalAPILeague, error) {
-	leagues := make([]models.ExternalAPILeague, 0, len(response.Leagues))
-	for _, v := range response.Leagues {
-		matches := make([]models.ExternalAPIMatch, 0, len(v.Matches))
-
-		for _, match := range v.Matches {
-			m, err := toDomainExternalAPIMatch(match)
-			if err != nil {
-				return nil, fmt.Errorf("failed to map to domain match: %w", err)
+func toDomainExternalAPITeams(response MatchesResponse) []models.ExternalAPITeam {
+	teams := make([]models.ExternalAPITeam, 0, len(response.Leagues)*2) // each league has at least one match with two teams
+	for _, league := range response.Leagues {
+		leagueTeams := make([]models.ExternalAPITeam, 0, len(league.Matches)*2)
+		for _, match := range league.Matches {
+			homeTeam := models.ExternalAPITeam{
+				ID:          match.Home.ID,
+				Name:        match.Home.Name,
+				LeagueNames: []string{league.Name, league.ParentLeagueName},
+				CountryCode: league.Ccode,
 			}
 
-			matches = append(matches, *m)
+			awayTeam := models.ExternalAPITeam{
+				ID:          match.Away.ID,
+				Name:        match.Away.Name,
+				LeagueNames: []string{league.Name, league.ParentLeagueName},
+				CountryCode: league.Ccode,
+			}
+
+			leagueTeams = append(leagueTeams, homeTeam, awayTeam)
 		}
 
-		leagues = append(leagues, models.ExternalAPILeague{
-			CountryCode:      v.Ccode,
-			Name:             v.Name,
-			ParentLeagueName: v.ParentLeagueName,
-			Matches:          matches,
-		})
+		teams = append(teams, leagueTeams...)
 	}
 
-	return leagues, nil
+	return teams
 }
 
-func toDomainExternalAPIMatch(match Match) (*models.ExternalAPIMatch, error) {
-	startsAt, err := time.Parse(time.RFC3339, match.Status.UTCTime)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse match starting time %s: %w", match.Status.UTCTime, err)
+func toDomainExternalAPIMatches(response MatchesResponse) ([]models.ExternalAPIMatch, error) {
+	matches := make([]models.ExternalAPIMatch, 0, len(response.Leagues)) // each league has at least one match
+	for _, league := range response.Leagues {
+		leagueMatches := make([]models.ExternalAPIMatch, 0, len(league.Matches))
+		for _, match := range league.Matches {
+			startsAt, err := time.Parse(time.RFC3339, match.Status.UTCTime)
+			if err != nil {
+				return nil, fmt.Errorf("unable to parse match starting time %s: %w", match.Status.UTCTime, err)
+			}
+
+			leagueMatches = append(leagueMatches, models.ExternalAPIMatch{
+				ID:        match.ID,
+				HomeID:    match.Home.ID,
+				AwayID:    match.Away.ID,
+				HomeScore: match.Home.Score,
+				AwayScore: match.Away.Score,
+				Time:      startsAt,
+				Status:    toDomainExternalAPIMatchStatus(match.ID, match.StatusID),
+			})
+		}
+
+		matches = append(matches, leagueMatches...)
 	}
 
-	return &models.ExternalAPIMatch{
-		ID:     match.ID,
-		Time:   startsAt,
-		Home:   toDomainExternalAPITeam(match.Home),
-		Away:   toDomainExternalAPITeam(match.Away),
-		Status: toDomainExternalAPIMatchStatus(match.ID, match.StatusID),
-	}, nil
-}
-
-func toDomainExternalAPITeam(team Team) models.ExternalAPITeam {
-	return models.ExternalAPITeam{
-		ID:    team.ID,
-		Score: team.Score,
-		Name:  team.Name,
-	}
+	return matches, nil
 }
 
 func toDomainExternalAPIMatchStatus(matchID int, statusID int) models.ExternalMatchStatus {

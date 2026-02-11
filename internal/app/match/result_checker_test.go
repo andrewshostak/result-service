@@ -63,8 +63,8 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 	expectedRepositoryMatch := models.ExternalMatch{
 		ID:        externalMatchID,
 		MatchID:   matchID,
-		HomeScore: externalMatchClient.Home.Score,
-		AwayScore: externalMatchClient.Away.Score,
+		HomeScore: externalMatchClient.HomeScore,
+		AwayScore: externalMatchClient.AwayScore,
 		Status:    models.StatusMatchFinished,
 	}
 
@@ -145,7 +145,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, startsAt).Return(nil, unexpectedErr).Once()
+				m.On("GetMatches", ctx, startsAt).Return(nil, unexpectedErr).Once()
 				return m
 			},
 			expectedErr: fmt.Errorf("failed to get matches from external api: %w", unexpectedErr),
@@ -165,7 +165,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, startsAt).Return(nil, unexpectedErr).Once()
+				m.On("GetMatches", ctx, startsAt).Return(nil, unexpectedErr).Once()
 				return m
 			},
 			expectedErr: fmt.Errorf("failed to get matches from external api: %w", unexpectedErr),
@@ -182,14 +182,10 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, mock.Anything).Return([]models.ExternalAPILeague{
-					{
-						Matches: []models.ExternalAPIMatch{
-							testutils.FakeExternalAPIMatch(func(r *models.ExternalAPIMatch) {
-								r.ID = int(gofakeit.Uint32()) // Different ID
-							}),
-						},
-					},
+				m.On("GetMatches", ctx, mock.Anything).Return([]models.ExternalAPIMatch{
+					testutils.FakeExternalAPIMatch(func(r *models.ExternalAPIMatch) {
+						r.ID = int(gofakeit.Uint32()) // Different ID
+					}),
 				}, nil).Once()
 				return m
 			},
@@ -207,9 +203,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, startsAt).Return([]models.ExternalAPILeague{
-					{Matches: []models.ExternalAPIMatch{externalMatchClientFinished}},
-				}, nil).Once()
+				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientFinished}, nil).Once()
 				return m
 			},
 			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
@@ -233,9 +227,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, startsAt).Return([]models.ExternalAPILeague{
-					{Matches: []models.ExternalAPIMatch{externalMatchClientCancelled}},
-				}, nil).Once()
+				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientCancelled}, nil).Once()
 				return m
 			},
 			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
@@ -261,9 +253,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, startsAt).Return([]models.ExternalAPILeague{
-					{Matches: []models.ExternalAPIMatch{externalMatchClientCancelled}},
-				}, nil).Once()
+				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientCancelled}, nil).Once()
 				return m
 			},
 			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
@@ -288,9 +278,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, startsAt).Return([]models.ExternalAPILeague{
-					{Matches: []models.ExternalAPIMatch{externalMatchClientNotStarted}},
-				}, nil).Once()
+				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientNotStarted}, nil).Once()
 				return m
 			},
 			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
@@ -314,9 +302,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, startsAt).Return([]models.ExternalAPILeague{
-					{Matches: []models.ExternalAPIMatch{externalMatchClientInProgress}},
-				}, nil).Once()
+				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientInProgress}, nil).Once()
 				return m
 			},
 			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
@@ -340,9 +326,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, startsAt).Return([]models.ExternalAPILeague{
-					{Matches: []models.ExternalAPIMatch{externalMatchClientInProgress}},
-				}, nil).Once()
+				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientInProgress}, nil).Once()
 				return m
 			},
 			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
@@ -374,9 +358,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, startsAt).Return([]models.ExternalAPILeague{
-					{Matches: []models.ExternalAPIMatch{externalMatchClientInProgress}},
-				}, nil).Once()
+				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientInProgress}, nil).Once()
 				return m
 			},
 			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
@@ -407,9 +389,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, startsAt).Return([]models.ExternalAPILeague{
-					{Matches: []models.ExternalAPIMatch{externalMatchClientInProgress}},
-				}, nil).Once()
+				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientInProgress}, nil).Once()
 				return m
 			},
 			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
@@ -451,9 +431,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, startsAt).Return([]models.ExternalAPILeague{
-					{Matches: []models.ExternalAPIMatch{externalMatchClientInProgress}},
-				}, nil).Once()
+				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientInProgress}, nil).Once()
 				return m
 			},
 			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
@@ -494,9 +472,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, startsAt).Return([]models.ExternalAPILeague{
-					{Matches: []models.ExternalAPIMatch{externalMatchClientFinished}},
-				}, nil).Once()
+				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientFinished}, nil).Once()
 				return m
 			},
 			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
@@ -526,9 +502,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, startsAt).Return([]models.ExternalAPILeague{
-					{Matches: []models.ExternalAPIMatch{externalMatchClientFinished}},
-				}, nil).Once()
+				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientFinished}, nil).Once()
 				return m
 			},
 			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
@@ -557,9 +531,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, startsAt).Return([]models.ExternalAPILeague{
-					{Matches: []models.ExternalAPIMatch{externalMatchClientFinished}},
-				}, nil).Once()
+				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientFinished}, nil).Once()
 				return m
 			},
 			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
@@ -595,9 +567,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, startsAt).Return([]models.ExternalAPILeague{
-					{Matches: []models.ExternalAPIMatch{externalMatchClientFinished}},
-				}, nil).Once()
+				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientFinished}, nil).Once()
 				return m
 			},
 			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
@@ -634,9 +604,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
 				t.Helper()
 				m := mocks.NewExternalAPIClient(t)
-				m.On("GetMatchesByDate", ctx, startsAt).Return([]models.ExternalAPILeague{
-					{Matches: []models.ExternalAPIMatch{externalMatchClientFinished}},
-				}, nil).Once()
+				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientFinished}, nil).Once()
 				return m
 			},
 			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {

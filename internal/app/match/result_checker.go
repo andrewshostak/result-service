@@ -59,7 +59,7 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 		return errors.New("match relation external match does not exist")
 	}
 
-	leagues, err := s.externalAPIClient.GetMatchesByDate(ctx, match.StartsAt)
+	matches, err := s.externalAPIClient.GetMatches(ctx, match.StartsAt)
 	if err != nil {
 		s.logger.Error().Uint("match_id", matchID).Err(err)
 		if errUpdate := s.updateMatchResultStatus(ctx, match.ID, models.APIError); errUpdate != nil {
@@ -69,7 +69,7 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 		return fmt.Errorf("failed to get matches from external api: %w", err)
 	}
 
-	externalAPIMatch, err := s.findExternalMatch(match.ExternalMatch.ID, leagues)
+	externalAPIMatch, err := s.findExternalMatch(match.ExternalMatch.ID, matches)
 	if err != nil {
 		return fmt.Errorf("external match with id %d is not found: %w", match.ExternalMatch.ID, err)
 	}
@@ -90,12 +90,10 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	}
 }
 
-func (s *ResultCheckerService) findExternalMatch(externalID uint, leagues []models.ExternalAPILeague) (*models.ExternalAPIMatch, error) {
-	for _, matches := range leagues {
-		for _, match := range matches.Matches {
-			if match.ID == int(externalID) {
-				return &match, nil
-			}
+func (s *ResultCheckerService) findExternalMatch(externalID uint, matches []models.ExternalAPIMatch) (*models.ExternalAPIMatch, error) {
+	for _, match := range matches {
+		if match.ID == int(externalID) {
+			return &match, nil
 		}
 	}
 
