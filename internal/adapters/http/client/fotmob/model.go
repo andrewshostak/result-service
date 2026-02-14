@@ -2,6 +2,7 @@ package fotmob
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/andrewshostak/result-service/internal/app/models"
@@ -19,15 +20,23 @@ type League struct {
 }
 
 type Match struct {
-	ID       int    `json:"id"`
-	Home     Team   `json:"home"`
-	Away     Team   `json:"away"`
-	StatusID int    `json:"statusId"`
-	Status   Status `json:"status"`
+	ID       int               `json:"id"`
+	Home     Team              `json:"home"`
+	Away     Team              `json:"away"`
+	StatusID fotmobMatchStatus `json:"statusId"`
+	Status   Status            `json:"status"`
 }
 
 type Status struct {
 	UTCTime string `json:"utcTime"`
+	Reason  Reason `json:"reason"`
+}
+
+type Reason struct {
+	Short    string `json:"short"`
+	ShortKey string `json:"shortKey"`
+	Long     string `json:"long"`
+	LongKey  string `json:"longKey"`
 }
 
 type Team struct {
@@ -36,6 +45,25 @@ type Team struct {
 	Name     string `json:"name"`
 	LongName string `json:"longName"`
 }
+
+type fotmobMatchStatus int
+
+const (
+	notStarted           fotmobMatchStatus = 1
+	postponed            fotmobMatchStatus = 5
+	abandoned            fotmobMatchStatus = 17
+	live1stHalf          fotmobMatchStatus = 2
+	live2ndHalf          fotmobMatchStatus = 3
+	liveExtraTime1stHalf fotmobMatchStatus = 8
+	liveExtraTime2ndHalf fotmobMatchStatus = 9
+	halfTime             fotmobMatchStatus = 10
+	interruptedShort     fotmobMatchStatus = 12
+	waitingForExtraTime  fotmobMatchStatus = 14
+	pauseExtraTime       fotmobMatchStatus = 231
+	fullTime             fotmobMatchStatus = 6
+	afterExtraTime       fotmobMatchStatus = 11
+	afterPenalties       fotmobMatchStatus = 13
+)
 
 func toDomainExternalAPITeams(response MatchesResponse) []models.ExternalAPITeam {
 	teams := make([]models.ExternalAPITeam, 0, len(response.Leagues)*2) // each league has at least one match with two teams
@@ -82,8 +110,19 @@ func toDomainExternalAPIMatches(response MatchesResponse) ([]models.ExternalAPIM
 				HomeScore: match.Home.Score,
 				AwayScore: match.Away.Score,
 				Time:      startsAt,
-				Status:    toDomainExternalAPIMatchStatus(match.ID, match.StatusID),
+				Status:    ToDomainExternalAPIMatchStatus(match.ID, match.StatusID),
 			})
+
+			if isUnknownStatus(match.StatusID) {
+				fmt.Printf(
+					"match with id %d has status %d. reason - short %s, short key %s, long %s, long key %s",
+					match.ID,
+					match.StatusID,
+					match.Status.Reason.Short,
+					match.Status.Reason.ShortKey,
+					match.Status.Reason.Long,
+					match.Status.Reason.LongKey)
+			}
 		}
 
 		matches = append(matches, leagueMatches...)
@@ -92,34 +131,42 @@ func toDomainExternalAPIMatches(response MatchesResponse) ([]models.ExternalAPIM
 	return matches, nil
 }
 
-func toDomainExternalAPIMatchStatus(matchID int, statusID int) models.ExternalMatchStatus {
+func ToDomainExternalAPIMatchStatus(matchID int, statusID fotmobMatchStatus) models.ExternalMatchStatus {
 	switch statusID {
-	// 1 - Not started
-	case 1:
+	case notStarted:
 		return models.StatusMatchNotStarted
-	// 5 - Postponed
-	// 17 - Abandoned
-	case 5, 17, 106:
+	// 106 - [NOT CLEAR]
+	case postponed, abandoned, 106:
 		return models.StatusMatchCancelled
-	// 2 - Live 1st half
-	// 3 - Live 2nd half
-	// 8 - Live extra time 1st half
-	// 9 - Live extra time 2nd half
-	// 10 - Half-Time
-	// 12 - Interrupted (Short)
-	// 14 - Waiting for extra time
-	// 231 - Pause extra time
-	case 2, 3, 8, 9, 10, 12, 14, 231:
+	// 4 - [NOT CLEAR] received from a match 4935228 which has penalties without extra time
+	// 20 - [NOT CLEAR] received from a match 4935225 which has penalties without extra time
+	case live1stHalf, live2ndHalf, 4, liveExtraTime1stHalf, liveExtraTime2ndHalf, halfTime, interruptedShort, waitingForExtraTime, 20, pauseExtraTime:
 		return models.StatusMatchInProgress
-	// 6 - Full-Time
-	// 11 - After extra time
-	// 13 - Finished after Penalties
-	case 6, 11, 13:
+	case fullTime, afterExtraTime, afterPenalties:
 		return models.StatusMatchFinished
-	// 93 - Will be continued after interruption
-	// 4, 7, 9, 14, 15, 16
+	// 93 - [NOT CLEAR] Will be continued after interruption ?
+	// 7, 9, 15, 16 - [NOT CLEAR]
 	default:
-		fmt.Printf("match with id %d has unknown status status: %d\n", matchID, statusID)
+		fmt.Printf("match with id %d has unknown status: %d\n", matchID, statusID)
 		return models.StatusMatchUnknown
 	}
+}
+
+func isUnknownStatus(statusID fotmobMatchStatus) bool {
+	return !slices.Contains([]fotmobMatchStatus{
+		notStarted,
+		postponed,
+		abandoned,
+		live1stHalf,
+		live2ndHalf,
+		liveExtraTime1stHalf,
+		liveExtraTime2ndHalf,
+		halfTime,
+		interruptedShort,
+		waitingForExtraTime,
+		pauseExtraTime,
+		fullTime,
+		afterExtraTime,
+		afterPenalties,
+	}, statusID)
 }

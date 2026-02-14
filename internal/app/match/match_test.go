@@ -8,11 +8,10 @@ import (
 	"time"
 
 	"github.com/andrewshostak/result-service/config"
-	"github.com/andrewshostak/result-service/errs"
 	"github.com/andrewshostak/result-service/internal/app/match"
 	"github.com/andrewshostak/result-service/internal/app/match/mocks"
 	"github.com/andrewshostak/result-service/internal/app/models"
-	loggerinternal "github.com/andrewshostak/result-service/logger"
+	loggerinternal "github.com/andrewshostak/result-service/internal/infra/logger"
 	"github.com/andrewshostak/result-service/testutils"
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/assert"
@@ -209,7 +208,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, errs.NewResourceNotFoundError(errors.New("not found"))).Once()
+				}).Return(nil, models.NewResourceNotFoundError(errors.New("not found"))).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -237,7 +236,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", models.NewResourceNotFoundError(errors.New("not found")))).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -269,7 +268,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", models.NewResourceNotFoundError(errors.New("not found")))).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -308,7 +307,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", models.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
@@ -349,7 +348,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", models.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
@@ -402,7 +401,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", models.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
@@ -461,7 +460,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", models.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
@@ -491,7 +490,7 @@ func TestMatchService_Create(t *testing.T) {
 			taskClient: func(t *testing.T) *mocks.TaskClient {
 				t.Helper()
 				m := mocks.NewTaskClient(t)
-				m.On("ScheduleResultCheck", ctx, matchID, uint(1), startsAt.Add(pollingFirstAttemptDelay)).Return(nil, fmt.Errorf("already exists: %w", errs.NewResourceAlreadyExistsError(errors.New("task exists")))).Once()
+				m.On("ScheduleResultCheck", ctx, matchID, uint(1), startsAt.Add(pollingFirstAttemptDelay)).Return(nil, fmt.Errorf("already exists: %w", models.NewResourceAlreadyExistsError(errors.New("task exists")))).Once()
 				m.On("GetResultCheckTask", ctx, matchID, uint(1)).Return(nil, errUnexpected).Once()
 				return m
 			},
@@ -521,7 +520,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", models.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
@@ -585,7 +584,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", models.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
@@ -652,7 +651,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", models.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
@@ -719,7 +718,7 @@ func TestMatchService_Create(t *testing.T) {
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
-				}).Return(nil, fmt.Errorf("match not found: %w", errs.NewResourceNotFoundError(errors.New("not found")))).Once()
+				}).Return(nil, fmt.Errorf("match not found: %w", models.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
@@ -744,7 +743,7 @@ func TestMatchService_Create(t *testing.T) {
 			taskClient: func(t *testing.T) *mocks.TaskClient {
 				t.Helper()
 				m := mocks.NewTaskClient(t)
-				m.On("ScheduleResultCheck", ctx, matchID, uint(1), startsAt.Add(pollingFirstAttemptDelay)).Return(nil, fmt.Errorf("already exists: %w", errs.NewResourceAlreadyExistsError(errors.New("task exists")))).Once()
+				m.On("ScheduleResultCheck", ctx, matchID, uint(1), startsAt.Add(pollingFirstAttemptDelay)).Return(nil, fmt.Errorf("already exists: %w", models.NewResourceAlreadyExistsError(errors.New("task exists")))).Once()
 				m.On("GetResultCheckTask", ctx, matchID, uint(1)).Return(&clientTask, nil).Once()
 				return m
 			},

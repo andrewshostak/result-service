@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/andrewshostak/result-service/errs"
 	"github.com/andrewshostak/result-service/internal/app/models"
 	"gorm.io/gorm"
 )
@@ -60,7 +59,7 @@ func (r *MatchRepository) One(ctx context.Context, search models.Match) (*models
 
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errs.NewResourceNotFoundError(fmt.Errorf("match not found: %w", result.Error))
+			return nil, models.NewResourceNotFoundError(fmt.Errorf("match not found: %w", result.Error))
 		}
 
 		return nil, fmt.Errorf("failed to find match: %w", result.Error)

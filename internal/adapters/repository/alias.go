@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/andrewshostak/result-service/errs"
 	"github.com/andrewshostak/result-service/internal/app/models"
 	"gorm.io/gorm"
 )
@@ -23,7 +22,7 @@ func (r *AliasRepository) Find(ctx context.Context, alias string) (*models.Alias
 	result := r.db.WithContext(ctx).Joins("ExternalTeam").Where("alias ILIKE ?", alias).First(&a)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errs.NewResourceNotFoundError(fmt.Errorf("alias %s not found: %w", alias, result.Error))
+			return nil, models.NewResourceNotFoundError(fmt.Errorf("alias %s not found: %w", alias, result.Error))
 		}
 
 		return nil, fmt.Errorf("failed to find alias: %w", result.Error)

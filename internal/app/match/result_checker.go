@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/andrewshostak/result-service/config"
-	"github.com/andrewshostak/result-service/errs"
 	"github.com/andrewshostak/result-service/internal/app/models"
 )
 
@@ -69,9 +68,11 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 		return fmt.Errorf("failed to get matches from external api: %w", err)
 	}
 
-	externalAPIMatch, err := s.findExternalMatch(match.ExternalMatch.ID, matches)
-	if err != nil {
-		return fmt.Errorf("external match with id %d is not found: %w", match.ExternalMatch.ID, err)
+	externalAPIMatch := s.findExternalMatchByID(match.ExternalMatch.ID, matches)
+	if externalAPIMatch == nil {
+		s.logger.Info().Uint("match_id", matchID).Msgf("external match with id %d is not found", match.ExternalMatch.ID)
+
+		return s.handleNotFoundMatch(ctx, *match.ExternalMatch)
 	}
 
 	_, err = s.externalMatchRepository.Save(ctx, &match.ExternalMatch.ID, externalAPIMatch.ToExternalMatch(match.ID))
@@ -90,14 +91,14 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	}
 }
 
-func (s *ResultCheckerService) findExternalMatch(externalID uint, matches []models.ExternalAPIMatch) (*models.ExternalAPIMatch, error) {
+func (s *ResultCheckerService) findExternalMatchByID(externalID uint, matches []models.ExternalAPIMatch) *models.ExternalAPIMatch {
 	for _, match := range matches {
 		if match.ID == int(externalID) {
-			return &match, nil
+			return &match
 		}
 	}
 
-	return nil, errors.New("match not found")
+	return nil
 }
 
 func (s *ResultCheckerService) handleMatchWithUnexpectedStatus(ctx context.Context, matchID uint, externalMatchStatus models.ExternalMatchStatus) error {
@@ -160,7 +161,7 @@ func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID 
 
 	for _, subscription := range subscriptions {
 		err := s.taskClient.ScheduleSubscriberNotification(ctx, subscription.ID)
-		if err != nil && !errors.As(err, &errs.ResourceAlreadyExistsError{}) {
+		if err != nil && !errors.As(err, &models.ResourceAlreadyExistsError{}) {
 			s.logger.Error().Uint("subscription_id", subscription.ID).Err(err).Msg("failed to schedule subscriber notification task")
 			errUpdate := s.subscriptionRepository.Update(ctx, subscription.ID, models.Subscription{Status: models.SchedulingErrorSub, SubscriberError: nil})
 			if errUpdate != nil {
@@ -173,6 +174,19 @@ func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID 
 
 	if err := s.updateMatchResultStatus(ctx, matchID, models.Received); err != nil {
 		return fmt.Errorf("failed to handle finished match: %w", err)
+	}
+
+	return nil
+}
+
+func (s *ResultCheckerService) handleNotFoundMatch(ctx context.Context, externalMatch models.ExternalMatch) error {
+	externalMatch.Status = models.StatusMatchUnknown
+	if _, err := s.externalMatchRepository.Save(ctx, &externalMatch.MatchID, externalMatch); err != nil {
+		return fmt.Errorf("failed to update external match: %w", err)
+	}
+
+	if err := s.updateMatchResultStatus(ctx, externalMatch.MatchID, models.Cancelled); err != nil {
+		return fmt.Errorf("failed to update match: %w", err)
 	}
 
 	return nil

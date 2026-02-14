@@ -17,12 +17,12 @@ const matchesPath = "/api/data/matches"
 const dateFormat = "20060102"
 
 type FotmobClient struct {
-	httpClient *http.Client
+	httpClient HTTPManager
 	logger     Logger
 	config     config.ExternalAPI
 }
 
-func NewFotmobClient(httpClient *http.Client, logger Logger, config config.ExternalAPI) *FotmobClient {
+func NewFotmobClient(httpClient HTTPManager, logger Logger, config config.ExternalAPI) *FotmobClient {
 	return &FotmobClient{httpClient: httpClient, logger: logger, config: config}
 }
 

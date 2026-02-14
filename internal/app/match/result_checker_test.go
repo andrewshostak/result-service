@@ -11,7 +11,7 @@ import (
 	"github.com/andrewshostak/result-service/internal/app/match"
 	"github.com/andrewshostak/result-service/internal/app/match/mocks"
 	"github.com/andrewshostak/result-service/internal/app/models"
-	loggerinternal "github.com/andrewshostak/result-service/logger"
+	loggerinternal "github.com/andrewshostak/result-service/internal/infra/logger"
 	"github.com/andrewshostak/result-service/testutils"
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/assert"
@@ -171,7 +171,36 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to get matches from external api: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns an error when external api result doesn't contain expected match",
+			name:  "it returns nil when external api result doesn't contain expected match",
+			input: matchID,
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
+				m.On("Update", ctx, matchID, models.Cancelled).Return(&models.Match{}, nil).Once()
+				return m
+			},
+			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
+				t.Helper()
+				m := mocks.NewExternalAPIClient(t)
+				m.On("GetMatches", ctx, mock.Anything).Return([]models.ExternalAPIMatch{
+					testutils.FakeExternalAPIMatch(func(r *models.ExternalAPIMatch) {
+						r.ID = int(gofakeit.Uint32()) // Different ID
+					}),
+				}, nil).Once()
+				return m
+			},
+			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
+				t.Helper()
+				m := mocks.NewExternalMatchRepository(t)
+				expectedExternalMatch := *scheduledMatch.ExternalMatch
+				expectedExternalMatch.Status = models.StatusMatchUnknown
+				m.On("Save", ctx, &scheduledMatch.ExternalMatch.MatchID, expectedExternalMatch).Return(&models.ExternalMatch{}, nil).Once()
+				return m
+			},
+		},
+		{
+			name:  "it returns an error when external api match is not found and external match saving fails",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
@@ -189,7 +218,45 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				}, nil).Once()
 				return m
 			},
-			expectedErr: errors.New("is not found: match not found"),
+			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
+				t.Helper()
+				m := mocks.NewExternalMatchRepository(t)
+				expectedExternalMatch := *scheduledMatch.ExternalMatch
+				expectedExternalMatch.Status = models.StatusMatchUnknown
+				m.On("Save", ctx, &scheduledMatch.ExternalMatch.MatchID, expectedExternalMatch).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to update external match: %w", unexpectedErr),
+		},
+		{
+			name:  "it returns an error when external api match is not found and match update fails",
+			input: matchID,
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
+				m.On("Update", ctx, matchID, models.Cancelled).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
+				t.Helper()
+				m := mocks.NewExternalAPIClient(t)
+				m.On("GetMatches", ctx, mock.Anything).Return([]models.ExternalAPIMatch{
+					testutils.FakeExternalAPIMatch(func(r *models.ExternalAPIMatch) {
+						r.ID = int(gofakeit.Uint32()) // Different ID
+					}),
+				}, nil).Once()
+				return m
+			},
+			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
+				t.Helper()
+				m := mocks.NewExternalMatchRepository(t)
+				expectedExternalMatch := *scheduledMatch.ExternalMatch
+				expectedExternalMatch.Status = models.StatusMatchUnknown
+				m.On("Save", ctx, &scheduledMatch.ExternalMatch.MatchID, expectedExternalMatch).Return(&models.ExternalMatch{}, nil).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to update match: %w", fmt.Errorf("failed to update result status to %s: %w", "cancelled", unexpectedErr)),
 		},
 		{
 			name:  "it returns an error when external match saving fails",

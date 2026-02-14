@@ -7,6 +7,29 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 )
 
+func FakeMatchesResponse(options ...Option[fotmob.MatchesResponse]) fotmob.MatchesResponse {
+	response := fotmob.MatchesResponse{
+		Leagues: []fotmob.League{FakeClientLeague()},
+	}
+
+	applyOptions(&response, options...)
+
+	return response
+}
+
+func FakeClientLeague(options ...Option[fotmob.League]) fotmob.League {
+	league := fotmob.League{
+		Ccode:            "ENG",
+		Name:             "Premier League",
+		ParentLeagueName: "Premier League",
+		Matches:          []fotmob.Match{FakeClientMatch()},
+	}
+
+	applyOptions(&league, options...)
+
+	return league
+}
+
 func FakeClientMatch(options ...Option[fotmob.Match]) fotmob.Match {
 	match := fotmob.Match{
 		ID:       int(gofakeit.Int8()),
@@ -15,6 +38,12 @@ func FakeClientMatch(options ...Option[fotmob.Match]) fotmob.Match {
 		StatusID: 1,
 		Status: fotmob.Status{
 			UTCTime: gofakeit.Date().Format(time.RFC3339),
+			Reason: fotmob.Reason{
+				Short:    "FT",
+				ShortKey: "fulltime_short",
+				Long:     "Full-Time",
+				LongKey:  "finished",
+			},
 		},
 	}
 

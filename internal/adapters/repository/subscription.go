@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/andrewshostak/result-service/errs"
 	"github.com/andrewshostak/result-service/internal/app/models"
 	"gorm.io/gorm"
 )
@@ -28,10 +27,10 @@ func (r *SubscriptionRepository) Create(ctx context.Context, subscription models
 	result := r.db.WithContext(ctx).Create(&s)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrForeignKeyViolated) {
-			return nil, errs.NewUnprocessableContentError(fmt.Errorf("match id does not exist: %w", result.Error))
+			return nil, models.NewUnprocessableContentError(fmt.Errorf("match id does not exist: %w", result.Error))
 		}
 		if isDuplicateError(result.Error) {
-			return nil, errs.NewResourceAlreadyExistsError(fmt.Errorf("subscription already exists: %w", result.Error))
+			return nil, models.NewResourceAlreadyExistsError(fmt.Errorf("subscription already exists: %w", result.Error))
 		}
 
 		return nil, fmt.Errorf("failed to create subscription: %w", result.Error)
@@ -62,7 +61,7 @@ func (r *SubscriptionRepository) Get(ctx context.Context, id uint) (*models.Subs
 
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errs.NewResourceNotFoundError(fmt.Errorf("subscription with id %d not found: %w", id, result.Error))
+			return nil, models.NewResourceNotFoundError(fmt.Errorf("subscription with id %d not found: %w", id, result.Error))
 		}
 		return nil, fmt.Errorf("failed to get subscription by id: %w", result.Error)
 	}
@@ -81,7 +80,7 @@ func (r *SubscriptionRepository) One(ctx context.Context, matchID uint, key stri
 
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errs.NewResourceNotFoundError(fmt.Errorf("subscription is not found: %w", result.Error))
+			return nil, models.NewResourceNotFoundError(fmt.Errorf("subscription is not found: %w", result.Error))
 		}
 
 		return nil, fmt.Errorf("failed to find subscription: %w", result.Error)

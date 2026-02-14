@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/andrewshostak/result-service/errs"
+	"github.com/andrewshostak/result-service/internal/app/models"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,26 +19,26 @@ func NewSubscriptionHandler(subscriptionService SubscriptionService) *Subscripti
 func (h *SubscriptionHandler) Create(c *gin.Context) {
 	var params CreateSubscriptionRequest
 	if err := c.ShouldBindJSON(&params); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": errs.CodeInvalidRequest})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": models.CodeInvalidRequest})
 
 		return
 	}
 
 	err := h.subscriptionService.Create(c.Request.Context(), params.ToDomain())
-	if errors.As(err, &errs.ResourceNotFoundError{}) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": errs.CodeResourceNotFound})
+	if errors.As(err, &models.ResourceNotFoundError{}) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": models.CodeResourceNotFound})
 
 		return
 	}
 
-	if errors.As(err, &errs.UnprocessableContentError{}) {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error(), "code": errs.CodeUnprocessableContent})
+	if errors.As(err, &models.UnprocessableContentError{}) {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error(), "code": models.CodeUnprocessableContent})
 
 		return
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": errs.CodeInternalServerError})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": models.CodeInternalServerError})
 
 		return
 	}
@@ -49,25 +49,25 @@ func (h *SubscriptionHandler) Create(c *gin.Context) {
 func (h *SubscriptionHandler) Delete(c *gin.Context) {
 	var params DeleteSubscriptionRequest
 	if err := c.ShouldBindQuery(&params); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": errs.CodeInvalidRequest})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": models.CodeInvalidRequest})
 		return
 	}
 
 	err := h.subscriptionService.Delete(c.Request.Context(), params.ToDomain())
-	if errors.As(err, &errs.ResourceNotFoundError{}) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": errs.CodeResourceNotFound})
+	if errors.As(err, &models.ResourceNotFoundError{}) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": models.CodeResourceNotFound})
 
 		return
 	}
 
-	if errors.As(err, &errs.UnprocessableContentError{}) {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error(), "code": errs.CodeUnprocessableContent})
+	if errors.As(err, &models.UnprocessableContentError{}) {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error(), "code": models.CodeUnprocessableContent})
 
 		return
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": errs.CodeInternalServerError})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": models.CodeInternalServerError})
 
 		return
 	}

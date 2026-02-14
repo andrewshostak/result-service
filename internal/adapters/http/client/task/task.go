@@ -10,7 +10,6 @@ import (
 	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
 	taskspb "cloud.google.com/go/cloudtasks/apiv2/cloudtaskspb"
 	"github.com/andrewshostak/result-service/config"
-	"github.com/andrewshostak/result-service/errs"
 	"github.com/andrewshostak/result-service/internal/app/models"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -88,7 +87,7 @@ func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, atte
 	createdTask, err := c.client.CreateTask(ctx, req)
 	if err != nil {
 		if c.isTaskAlreadyExistsError(err) {
-			return nil, errs.NewResourceAlreadyExistsError(fmt.Errorf("result-check task already exists: %w", err))
+			return nil, models.NewResourceAlreadyExistsError(fmt.Errorf("result-check task already exists: %w", err))
 		}
 
 		return nil, fmt.Errorf("failed to create result-check task: %w", err)
@@ -148,7 +147,7 @@ func (c *TaskClient) ScheduleSubscriberNotification(ctx context.Context, subscri
 
 	if _, err := c.client.CreateTask(ctx, req); err != nil {
 		if c.isTaskAlreadyExistsError(err) {
-			return errs.NewResourceAlreadyExistsError(fmt.Errorf("subscriber-notification task already exists: %w", err))
+			return models.NewResourceAlreadyExistsError(fmt.Errorf("subscriber-notification task already exists: %w", err))
 		}
 
 		return fmt.Errorf("failed to create subscriber-notification task: %w", err)

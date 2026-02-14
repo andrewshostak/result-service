@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/andrewshostak/result-service/errs"
+	"github.com/andrewshostak/result-service/internal/app/models"
 	"github.com/gin-contrib/timeout"
 	"github.com/gin-gonic/gin"
 )
@@ -17,5 +17,5 @@ func Timeout(t time.Duration) gin.HandlerFunc {
 }
 
 func TimeoutResponse(c *gin.Context) {
-	c.JSON(http.StatusRequestTimeout, gin.H{"error": "timeout", "code": errs.CodeTimeout})
+	c.JSON(http.StatusRequestTimeout, gin.H{"error": "timeout", "code": models.CodeTimeout})
 }

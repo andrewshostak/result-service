@@ -10,7 +10,7 @@ import (
 	"github.com/andrewshostak/result-service/internal/app/models"
 	sub "github.com/andrewshostak/result-service/internal/app/subscription"
 	"github.com/andrewshostak/result-service/internal/app/subscription/mocks"
-	loggerinternal "github.com/andrewshostak/result-service/logger"
+	loggerinternal "github.com/andrewshostak/result-service/internal/infra/logger"
 	"github.com/andrewshostak/result-service/testutils"
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/assert"

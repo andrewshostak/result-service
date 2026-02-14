@@ -7,12 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/andrewshostak/result-service/errs"
 	"github.com/andrewshostak/result-service/internal/app/models"
 	"github.com/andrewshostak/result-service/internal/app/subscription"
 	sub "github.com/andrewshostak/result-service/internal/app/subscription"
 	"github.com/andrewshostak/result-service/internal/app/subscription/mocks"
-	loggerinternal "github.com/andrewshostak/result-service/logger"
+	loggerinternal "github.com/andrewshostak/result-service/internal/infra/logger"
 	"github.com/andrewshostak/result-service/testutils"
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/assert"
@@ -104,7 +103,7 @@ func TestSubscriptionService_Create(t *testing.T) {
 					MatchID: matchID,
 					Key:     secretKey,
 					Url:     url,
-				}).Return(nil, errs.NewResourceAlreadyExistsError(errors.New("already exists"))).Once()
+				}).Return(nil, models.NewResourceAlreadyExistsError(errors.New("already exists"))).Once()
 				return m
 			},
 		},
@@ -299,7 +298,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 				}, nil).Once()
 				return m
 			},
-			expectedErr: errs.NewUnprocessableContentError(errors.New("not allowed to delete successfully notified subscription")),
+			expectedErr: models.NewUnprocessableContentError(errors.New("not allowed to delete successfully notified subscription")),
 		},
 		{
 			name:  "it returns an error when subscription deletion fails",

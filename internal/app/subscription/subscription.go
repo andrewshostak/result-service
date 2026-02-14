@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/andrewshostak/result-service/errs"
 	"github.com/andrewshostak/result-service/internal/app/models"
 )
 
@@ -40,7 +39,7 @@ func (s *SubscriptionService) Create(ctx context.Context, request models.CreateS
 	}
 
 	if !s.isMatchResultScheduled(*match) {
-		return errs.NewUnprocessableContentError(errors.New("match result status doesn't allow to create a subscription"))
+		return models.NewUnprocessableContentError(errors.New("match result status doesn't allow to create a subscription"))
 	}
 
 	_, err = s.subscriptionRepository.Create(ctx, models.Subscription{
@@ -49,7 +48,7 @@ func (s *SubscriptionService) Create(ctx context.Context, request models.CreateS
 		Url:     request.URL,
 	})
 
-	if errors.As(err, &errs.ResourceAlreadyExistsError{}) {
+	if errors.As(err, &models.ResourceAlreadyExistsError{}) {
 		s.logger.Error().Uint("subscription_id", match.ID).Msg("subscription already exists")
 		return nil
 	}
@@ -89,7 +88,7 @@ func (s *SubscriptionService) Delete(ctx context.Context, request models.DeleteS
 	}
 
 	if s.isSubscriberNotified(*subscription) {
-		return errs.NewUnprocessableContentError(errors.New("not allowed to delete successfully notified subscription"))
+		return models.NewUnprocessableContentError(errors.New("not allowed to delete successfully notified subscription"))
 	}
 
 	err = s.subscriptionRepository.Delete(ctx, subscription.ID)
