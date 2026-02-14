@@ -14,11 +14,11 @@ import (
 const notificationAuthHeader = "Authorization"
 
 type NotifierClient struct {
-	httpClient *http.Client
+	httpClient HTTPManager
 	logger     Logger
 }
 
-func NewNotifierClient(httpClient *http.Client, logger Logger) *NotifierClient {
+func NewNotifierClient(httpClient HTTPManager, logger Logger) *NotifierClient {
 	return &NotifierClient{httpClient: httpClient, logger: logger}
 }
 
