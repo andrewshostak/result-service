@@ -20,8 +20,8 @@ func FakeMatchesResponse(options ...Option[fotmob.MatchesResponse]) fotmob.Match
 func FakeClientLeague(options ...Option[fotmob.League]) fotmob.League {
 	league := fotmob.League{
 		Ccode:            "ENG",
-		Name:             "Premier League",
-		ParentLeagueName: "Premier League",
+		Name:             "League",
+		ParentLeagueName: "League Group 1",
 		Matches:          []fotmob.Match{FakeClientMatch()},
 	}
 
