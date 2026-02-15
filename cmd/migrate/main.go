@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	"github.com/andrewshostak/result-service/config"
-	loggerinternal "github.com/andrewshostak/result-service/logger"
-	"github.com/andrewshostak/result-service/repository"
+	loggerinternal "github.com/andrewshostak/result-service/internal/infra/logger"
+	"github.com/andrewshostak/result-service/internal/infra/postgres"
 	"github.com/golang-migrate/migrate/v4"
 	migratepg "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/rs/zerolog"
@@ -83,7 +83,7 @@ func run() (*migrate.Migrate, *zerolog.Logger) {
 
 	logger := loggerinternal.SetupLogger()
 
-	db := repository.EstablishDatabaseConnection(cfg.PG)
+	db := postgres.EstablishDatabaseConnection(cfg.PG)
 
 	sqlDb, err := db.DB()
 	if err != nil {
@@ -95,7 +95,7 @@ func run() (*migrate.Migrate, *zerolog.Logger) {
 		panic(err)
 	}
 
-	m, err := migrate.NewWithDatabaseInstance("file://./migrations", cfg.PG.Database, driver)
+	m, err := migrate.NewWithDatabaseInstance("file://./database/migrations", cfg.PG.Database, driver)
 	if err != nil {
 		panic(err)
 	}

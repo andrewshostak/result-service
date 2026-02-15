@@ -6,11 +6,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/andrewshostak/result-service/client"
 	"github.com/andrewshostak/result-service/config"
-	loggerinternal "github.com/andrewshostak/result-service/logger"
-	"github.com/andrewshostak/result-service/repository"
-	"github.com/andrewshostak/result-service/service"
+	"github.com/andrewshostak/result-service/internal/adapters/http/client/fotmob"
+	"github.com/andrewshostak/result-service/internal/adapters/repository"
+	"github.com/andrewshostak/result-service/internal/app/alias"
+	loggerinternal "github.com/andrewshostak/result-service/internal/infra/logger"
+	"github.com/andrewshostak/result-service/internal/infra/postgres"
 	"github.com/spf13/cobra"
 )
 
@@ -54,13 +55,13 @@ func run(cmd *cobra.Command, _ []string) {
 
 	httpClient := http.Client{}
 
-	db := repository.EstablishDatabaseConnection(cfg.PG)
+	db := postgres.EstablishDatabaseConnection(cfg.PG)
 
 	aliasRepository := repository.NewAliasRepository(db)
 
-	fotmobClient := client.NewFotmobClient(&httpClient, logger, cfg.ExternalAPI)
+	fotmobClient := fotmob.NewFotmobClient(&httpClient, logger, cfg.ExternalAPI)
 
-	backfillAliasesService := service.NewBackfillAliasesService(aliasRepository, fotmobClient, logger)
+	backfillAliasesService := alias.NewBackfillAliasesService(aliasRepository, fotmobClient, logger)
 
 	ctx := context.Background()
 

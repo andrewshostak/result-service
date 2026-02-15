@@ -14,7 +14,7 @@ services:
     environment:
       PG_HOST: database
     volumes:
-      - ./migrations:/app/migrations
+      - ./database/migrations:/app/database/migrations
     command:
       ./bin/server
   database:

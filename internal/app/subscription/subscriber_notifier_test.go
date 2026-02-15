@@ -1,0 +1,273 @@
+package subscription_test
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"testing"
+	"time"
+
+	"github.com/andrewshostak/result-service/internal/app/models"
+	sub "github.com/andrewshostak/result-service/internal/app/subscription"
+	"github.com/andrewshostak/result-service/internal/app/subscription/mocks"
+	loggerinternal "github.com/andrewshostak/result-service/internal/infra/logger"
+	"github.com/andrewshostak/result-service/testutils"
+	"github.com/brianvoe/gofakeit/v6"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+)
+
+func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
+	ctx := context.Background()
+	subscriptionID, matchID := uint(gofakeit.Uint8()), uint(gofakeit.Uint8())
+
+	errorMessage := "unexpected error"
+	unexpectedErr := errors.New(errorMessage)
+
+	subscription := testutils.FakeSubscription(func(s *models.Subscription) {
+		s.ID = subscriptionID
+		s.MatchID = matchID
+		s.Status = "pending"
+	})
+
+	externalMatch := testutils.FakeExternalMatch(func(m *models.ExternalMatch) {
+		m.MatchID = matchID
+	})
+
+	match := testutils.FakeMatch(func(m *models.Match) {
+		m.ID = matchID
+		m.ExternalMatch = &externalMatch
+	})
+
+	notification := testutils.FakeSubscriberNotification(func(n *models.SubscriberNotification) {
+		n.Home = uint(match.ExternalMatch.HomeScore)
+		n.Away = uint(match.ExternalMatch.AwayScore)
+		n.Url = subscription.Url
+		n.Key = subscription.Key
+	})
+
+	tests := []struct {
+		name                   string
+		input                  uint
+		matchRepository        func(t *testing.T) *mocks.MatchRepository
+		notifierClient         func(t *testing.T) *mocks.NotifierClient
+		subscriptionRepository func(t *testing.T) *mocks.SubscriptionRepository
+		expectedErr            error
+	}{
+		{
+			name:  "success - it returns nil when processing unnotified subscription",
+			input: subscriptionID,
+			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
+				t.Helper()
+				m := mocks.NewSubscriptionRepository(t)
+				m.On("Get", ctx, subscriptionID).Return(&subscription, nil).Once()
+				m.On("Update", ctx, subscriptionID, mock.MatchedBy(subscriptionMatchedFunc)).Return(nil).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, models.Match{ID: matchID}).Return(&match, nil).Once()
+				return m
+			},
+			notifierClient: func(t *testing.T) *mocks.NotifierClient {
+				t.Helper()
+				m := mocks.NewNotifierClient(t)
+				m.On("Notify", ctx, notification).Return(nil).Once()
+				return m
+			},
+			expectedErr: nil,
+		},
+		{
+			name:  "it returns an error when subscription retrieval fails",
+			input: subscriptionID,
+			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
+				t.Helper()
+				m := mocks.NewSubscriptionRepository(t)
+				m.On("Get", ctx, subscriptionID).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to get subscription by id: %w", unexpectedErr),
+		},
+		{
+			name:  "success - it returns nil when subscription is already notified",
+			input: subscriptionID,
+			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
+				t.Helper()
+				m := mocks.NewSubscriptionRepository(t)
+				m.On("Get", ctx, subscriptionID).Return(&models.Subscription{
+					ID:     subscriptionID,
+					Status: "successful",
+				}, nil).Once()
+				return m
+			},
+			expectedErr: nil,
+		},
+		{
+			name:  "it returns an error when match retrieval fails",
+			input: subscriptionID,
+			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
+				t.Helper()
+				m := mocks.NewSubscriptionRepository(t)
+				m.On("Get", ctx, subscriptionID).Return(&models.Subscription{
+					ID:      subscriptionID,
+					Status:  "pending",
+					MatchID: matchID,
+				}, nil).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, models.Match{ID: matchID}).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to get match: %w", unexpectedErr),
+		},
+		{
+			name:  "it returns an error when match relation external match doesn't exist",
+			input: subscriptionID,
+			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
+				t.Helper()
+				m := mocks.NewSubscriptionRepository(t)
+				m.On("Get", ctx, subscriptionID).Return(&models.Subscription{
+					ID:      subscriptionID,
+					Status:  "pending",
+					MatchID: matchID,
+				}, nil).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, models.Match{ID: matchID}).Return(&models.Match{ID: matchID}, nil).Once()
+				return m
+			},
+			expectedErr: errors.New("match relation external match doesn't exist"),
+		},
+		{
+			name:  "it returns an error when notifier fails and subscription update fails",
+			input: subscriptionID,
+			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
+				t.Helper()
+				m := mocks.NewSubscriptionRepository(t)
+				m.On("Get", ctx, subscriptionID).Return(&subscription, nil).Once()
+				m.On("Update", ctx, subscriptionID, models.Subscription{
+					Status:          models.SubscriberErrorSub,
+					SubscriberError: &errorMessage,
+				}).Return(unexpectedErr).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, models.Match{ID: matchID}).Return(&match, nil).Once()
+				return m
+			},
+			notifierClient: func(t *testing.T) *mocks.NotifierClient {
+				t.Helper()
+				m := mocks.NewNotifierClient(t)
+				m.On("Notify", ctx, notification).Return(unexpectedErr).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to notify subscriber: %w", unexpectedErr),
+		},
+		{
+			name:  "it returns an error when notifier fails and subscription update succeeds",
+			input: subscriptionID,
+			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
+				t.Helper()
+				m := mocks.NewSubscriptionRepository(t)
+				m.On("Get", ctx, subscriptionID).Return(&subscription, nil).Once()
+				m.On("Update", ctx, subscriptionID, models.Subscription{
+					Status:          models.SubscriberErrorSub,
+					SubscriberError: &errorMessage,
+				}).Return(nil).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, models.Match{ID: matchID}).Return(&match, nil).Once()
+				return m
+			},
+			notifierClient: func(t *testing.T) *mocks.NotifierClient {
+				t.Helper()
+				m := mocks.NewNotifierClient(t)
+				m.On("Notify", ctx, notification).Return(unexpectedErr).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to notify subscriber: %w", unexpectedErr),
+		},
+		{
+			name:  "it returns an error when notifier succeeds but subscription update fails",
+			input: subscriptionID,
+			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
+				t.Helper()
+				m := mocks.NewSubscriptionRepository(t)
+				m.On("Get", ctx, subscriptionID).Return(&subscription, nil).Once()
+				m.On("Update", ctx, subscriptionID, mock.MatchedBy(subscriptionMatchedFunc)).Return(unexpectedErr).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, models.Match{ID: matchID}).Return(&match, nil).Once()
+				return m
+			},
+			notifierClient: func(t *testing.T) *mocks.NotifierClient {
+				t.Helper()
+				m := mocks.NewNotifierClient(t)
+				m.On("Notify", ctx, notification).Return(nil).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to update subscription status to %s: %w", string(models.SuccessfulSub), unexpectedErr),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var matchRepository *mocks.MatchRepository
+			if tt.matchRepository != nil {
+				matchRepository = tt.matchRepository(t)
+			}
+
+			var subscriptionRepository *mocks.SubscriptionRepository
+			if tt.subscriptionRepository != nil {
+				subscriptionRepository = tt.subscriptionRepository(t)
+			}
+
+			var notifierClient *mocks.NotifierClient
+			if tt.notifierClient != nil {
+				notifierClient = tt.notifierClient(t)
+			}
+
+			logger := loggerinternal.SetupLogger()
+
+			sns := sub.NewSubscriberNotifierService(subscriptionRepository, matchRepository, notifierClient, logger)
+
+			err := sns.NotifySubscriber(ctx, tt.input)
+			if tt.expectedErr != nil {
+				assert.ErrorContains(t, err, tt.expectedErr.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func subscriptionMatchedFunc(actual models.Subscription) bool {
+	if actual.SubscriberError != actual.SubscriberError {
+		return false
+	}
+
+	if actual.Status != models.SuccessfulSub {
+		return false
+	}
+
+	if actual.NotifiedAt.After(time.Now()) {
+		return false
+	}
+
+	return true
+}
