@@ -12,3 +12,4 @@ RUN go build -o ./out/migrate ./cmd/migrate
 FROM alpine
 WORKDIR /app
 COPY --from=builder /app/out /app/bin
+COPY --from=builder /app/functionaltests/google-test-credentials.json /app/google-test-credentials.json

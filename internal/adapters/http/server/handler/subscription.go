@@ -19,26 +19,26 @@ func NewSubscriptionHandler(subscriptionService SubscriptionService) *Subscripti
 func (h *SubscriptionHandler) Create(c *gin.Context) {
 	var params CreateSubscriptionRequest
 	if err := c.ShouldBindJSON(&params); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": models.CodeInvalidRequest})
+		c.JSON(http.StatusBadRequest, NewErrorResponse(models.CodeInvalidRequest, err))
 
 		return
 	}
 
 	err := h.subscriptionService.Create(c.Request.Context(), params.ToDomain())
 	if errors.As(err, &models.ResourceNotFoundError{}) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": models.CodeResourceNotFound})
+		c.JSON(http.StatusBadRequest, NewErrorResponse(models.CodeResourceNotFound, err))
 
 		return
 	}
 
 	if errors.As(err, &models.UnprocessableContentError{}) {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error(), "code": models.CodeUnprocessableContent})
+		c.JSON(http.StatusUnprocessableEntity, NewErrorResponse(models.CodeUnprocessableContent, err))
 
 		return
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": models.CodeInternalServerError})
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(models.CodeInternalServerError, err))
 
 		return
 	}

@@ -26,11 +26,11 @@ type ExternalTeam struct {
 }
 
 type Match struct {
-	ID           uint      `gorm:"column:id;primaryKey"`
-	HomeTeamID   uint      `gorm:"column:home_team_id"`
-	AwayTeamID   uint      `gorm:"column:away_team_id"`
-	StartsAt     time.Time `gorm:"column:starts_at"`
-	ResultStatus string    `gorm:"column:result_status;default:not_scheduled"`
+	ID           uint      `gorm:"column:id;primaryKey" db:"id"`
+	HomeTeamID   uint      `gorm:"column:home_team_id" db:"home_team_id"`
+	AwayTeamID   uint      `gorm:"column:away_team_id" db:"away_team_id"`
+	StartsAt     time.Time `gorm:"column:starts_at" db:"starts_at"`
+	ResultStatus string    `gorm:"column:result_status;default:not_scheduled" db:"result_status"`
 
 	ExternalMatch   *ExternalMatch
 	CheckResultTask *CheckResultTask
@@ -49,14 +49,14 @@ type ExternalMatch struct {
 }
 
 type Subscription struct {
-	ID              uint       `gorm:"column:id;primaryKey"`
-	Url             string     `gorm:"column:url;unique"`
-	MatchID         uint       `gorm:"column:match_id"`
-	Key             string     `gorm:"column:key;unique"`
-	CreatedAt       time.Time  `gorm:"column:created_at"`
-	Status          string     `gorm:"column:status;default:pending"`
-	SubscriberError *string    `gorm:"column:subscriber_error"`
-	NotifiedAt      *time.Time `gorm:"column:notified_at"`
+	ID              uint       `gorm:"column:id;primaryKey" db:"id"`
+	Url             string     `gorm:"column:url;unique" db:"url"`
+	MatchID         uint       `gorm:"column:match_id" db:"match_id"`
+	Key             string     `gorm:"column:key;unique" db:"key"`
+	CreatedAt       time.Time  `gorm:"column:created_at" db:"created_at"`
+	Status          string     `gorm:"column:status;default:pending" db:"status"`
+	SubscriberError *string    `gorm:"column:subscriber_error" db:"subscriber_error"`
+	NotifiedAt      *time.Time `gorm:"column:notified_at" db:"notified_at"`
 
 	Match *Match `gorm:"foreignKey:MatchID"`
 }

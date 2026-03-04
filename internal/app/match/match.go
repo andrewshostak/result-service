@@ -44,6 +44,7 @@ func NewMatchService(
 }
 
 func (s *MatchService) Create(ctx context.Context, request models.CreateMatchRequest) (uint, error) {
+	// TODO: remove this check or move it after match status check
 	if request.StartsAt.Before(time.Now()) {
 		return 0, models.NewUnprocessableContentError(errors.New("match starting time must be in the future"))
 	}
