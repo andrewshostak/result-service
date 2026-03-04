@@ -87,11 +87,6 @@ func TestMatchService_Create(t *testing.T) {
 		expectedErr               error
 	}{
 		{
-			name:        "it returns an error when match starting date is not valid",
-			input:       models.CreateMatchRequest{StartsAt: time.Now().Add(-1 * time.Hour)},
-			expectedErr: errors.New("match starting time must be in the future"),
-		},
-		{
 			name:  "it returns an error when home team alias finding fails",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {

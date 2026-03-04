@@ -21,8 +21,8 @@ type Team struct {
 }
 
 type ExternalTeam struct {
-	ID     uint `gorm:"column:id;primaryKey"`
-	TeamID uint `gorm:"column:team_id"`
+	ID     uint `gorm:"column:id;primaryKey" db:"id"`
+	TeamID uint `gorm:"column:team_id" db:"team_id"`
 }
 
 type Match struct {

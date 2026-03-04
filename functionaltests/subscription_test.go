@@ -50,6 +50,7 @@ func (s *FunctionalTestSuite) TestCreateSubscription_Success() {
 
 	resp, err := s.httpClient.Do(req)
 	s.Require().NoError(err)
+
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
 	}(resp.Body)

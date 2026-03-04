@@ -21,6 +21,18 @@ func CreateTeams(t *testing.T, db *sqlx.DB) []int {
 	return teamIDs
 }
 
+func CreateExternalTeams(t *testing.T, db *sqlx.DB, teamID int, externalTeamID int) repository.ExternalTeam {
+	t.Helper()
+
+	var created repository.ExternalTeam
+	externalTeamCreationQuery := "INSERT INTO external_teams (id, team_id) VALUES ($1, $2) RETURNING *"
+
+	err := db.Get(&created, externalTeamCreationQuery, externalTeamID, teamID)
+	require.NoError(t, err)
+
+	return created
+}
+
 func CreateAlias(t *testing.T, db *sqlx.DB, alias string, teamID int) {
 	t.Helper()
 
