@@ -85,9 +85,9 @@ func FakeExternalAPIMatch(options ...Option[models.ExternalAPIMatch]) models.Ext
 	}
 
 	externalMatch := models.ExternalAPIMatch{
-		ID:        int(gofakeit.Int8()),
-		HomeID:    int(gofakeit.Int8()),
-		AwayID:    int(gofakeit.Int8()),
+		ID:        uint(gofakeit.Uint8()),
+		HomeID:    uint(gofakeit.Uint8()),
+		AwayID:    uint(gofakeit.Uint8()),
 		HomeScore: gofakeit.IntRange(0, 9),
 		AwayScore: gofakeit.IntRange(0, 9),
 		Time:      gofakeit.Date(),

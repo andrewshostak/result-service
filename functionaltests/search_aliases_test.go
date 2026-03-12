@@ -13,12 +13,10 @@ import (
 const secretKey = "OQJdhUG6twIePy5HWwOu1lqU"
 
 func (s *FunctionalTestSuite) TestSearchAliases_Success() {
-	teamIDs := testutils.CreateTeams(s.T(), s.db)
-
 	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
 
-	for i, teamID := range teamIDs {
-		testutils.CreateAlias(s.T(), s.db, aliases[i], teamID)
+	for i := range aliases {
+		_, _ = testutils.SetupTeamWithRelations(s.T(), s.db, aliases[i], i+1)
 	}
 
 	url := s.apiBaseURL + "/v1/aliases"
@@ -53,12 +51,10 @@ func (s *FunctionalTestSuite) TestSearchAliases_Success() {
 }
 
 func (s *FunctionalTestSuite) TestSearchAliases_NothingFound() {
-	teamIDs := testutils.CreateTeams(s.T(), s.db)
-
 	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
 
-	for i, teamID := range teamIDs {
-		testutils.CreateAlias(s.T(), s.db, aliases[i], teamID)
+	for i := range aliases {
+		_, _ = testutils.SetupTeamWithRelations(s.T(), s.db, aliases[i], i+1)
 	}
 
 	url := s.apiBaseURL + "/v1/aliases"

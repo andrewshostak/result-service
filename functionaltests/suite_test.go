@@ -28,12 +28,14 @@ type FunctionalTestSuite struct {
 	postgresContainer *postgres.PostgresContainer
 	appContainer      testcontainers.Container
 	cloudTasksClient  testcontainers.Container
+	smocker           testcontainers.Container
 	testNetwork       *testcontainers.DockerNetwork
 
 	db *sqlx.DB
 
-	apiBaseURL string
-	httpClient *http.Client
+	apiBaseURL      string
+	smockerAdminURL string
+	httpClient      *http.Client
 }
 
 // called once before all tests
@@ -79,6 +81,7 @@ func (s *FunctionalTestSuite) SetupSuite() {
 			nw.Name: {"cloud-tasks-emulator"},
 		},
 		ExposedPorts: []string{"8123/tcp"},
+		Cmd:          []string{"-host", "0.0.0.0", "-port", "8123", "-queue", "projects/test-project/locations/europe-west3/queues/check-result"},
 		WaitingFor:   wait.ForListeningPort("8123/tcp"),
 	}
 
@@ -89,6 +92,30 @@ func (s *FunctionalTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 
 	s.cloudTasksClient = container
+
+	s.T().Log("starting smoker container...")
+
+	smockerReq := testcontainers.ContainerRequest{
+		Image:    "thiht/smocker:latest",
+		Networks: []string{nw.Name},
+		NetworkAliases: map[string][]string{
+			nw.Name: {"smocker"},
+		},
+		ExposedPorts: []string{"8080/tcp", "8081/tcp"},
+		WaitingFor:   wait.ForHTTP("/sessions").WithPort("8081/tcp"),
+	}
+
+	smockerContainer, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: smockerReq,
+		Started:          true,
+	})
+	s.Require().NoError(err)
+
+	s.smocker = smockerContainer
+
+	adminHost, _ := smockerContainer.Host(ctx)
+	adminPort, _ := smockerContainer.MappedPort(ctx, "8081")
+	s.smockerAdminURL = fmt.Sprintf("http://%s:%s", adminHost, adminPort.Port())
 
 	// start application container
 	s.T().Log("Starting application container...")
@@ -108,12 +135,12 @@ func (s *FunctionalTestSuite) SetupSuite() {
 			"PG_PORT":     "5432",
 			"PG_PASSWORD": "postgres",
 
-			"SECRET_KEY":      "i_am_a_secret_key",
-			"HASHED_API_KEYS": "a87a39c7ddb9682faa412e209834b92d96470cc21878f391c719b3357a8126387b3817628dca009b5e5a66a9e576bbf9361d8b60a7f85f5cfd3f17c15cfed6b5",
-
+			"SECRET_KEY":                         "i_am_a_secret_key",
+			"HASHED_API_KEYS":                    "a87a39c7ddb9682faa412e209834b92d96470cc21878f391c719b3357a8126387b3817628dca009b5e5a66a9e576bbf9361d8b60a7f85f5cfd3f17c15cfed6b5",
+			"FOTMOB_API_BASE_URL":                "http://smocker:8080",
 			"GOOGLE_CLOUD_PROJECT_ID":            "test-project",
 			"GOOGLE_CLOUD_REGION":                "europe-west3",
-			"GOOGLE_CLOUD_BASE_URL":              "http://cloud-tasks-emulator:8123",
+			"GOOGLE_CLOUD_BASE_URL":              "cloud-tasks-emulator:8123",
 			"GOOGLE_CLOUD_SERVICE_ACCOUNT_EMAIL": "test-sa@test-project.iam.gserviceaccount.com",
 			// better to have an absolute path. if it doesn't work - try google-test-credentials.json
 			"GOOGLE_APPLICATION_CREDENTIALS": "/app/google-test-credentials.json",
@@ -158,6 +185,11 @@ func (s *FunctionalTestSuite) TearDownSuite() {
 		_ = s.db.Close()
 	}
 
+	if s.smocker != nil {
+		s.T().Log("Stopping smoker container...")
+		_ = s.smocker.Terminate(ctx)
+	}
+
 	if s.cloudTasksClient != nil {
 		s.T().Log("Stopping cloud tasks container...")
 		_ = s.cloudTasksClient.Terminate(ctx)
@@ -177,6 +209,7 @@ func (s *FunctionalTestSuite) TearDownSuite() {
 // called before each test
 func (s *FunctionalTestSuite) SetupTest() {
 	s.cleanDatabase()
+	s.resetSmocker()
 }
 
 func (s *FunctionalTestSuite) runMigrations() error {
@@ -209,8 +242,16 @@ func (s *FunctionalTestSuite) cleanDatabase() {
 		"check_result_tasks",
 	}
 	for _, table := range tables {
-		_, _ = s.db.Exec(fmt.Sprintf("TRUNCATE TABLE %s CASCADE", table))
+		_, err := s.db.Exec(fmt.Sprintf("TRUNCATE TABLE %s RESTART IDENTITY CASCADE", table))
+		s.Require().NoError(err, "Failed to truncate table: "+table)
 	}
+}
+
+func (s *FunctionalTestSuite) resetSmocker() {
+	req, _ := http.NewRequest(http.MethodDelete, s.smockerAdminURL+"/sessions", nil)
+	resp, err := http.DefaultClient.Do(req)
+	s.Require().NoError(err)
+	defer resp.Body.Close()
 }
 
 func (s *FunctionalTestSuite) DB() *sqlx.DB {

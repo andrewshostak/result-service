@@ -93,7 +93,7 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 
 func (s *ResultCheckerService) findExternalMatchByID(externalID uint, matches []models.ExternalAPIMatch) *models.ExternalAPIMatch {
 	for _, match := range matches {
-		if match.ID == int(externalID) {
+		if match.ID == externalID {
 			return &match
 		}
 	}

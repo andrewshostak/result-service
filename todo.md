@@ -22,6 +22,7 @@
   - [ ] delete subscription
   - [ ] trigger result check
   - [ ] trigger subscriber notification
+    - [ ] verify mocked http request number of calls and bodies
   - [ ] auth middleware
   - [ ] google middleware
 - [ ] migrate from gorm to sqlc

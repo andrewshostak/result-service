@@ -259,7 +259,7 @@ func TestFotmobClient_GetTeams(t *testing.T) {
 
 func expectedExternalAPITeams(response fotmob.MatchesResponse) []models.ExternalAPITeam {
 	var teams []models.ExternalAPITeam
-	seen := make(map[int]bool)
+	seen := make(map[uint]bool)
 
 	for _, league := range response.Leagues {
 		for _, m := range league.Matches {

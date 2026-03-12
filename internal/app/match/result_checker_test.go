@@ -42,7 +42,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 	})
 
 	externalMatchClient := testutils.FakeExternalAPIMatch(func(r *models.ExternalAPIMatch) {
-		r.ID = int(externalMatchID)
+		r.ID = externalMatchID
 	})
 
 	externalMatchClientFinished := externalMatchClient
@@ -185,7 +185,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m := mocks.NewExternalAPIClient(t)
 				m.On("GetMatches", ctx, mock.Anything).Return([]models.ExternalAPIMatch{
 					testutils.FakeExternalAPIMatch(func(r *models.ExternalAPIMatch) {
-						r.ID = int(gofakeit.Uint32()) // Different ID
+						r.ID = uint(gofakeit.Uint32()) // Different ID
 					}),
 				}, nil).Once()
 				return m
@@ -213,7 +213,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m := mocks.NewExternalAPIClient(t)
 				m.On("GetMatches", ctx, mock.Anything).Return([]models.ExternalAPIMatch{
 					testutils.FakeExternalAPIMatch(func(r *models.ExternalAPIMatch) {
-						r.ID = int(gofakeit.Uint32()) // Different ID
+						r.ID = uint(gofakeit.Uint32()) // Different ID
 					}),
 				}, nil).Once()
 				return m
@@ -243,7 +243,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m := mocks.NewExternalAPIClient(t)
 				m.On("GetMatches", ctx, mock.Anything).Return([]models.ExternalAPIMatch{
 					testutils.FakeExternalAPIMatch(func(r *models.ExternalAPIMatch) {
-						r.ID = int(gofakeit.Uint32()) // Different ID
+						r.ID = uint(gofakeit.Uint32()) // Different ID
 					}),
 				}, nil).Once()
 				return m

@@ -145,7 +145,7 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.E
 		if err == nil {
 			s.logger.Debug().
 				Str("alias", teams[i].Name).
-				Int("external_id", teams[i].ID).
+				Uint("external_id", teams[i].ID).
 				Msg("alias already exists")
 			numberOfExisted++
 			continue
@@ -155,7 +155,7 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.E
 		if errTrx != nil {
 			s.logger.Error().
 				Str("alias", teams[i].Name).
-				Int("external_id", teams[i].ID).
+				Uint("external_id", teams[i].ID).
 				Err(errTrx).
 				Msg("failed to save alias")
 			continue
@@ -174,7 +174,7 @@ func deduplicateByTeamID(teams []models.ExternalAPITeam) []models.ExternalAPITea
 		return teams
 	}
 
-	uniqueByID := make(map[int]models.ExternalAPITeam, len(teams))
+	uniqueByID := make(map[uint]models.ExternalAPITeam, len(teams))
 	for _, team := range teams {
 		uniqueByID[team.ID] = team
 	}

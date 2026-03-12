@@ -18,12 +18,13 @@ import (
 
 func (s *FunctionalTestSuite) TestCreateSubscription_Success() {
 	now := time.Now()
-	teamIDs := testutils.CreateTeams(s.T(), s.db)
 
 	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
+	teamIDs := make([]uint, 0, len(aliases))
 
-	for i, teamID := range teamIDs {
-		testutils.CreateAlias(s.T(), s.db, aliases[i], teamID)
+	for i := range aliases {
+		teamID, _ := testutils.SetupTeamWithRelations(s.T(), s.db, aliases[i], i+1)
+		teamIDs = append(teamIDs, teamID)
 	}
 
 	match := repository.Match{
@@ -134,12 +135,11 @@ func (s *FunctionalTestSuite) TestCreateSubscription_MatchNotFound() {
 }
 
 func (s *FunctionalTestSuite) TestCreateSubscription_MatchResultNotScheduled() {
-	teamIDs := testutils.CreateTeams(s.T(), s.db)
-
 	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
-
-	for i, teamID := range teamIDs {
-		testutils.CreateAlias(s.T(), s.db, aliases[i], teamID)
+	teamIDs := make([]uint, 0, len(aliases))
+	for i := range aliases {
+		teamID, _ := testutils.SetupTeamWithRelations(s.T(), s.db, aliases[i], i+1)
+		teamIDs = append(teamIDs, teamID)
 	}
 
 	match := repository.Match{
@@ -184,12 +184,11 @@ func (s *FunctionalTestSuite) TestCreateSubscription_MatchResultNotScheduled() {
 }
 
 func (s *FunctionalTestSuite) TestCreateSubscription_SubscriptionAlreadyExists() {
-	teamIDs := testutils.CreateTeams(s.T(), s.db)
-
 	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
-
-	for i, teamID := range teamIDs {
-		testutils.CreateAlias(s.T(), s.db, aliases[i], teamID)
+	teamIDs := make([]uint, 0, len(aliases))
+	for i := range aliases {
+		teamID, _ := testutils.SetupTeamWithRelations(s.T(), s.db, aliases[i], i+1)
+		teamIDs = append(teamIDs, teamID)
 	}
 
 	match := repository.Match{

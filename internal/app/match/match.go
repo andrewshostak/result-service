@@ -155,7 +155,7 @@ func (s *MatchService) findAlias(ctx context.Context, alias string) (*models.Ali
 
 func (s *MatchService) findExternalMatch(externalHomeTeamID, externalAwayTeamID uint, matches []models.ExternalAPIMatch) (*models.ExternalAPIMatch, error) {
 	for _, match := range matches {
-		if match.HomeID == int(externalHomeTeamID) && match.AwayID == int(externalAwayTeamID) {
+		if match.HomeID == externalHomeTeamID && match.AwayID == externalAwayTeamID {
 			return &match, nil
 		}
 	}

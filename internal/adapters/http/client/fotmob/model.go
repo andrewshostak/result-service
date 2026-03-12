@@ -20,7 +20,7 @@ type League struct {
 }
 
 type Match struct {
-	ID       int               `json:"id"`
+	ID       uint              `json:"id"`
 	Home     Team              `json:"home"`
 	Away     Team              `json:"away"`
 	StatusID fotmobMatchStatus `json:"statusId"`
@@ -28,8 +28,8 @@ type Match struct {
 }
 
 type Status struct {
-	UTCTime string `json:"utcTime"`
-	Reason  Reason `json:"reason"`
+	UTCTime string  `json:"utcTime"`
+	Reason  *Reason `json:"reason"`
 }
 
 type Reason struct {
@@ -40,7 +40,7 @@ type Reason struct {
 }
 
 type Team struct {
-	ID       int    `json:"id"`
+	ID       uint   `json:"id"`
 	Score    int    `json:"score"`
 	Name     string `json:"name"`
 	LongName string `json:"longName"`
@@ -131,7 +131,7 @@ func toDomainExternalAPIMatches(response MatchesResponse) ([]models.ExternalAPIM
 	return matches, nil
 }
 
-func ToDomainExternalAPIMatchStatus(matchID int, statusID fotmobMatchStatus) models.ExternalMatchStatus {
+func ToDomainExternalAPIMatchStatus(matchID uint, statusID fotmobMatchStatus) models.ExternalMatchStatus {
 	switch statusID {
 	case notStarted:
 		return models.StatusMatchNotStarted
