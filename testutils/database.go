@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"testing"
+	"time"
 
 	"github.com/andrewshostak/result-service/internal/adapters/repository"
 	"github.com/jmoiron/sqlx"
@@ -57,6 +58,18 @@ func CreateExternalTeam(t *testing.T, db *sqlx.DB, teamID uint, externalTeamID i
 	return created
 }
 
+func CreateCheckResultTask(t *testing.T, db *sqlx.DB, matchID uint, name string, executeAt time.Time) repository.CheckResultTask {
+	t.Helper()
+
+	var created repository.CheckResultTask
+	query := "INSERT INTO check_result_tasks (match_id, name, execute_at) VALUES ($1, $2, $3) RETURNING *"
+
+	err := db.Get(&created, query, matchID, name, executeAt)
+	require.NoError(t, err)
+
+	return created
+}
+
 func CreateMatch(t *testing.T, db *sqlx.DB, match repository.Match) repository.Match {
 	t.Helper()
 
@@ -73,9 +86,9 @@ func CreateSubscription(t *testing.T, db *sqlx.DB, subscription repository.Subsc
 	t.Helper()
 
 	var created repository.Subscription
-	query := "INSERT INTO subscriptions (match_id, url, key) VALUES ($1, $2, $3) RETURNING *"
+	query := "INSERT INTO subscriptions (match_id, url, key, status) VALUES ($1, $2, $3, $4) RETURNING *"
 
-	err := db.Get(&created, query, subscription.MatchID, subscription.Url, subscription.Key)
+	err := db.Get(&created, query, subscription.MatchID, subscription.Url, subscription.Key, subscription.Status)
 	require.NoError(t, err)
 
 	return created

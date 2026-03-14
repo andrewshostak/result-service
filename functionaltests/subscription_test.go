@@ -192,6 +192,7 @@ func (s *FunctionalTestSuite) TestCreateSubscription_SubscriptionAlreadyExists()
 		MatchID: requestPayload.MatchID,
 		Url:     requestPayload.URL,
 		Key:     requestPayload.SecretKey,
+		Status:  string(models.PendingSub),
 	})
 
 	requestBody, err := json.Marshal(&requestPayload)
@@ -214,4 +215,287 @@ func (s *FunctionalTestSuite) TestCreateSubscription_SubscriptionAlreadyExists()
 	subs := testutils.ListSubscriptionsByMatch(s.T(), s.db, created.ID)
 	s.Equal(1, len(subs))
 	s.Equal(existingSub.ID, subs[0].ID)
+}
+
+func (s *FunctionalTestSuite) TestDeleteSubscription_AliasNotFound() {
+	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+
+	url := s.apiBaseURL + "/v1/subscriptions"
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", secretKey)
+
+	q := req.URL.Query()
+	q.Add("starts_at", startsAt.Format(time.RFC3339))
+	q.Add("alias_home", "Alias1")
+	q.Add("alias_away", "Alias2")
+	q.Add("base_url", gofakeit.URL())
+	q.Add("secret_key", gofakeit.Password(true, true, true, false, false, 10))
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Equal(http.StatusBadRequest, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Contains(response.Error, "failed to find home team alias")
+	s.Equal("resource_not_found", response.Code)
+}
+
+func (s *FunctionalTestSuite) TestDeleteSubscription_MatchNotFound() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+
+	url := s.apiBaseURL + "/v1/subscriptions"
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", secretKey)
+
+	q := req.URL.Query()
+	q.Add("starts_at", startsAt.Format(time.RFC3339))
+	q.Add("alias_home", teamSeeds[0].Alias)
+	q.Add("alias_away", teamSeeds[1].Alias)
+	q.Add("base_url", gofakeit.URL())
+	q.Add("secret_key", gofakeit.Password(true, true, true, false, false, 10))
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Equal(http.StatusBadRequest, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Contains(response.Error, "failed to find match")
+	s.Equal("resource_not_found", response.Code)
+}
+
+func (s *FunctionalTestSuite) TestDeleteSubscription_SubscriptionNotFound() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+
+	match := repository.Match{
+		StartsAt:     startsAt,
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
+		ResultStatus: string(models.NotScheduled),
+	}
+	_ = testutils.CreateMatch(s.T(), s.db, match)
+
+	url := s.apiBaseURL + "/v1/subscriptions"
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", secretKey)
+
+	q := req.URL.Query()
+	q.Add("starts_at", startsAt.Format(time.RFC3339))
+	q.Add("alias_home", teamSeeds[0].Alias)
+	q.Add("alias_away", teamSeeds[1].Alias)
+	q.Add("base_url", gofakeit.URL())
+	q.Add("secret_key", gofakeit.Password(true, true, true, false, false, 10))
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Equal(http.StatusBadRequest, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Contains(response.Error, "failed to find subscription")
+	s.Equal("resource_not_found", response.Code)
+}
+
+func (s *FunctionalTestSuite) TestDeleteSubscription_SubscriberAlreadyNotified() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+	subscriptionUrl := gofakeit.URL()
+
+	match := repository.Match{
+		StartsAt:     startsAt,
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
+		ResultStatus: string(models.Received),
+	}
+	createdMatch := testutils.CreateMatch(s.T(), s.db, match)
+
+	_ = testutils.CreateSubscription(s.T(), s.db, repository.Subscription{
+		MatchID: createdMatch.ID,
+		Url:     subscriptionUrl,
+		Key:     secretKey,
+		Status:  string(models.SuccessfulSub),
+	})
+
+	url := s.apiBaseURL + "/v1/subscriptions"
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", secretKey)
+
+	q := req.URL.Query()
+	q.Add("starts_at", startsAt.Format(time.RFC3339))
+	q.Add("alias_home", teamSeeds[0].Alias)
+	q.Add("alias_away", teamSeeds[1].Alias)
+	q.Add("base_url", subscriptionUrl)
+	q.Add("secret_key", secretKey)
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Equal(http.StatusUnprocessableEntity, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Contains(response.Error, "not allowed to delete successfully notified subscription")
+	s.Equal("unprocessable_content", response.Code)
+}
+
+func (s *FunctionalTestSuite) TestDeleteSubscription_SuccessOtherMatchSubscriptionsExist() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+	subscriptionUrl := gofakeit.URL()
+
+	match := repository.Match{
+		StartsAt:     startsAt,
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
+		ResultStatus: string(models.Scheduled),
+	}
+	createdMatch := testutils.CreateMatch(s.T(), s.db, match)
+
+	_ = testutils.CreateSubscription(s.T(), s.db, repository.Subscription{
+		MatchID: createdMatch.ID,
+		Url:     subscriptionUrl,
+		Key:     secretKey,
+		Status:  string(models.PendingSub),
+	})
+
+	otherSubscription := testutils.CreateSubscription(s.T(), s.db, repository.Subscription{
+		MatchID: createdMatch.ID,
+		Url:     gofakeit.URL(),
+		Key:     gofakeit.Password(true, true, true, false, false, 10),
+		Status:  string(models.PendingSub),
+	})
+
+	url := s.apiBaseURL + "/v1/subscriptions"
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", secretKey)
+
+	q := req.URL.Query()
+	q.Add("starts_at", startsAt.Format(time.RFC3339))
+	q.Add("alias_home", teamSeeds[0].Alias)
+	q.Add("alias_away", teamSeeds[1].Alias)
+	q.Add("base_url", subscriptionUrl)
+	q.Add("secret_key", secretKey)
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Equal(http.StatusNoContent, resp.StatusCode)
+
+	subs := testutils.ListSubscriptionsByMatch(s.T(), s.db, createdMatch.ID)
+	s.Equal(1, len(subs))
+	s.Equal(otherSubscription.ID, subs[0].ID)
+
+	matches := testutils.ListMatches(s.T(), s.db)
+	s.Equal(1, len(matches))
+}
+
+func (s *FunctionalTestSuite) TestDeleteSubscription_Success() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+	subscriptionUrl := gofakeit.URL()
+
+	match := repository.Match{
+		StartsAt:     startsAt,
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
+		ResultStatus: string(models.Scheduled),
+	}
+	createdMatch := testutils.CreateMatch(s.T(), s.db, match)
+
+	_ = testutils.CreateSubscription(s.T(), s.db, repository.Subscription{
+		MatchID: createdMatch.ID,
+		Url:     subscriptionUrl,
+		Key:     secretKey,
+		Status:  string(models.PendingSub),
+	})
+
+	_ = testutils.CreateCheckResultTask(s.T(), s.db, createdMatch.ID, "hello/task/1", gofakeit.Date())
+
+	url := s.apiBaseURL + "/v1/subscriptions"
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", secretKey)
+
+	q := req.URL.Query()
+	q.Add("starts_at", startsAt.Format(time.RFC3339))
+	q.Add("alias_home", teamSeeds[0].Alias)
+	q.Add("alias_away", teamSeeds[1].Alias)
+	q.Add("base_url", subscriptionUrl)
+	q.Add("secret_key", secretKey)
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Equal(http.StatusNoContent, resp.StatusCode)
+
+	subs := testutils.ListSubscriptionsByMatch(s.T(), s.db, createdMatch.ID)
+	s.Equal(0, len(subs))
+
+	tasks := testutils.ListCheckResultTasks(s.T(), s.db)
+	s.Equal(0, len(tasks))
+
+	matches := testutils.ListMatches(s.T(), s.db)
+	s.Equal(0, len(matches))
 }
