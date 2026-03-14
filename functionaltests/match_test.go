@@ -108,6 +108,56 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 	}, checkResultTasks)
 }
 
+func (s *FunctionalTestSuite) TestCreateMatch_AliasNotFound() {
+	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
+
+	teamIDs := make([]uint, 0, len(aliases))
+	externalTeamIDs := make([]uint, 0, len(teamIDs))
+	for i := range aliases {
+		teamID, externalTeam := testutils.SetupTeamWithRelations(s.T(), s.db, aliases[i], i+1)
+
+		teamIDs = append(teamIDs, teamID)
+		externalTeamIDs = append(externalTeamIDs, externalTeam.ID)
+	}
+
+	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+
+	requestPayload := handler.CreateMatchRequest{
+		StartsAt:  startsAt,
+		AliasHome: "WrongAlias",
+		AliasAway: "Barcelona",
+	}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/matches"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", secretKey)
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Equal(http.StatusBadRequest, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Contains(response.Error, "failed to find team alias")
+	s.Equal("resource_not_found", response.Code)
+
+	matches := testutils.ListMatches(s.T(), s.db)
+	s.Equal(0, len(matches))
+}
+
 func (s *FunctionalTestSuite) TestCreateMatch_AlreadyExistsScheduled() {
 	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
 
