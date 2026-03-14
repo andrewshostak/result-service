@@ -18,19 +18,12 @@ import (
 
 func (s *FunctionalTestSuite) TestCreateSubscription_Success() {
 	now := time.Now()
-
-	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
-	teamIDs := make([]uint, 0, len(aliases))
-
-	for i := range aliases {
-		teamID, _ := testutils.SetupTeamWithRelations(s.T(), s.db, aliases[i], i+1)
-		teamIDs = append(teamIDs, teamID)
-	}
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	match := repository.Match{
 		StartsAt:     gofakeit.Date(),
-		HomeTeamID:   uint(teamIDs[0]),
-		AwayTeamID:   uint(teamIDs[1]),
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
 		ResultStatus: string(models.Scheduled),
 	}
 	created := testutils.CreateMatch(s.T(), s.db, match)
@@ -135,17 +128,12 @@ func (s *FunctionalTestSuite) TestCreateSubscription_MatchNotFound() {
 }
 
 func (s *FunctionalTestSuite) TestCreateSubscription_MatchResultNotScheduled() {
-	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
-	teamIDs := make([]uint, 0, len(aliases))
-	for i := range aliases {
-		teamID, _ := testutils.SetupTeamWithRelations(s.T(), s.db, aliases[i], i+1)
-		teamIDs = append(teamIDs, teamID)
-	}
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	match := repository.Match{
 		StartsAt:     gofakeit.Date(),
-		HomeTeamID:   uint(teamIDs[0]),
-		AwayTeamID:   uint(teamIDs[1]),
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
 		ResultStatus: string(models.NotScheduled),
 	}
 	created := testutils.CreateMatch(s.T(), s.db, match)
@@ -184,17 +172,12 @@ func (s *FunctionalTestSuite) TestCreateSubscription_MatchResultNotScheduled() {
 }
 
 func (s *FunctionalTestSuite) TestCreateSubscription_SubscriptionAlreadyExists() {
-	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
-	teamIDs := make([]uint, 0, len(aliases))
-	for i := range aliases {
-		teamID, _ := testutils.SetupTeamWithRelations(s.T(), s.db, aliases[i], i+1)
-		teamIDs = append(teamIDs, teamID)
-	}
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	match := repository.Match{
 		StartsAt:     gofakeit.Date(),
-		HomeTeamID:   uint(teamIDs[0]),
-		AwayTeamID:   uint(teamIDs[1]),
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
 		ResultStatus: string(models.Scheduled),
 	}
 	created := testutils.CreateMatch(s.T(), s.db, match)

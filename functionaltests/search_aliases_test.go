@@ -13,11 +13,7 @@ import (
 const secretKey = "OQJdhUG6twIePy5HWwOu1lqU"
 
 func (s *FunctionalTestSuite) TestSearchAliases_Success() {
-	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
-
-	for i := range aliases {
-		_, _ = testutils.SetupTeamWithRelations(s.T(), s.db, aliases[i], i+1)
-	}
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	url := s.apiBaseURL + "/v1/aliases"
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -46,16 +42,12 @@ func (s *FunctionalTestSuite) TestSearchAliases_Success() {
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
 	s.Equal(2, len(response.Aliases))
-	s.Equal(response.Aliases[0], aliases[0])
-	s.Equal(response.Aliases[1], aliases[1])
+	s.Equal(teamSeeds[0].Alias, response.Aliases[0])
+	s.Equal(teamSeeds[1].Alias, response.Aliases[1])
 }
 
 func (s *FunctionalTestSuite) TestSearchAliases_NothingFound() {
-	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
-
-	for i := range aliases {
-		_, _ = testutils.SetupTeamWithRelations(s.T(), s.db, aliases[i], i+1)
-	}
+	_ = testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	url := s.apiBaseURL + "/v1/aliases"
 	req, err := http.NewRequest(http.MethodGet, url, nil)

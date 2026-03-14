@@ -17,22 +17,13 @@ import (
 )
 
 func (s *FunctionalTestSuite) TestCreateMatch_Success() {
-	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
-
-	teamIDs := make([]uint, 0, len(aliases))
-	externalTeamIDs := make([]uint, 0, len(teamIDs))
-	for i := range aliases {
-		teamID, externalTeam := testutils.SetupTeamWithRelations(s.T(), s.db, aliases[i], i+1)
-
-		teamIDs = append(teamIDs, teamID)
-		externalTeamIDs = append(externalTeamIDs, externalTeam.ID)
-	}
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
 
 	matchesResponse := testutils.FakeMatchesResponse()
-	matchesResponse.Leagues[0].Matches[0].Home.ID = externalTeamIDs[0]
-	matchesResponse.Leagues[0].Matches[0].Away.ID = externalTeamIDs[1]
+	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
+	matchesResponse.Leagues[0].Matches[0].Away.ID = teamSeeds[1].ExternalTeamID
 	matchesResponse.Leagues[0].Matches[0].StatusID = 1
 	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = startsAt.UTC().Format(time.RFC3339)
 	jsonResponse, err := json.Marshal(matchesResponse)
@@ -77,8 +68,8 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 	s.Equal([]repository.Match{
 		{
 			ID:           1,
-			HomeTeamID:   uint(teamIDs[0]),
-			AwayTeamID:   uint(teamIDs[1]),
+			HomeTeamID:   teamSeeds[0].TeamID,
+			AwayTeamID:   teamSeeds[1].TeamID,
 			StartsAt:     startsAt,
 			ResultStatus: string(models.Scheduled),
 		},
@@ -109,16 +100,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 }
 
 func (s *FunctionalTestSuite) TestCreateMatch_AliasNotFound() {
-	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
-
-	teamIDs := make([]uint, 0, len(aliases))
-	externalTeamIDs := make([]uint, 0, len(teamIDs))
-	for i := range aliases {
-		teamID, externalTeam := testutils.SetupTeamWithRelations(s.T(), s.db, aliases[i], i+1)
-
-		teamIDs = append(teamIDs, teamID)
-		externalTeamIDs = append(externalTeamIDs, externalTeam.ID)
-	}
+	_ = testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
 
@@ -159,19 +141,13 @@ func (s *FunctionalTestSuite) TestCreateMatch_AliasNotFound() {
 }
 
 func (s *FunctionalTestSuite) TestCreateMatch_AlreadyExistsScheduled() {
-	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
-
-	teamIDs := make([]uint, 0, len(aliases))
-	for i := range aliases {
-		teamID, _ := testutils.SetupTeamWithRelations(s.T(), s.db, aliases[i], i+1)
-		teamIDs = append(teamIDs, teamID)
-	}
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
 	match := repository.Match{
 		StartsAt:     startsAt,
-		HomeTeamID:   uint(teamIDs[0]),
-		AwayTeamID:   uint(teamIDs[1]),
+		HomeTeamID:   teamSeeds[0].TeamID,
+		AwayTeamID:   teamSeeds[1].TeamID,
 		ResultStatus: string(models.Scheduled),
 	}
 	created := testutils.CreateMatch(s.T(), s.db, match)
@@ -217,13 +193,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_AlreadyExistsScheduled() {
 }
 
 func (s *FunctionalTestSuite) TestCreateMatch_MatchNotFoundInExternalAPI() {
-	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
-
-	teamIDs := make([]uint, 0, len(aliases))
-	for i := range aliases {
-		teamID, _ := testutils.SetupTeamWithRelations(s.T(), s.db, aliases[i], i+1)
-		teamIDs = append(teamIDs, teamID)
-	}
+	_ = testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, `{"leagues": [{"matches": []}]}`)
 

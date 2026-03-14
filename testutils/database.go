@@ -8,7 +8,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func SetupTeamsWithRelations(t *testing.T, db *sqlx.DB) []TeamSeed {
+	t.Helper()
+
+	aliases := []string{"Arsenal", "Barcelona", "Juventus"}
+
+	teamSeeds := make([]TeamSeed, 0, len(aliases))
+	for i := range aliases {
+		teamID, externalTeam := SetupTeamWithRelations(t, db, aliases[i], i+1)
+
+		teamSeeds = append(teamSeeds, TeamSeed{
+			TeamID:         teamID,
+			ExternalTeamID: externalTeam.ID,
+			Alias:          aliases[i],
+		})
+	}
+
+	return teamSeeds
+}
+
 func SetupTeamWithRelations(t *testing.T, db *sqlx.DB, alias string, externalTeamID int) (uint, repository.ExternalTeam) {
+	t.Helper()
+
 	teamID := CreateTeam(t, db)
 	CreateAlias(t, db, alias, teamID)
 	externalTeam := CreateExternalTeam(t, db, teamID, externalTeamID)
@@ -114,4 +135,10 @@ func ListSubscriptionsByMatch(t *testing.T, db *sqlx.DB, matchID uint) []reposit
 	require.NoError(t, err)
 
 	return subs
+}
+
+type TeamSeed struct {
+	TeamID         uint
+	ExternalTeamID uint
+	Alias          string
 }
