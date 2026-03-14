@@ -17,12 +17,16 @@
       - [ ] notify subscriber
 - [ ] functional tests
   - [X] search aliases
-  - [ ] create match
+  - [X] create match
   - [X] create subscription
   - [ ] delete subscription
   - [ ] trigger result check
   - [ ] trigger subscriber notification
+  - [ ] improvements
     - [ ] verify mocked http request number of calls and bodies
+    - [ ] implement better mocking of http requests (with-pattern)
+    - [ ] add cases for invalid request bodies
+    - [ ] add cases for error response from gcloud tasks
   - [ ] auth middleware
   - [ ] google middleware
 - [ ] migrate from gorm to sqlc

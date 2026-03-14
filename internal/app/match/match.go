@@ -101,7 +101,7 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 		return 0, fmt.Errorf("failed to save match with team ids %d and %d starting at %s: %w", aliasHome.TeamID, aliasAway.TeamID, externalMatch.Time, err)
 	}
 
-	externalMatchID := uint(externalMatch.ID)
+	externalMatchID := externalMatch.ID
 	_, err = s.externalMatchRepository.Save(ctx, &externalMatchID, externalMatch.ToExternalMatch(match.ID))
 	if err != nil {
 		return 0, fmt.Errorf("failed to save external match with id %d and match id %d: %w", externalMatchID, match.ID, err)

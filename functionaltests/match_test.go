@@ -33,8 +33,8 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 
 	requestPayload := handler.CreateMatchRequest{
 		StartsAt:  startsAt,
-		AliasHome: "Arsenal",
-		AliasAway: "Barcelona",
+		AliasHome: teamSeeds[0].Alias,
+		AliasAway: teamSeeds[1].Alias,
 	}
 
 	requestBody, err := json.Marshal(&requestPayload)
@@ -100,14 +100,14 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 }
 
 func (s *FunctionalTestSuite) TestCreateMatch_AliasNotFound() {
-	_ = testutils.SetupTeamsWithRelations(s.T(), s.db)
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
 
 	requestPayload := handler.CreateMatchRequest{
 		StartsAt:  startsAt,
 		AliasHome: "WrongAlias",
-		AliasAway: "Barcelona",
+		AliasAway: teamSeeds[1].Alias,
 	}
 
 	requestBody, err := json.Marshal(&requestPayload)
@@ -156,8 +156,8 @@ func (s *FunctionalTestSuite) TestCreateMatch_AlreadyExistsScheduled() {
 
 	requestPayload := handler.CreateMatchRequest{
 		StartsAt:  startsAt,
-		AliasHome: "Arsenal",
-		AliasAway: "Barcelona",
+		AliasHome: teamSeeds[0].Alias,
+		AliasAway: teamSeeds[1].Alias,
 	}
 
 	requestBody, err := json.Marshal(&requestPayload)
@@ -192,16 +192,66 @@ func (s *FunctionalTestSuite) TestCreateMatch_AlreadyExistsScheduled() {
 	s.Equal(response.MatchID, matches[0].ID)
 }
 
+func (s *FunctionalTestSuite) TestCreateMatch_AlreadyExistsNonScheduled() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+	match := repository.Match{
+		StartsAt:     startsAt,
+		HomeTeamID:   teamSeeds[0].TeamID,
+		AwayTeamID:   teamSeeds[1].TeamID,
+		ResultStatus: string(models.Received),
+	}
+	_ = testutils.CreateMatch(s.T(), s.db, match)
+
+	s.Require().NoError(err)
+
+	requestPayload := handler.CreateMatchRequest{
+		StartsAt:  startsAt,
+		AliasHome: teamSeeds[0].Alias,
+		AliasAway: teamSeeds[1].Alias,
+	}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/matches"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", secretKey)
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Equal(http.StatusUnprocessableEntity, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Contains(response.Error, "match already exists with result status: received")
+	s.Equal("unprocessable_content", response.Code)
+
+	matches := testutils.ListMatches(s.T(), s.db)
+	s.Equal(1, len(matches))
+}
+
 func (s *FunctionalTestSuite) TestCreateMatch_MatchNotFoundInExternalAPI() {
-	_ = testutils.SetupTeamsWithRelations(s.T(), s.db)
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, `{"leagues": [{"matches": []}]}`)
 
 	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
 	requestPayload := handler.CreateMatchRequest{
 		StartsAt:  startsAt,
-		AliasHome: "Arsenal",
-		AliasAway: "Barcelona",
+		AliasHome: teamSeeds[0].Alias,
+		AliasAway: teamSeeds[1].Alias,
 	}
 
 	requestBody, err := json.Marshal(&requestPayload)
@@ -228,6 +278,57 @@ func (s *FunctionalTestSuite) TestCreateMatch_MatchNotFoundInExternalAPI() {
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
 	s.Contains(response.Error, "match not found")
+	s.Equal("unprocessable_content", response.Code)
+
+	matches := testutils.ListMatches(s.T(), s.db)
+	s.Equal(0, len(matches))
+}
+
+func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIStatusDoesntAllowScheduling() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+
+	matchesResponse := testutils.FakeMatchesResponse()
+	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
+	matchesResponse.Leagues[0].Matches[0].Away.ID = teamSeeds[1].ExternalTeamID
+	matchesResponse.Leagues[0].Matches[0].StatusID = 6
+	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = startsAt.UTC().Format(time.RFC3339)
+	jsonResponse, err := json.Marshal(matchesResponse)
+	s.Require().NoError(err)
+
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse))
+
+	requestPayload := handler.CreateMatchRequest{
+		StartsAt:  startsAt,
+		AliasHome: teamSeeds[0].Alias,
+		AliasAway: teamSeeds[1].Alias,
+	}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/matches"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", secretKey)
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Equal(http.StatusUnprocessableEntity, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Contains(response.Error, "result check scheduling is not allowed for this match, external match status is finished")
 	s.Equal("unprocessable_content", response.Code)
 
 	matches := testutils.ListMatches(s.T(), s.db)
