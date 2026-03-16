@@ -58,6 +58,18 @@ func CreateExternalTeam(t *testing.T, db *sqlx.DB, teamID uint, externalTeamID i
 	return created
 }
 
+func CreateExternalMatch(t *testing.T, db *sqlx.DB, externalMatch repository.ExternalMatch) repository.ExternalMatch {
+	t.Helper()
+
+	var created repository.ExternalMatch
+	externalMatchCreationQuery := "INSERT INTO external_matches (match_id, status, home_score, away_score) VALUES ($1, $2, $3, $4) RETURNING *"
+
+	err := db.Get(&created, externalMatchCreationQuery, externalMatch.MatchID, externalMatch.Status, externalMatch.HomeScore, externalMatch.AwayScore)
+	require.NoError(t, err)
+
+	return created
+}
+
 func CreateCheckResultTask(t *testing.T, db *sqlx.DB, matchID uint, name string, executeAt time.Time) repository.CheckResultTask {
 	t.Helper()
 
