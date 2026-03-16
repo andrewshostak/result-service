@@ -90,7 +90,7 @@ func (s *FunctionalTestSuite) TestCreateSubscription_InvalidPayload() {
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
 	s.Contains(response.Error, "required")
-	s.Equal("invalid_request", response.Code)
+	s.Equal(string(models.CodeInvalidRequest), response.Code)
 }
 
 func (s *FunctionalTestSuite) TestCreateSubscription_MatchNotFound() {
@@ -124,7 +124,7 @@ func (s *FunctionalTestSuite) TestCreateSubscription_MatchNotFound() {
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
 	s.Equal("failed to get a match: match not found: record not found", response.Error)
-	s.Equal("resource_not_found", response.Code)
+	s.Equal(string(models.CodeResourceNotFound), response.Code)
 }
 
 func (s *FunctionalTestSuite) TestCreateSubscription_MatchResultNotScheduled() {
@@ -168,7 +168,7 @@ func (s *FunctionalTestSuite) TestCreateSubscription_MatchResultNotScheduled() {
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
 	s.Equal("match result status doesn't allow to create a subscription", response.Error)
-	s.Equal("unprocessable_content", response.Code)
+	s.Equal(string(models.CodeUnprocessableContent), response.Code)
 }
 
 func (s *FunctionalTestSuite) TestCreateSubscription_SubscriptionAlreadyExists() {
@@ -412,7 +412,7 @@ func (s *FunctionalTestSuite) TestDeleteSubscription_AliasNotFound() {
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
 	s.Contains(response.Error, "failed to find home team alias")
-	s.Equal("resource_not_found", response.Code)
+	s.Equal(string(models.CodeResourceNotFound), response.Code)
 }
 
 func (s *FunctionalTestSuite) TestDeleteSubscription_MatchNotFound() {
@@ -449,7 +449,7 @@ func (s *FunctionalTestSuite) TestDeleteSubscription_MatchNotFound() {
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
 	s.Contains(response.Error, "failed to find match")
-	s.Equal("resource_not_found", response.Code)
+	s.Equal(string(models.CodeResourceNotFound), response.Code)
 }
 
 func (s *FunctionalTestSuite) TestDeleteSubscription_SubscriptionNotFound() {
@@ -494,7 +494,7 @@ func (s *FunctionalTestSuite) TestDeleteSubscription_SubscriptionNotFound() {
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
 	s.Contains(response.Error, "failed to find subscription")
-	s.Equal("resource_not_found", response.Code)
+	s.Equal(string(models.CodeResourceNotFound), response.Code)
 }
 
 func (s *FunctionalTestSuite) TestDeleteSubscription_SubscriberAlreadyNotified() {
@@ -547,5 +547,5 @@ func (s *FunctionalTestSuite) TestDeleteSubscription_SubscriberAlreadyNotified()
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
 	s.Contains(response.Error, "not allowed to delete successfully notified subscription")
-	s.Equal("unprocessable_content", response.Code)
+	s.Equal(string(models.CodeUnprocessableContent), response.Code)
 }

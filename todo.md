@@ -19,7 +19,7 @@
   - [X] search aliases
   - [X] create match
   - [X] create subscription
-  - [ ] delete subscription
+  - [X] delete subscription
   - [ ] trigger result check
   - [ ] trigger subscriber notification
   - [ ] improvements

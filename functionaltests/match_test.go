@@ -134,7 +134,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_AliasNotFound() {
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
 	s.Contains(response.Error, "failed to find team alias")
-	s.Equal("resource_not_found", response.Code)
+	s.Equal(string(models.CodeResourceNotFound), response.Code)
 
 	matches := testutils.ListMatches(s.T(), s.db)
 	s.Equal(0, len(matches))
@@ -236,7 +236,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_AlreadyExistsNonScheduled() {
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
 	s.Contains(response.Error, "match already exists with result status: received")
-	s.Equal("unprocessable_content", response.Code)
+	s.Equal(string(models.CodeUnprocessableContent), response.Code)
 
 	matches := testutils.ListMatches(s.T(), s.db)
 	s.Equal(1, len(matches))
@@ -278,7 +278,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_MatchNotFoundInExternalAPI() {
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
 	s.Contains(response.Error, "match not found")
-	s.Equal("unprocessable_content", response.Code)
+	s.Equal(string(models.CodeUnprocessableContent), response.Code)
 
 	matches := testutils.ListMatches(s.T(), s.db)
 	s.Equal(0, len(matches))
@@ -329,7 +329,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIStatusDoesntAllowSchedu
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
 	s.Contains(response.Error, "result check scheduling is not allowed for this match, external match status is finished")
-	s.Equal("unprocessable_content", response.Code)
+	s.Equal(string(models.CodeUnprocessableContent), response.Code)
 
 	matches := testutils.ListMatches(s.T(), s.db)
 	s.Equal(0, len(matches))
