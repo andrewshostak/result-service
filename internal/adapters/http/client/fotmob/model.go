@@ -113,9 +113,9 @@ func toDomainExternalAPIMatches(response MatchesResponse) ([]models.ExternalAPIM
 				Status:    ToDomainExternalAPIMatchStatus(match.ID, match.StatusID),
 			})
 
-			if isUnknownStatus(match.StatusID) {
+			if isUnknownStatus(match.StatusID) && match.Status.Reason != nil {
 				fmt.Printf(
-					"match with id %d has status %d. reason - short %s, short key %s, long %s, long key %s",
+					"match with id %d has status %d. reason - short %s, short key %s, long %s, long key %s \n",
 					match.ID,
 					match.StatusID,
 					match.Status.Reason.Short,
