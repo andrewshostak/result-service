@@ -26,6 +26,7 @@
     - [ ] verify mocked http request number of calls and bodies
     - [ ] implement better mocking of http requests (with-pattern)
     - [ ] add cases for invalid request bodies
+    - [ ] verify gcloud was reaached
     - [ ] add cases for error response from gcloud tasks
   - [ ] auth middleware
   - [ ] google middleware

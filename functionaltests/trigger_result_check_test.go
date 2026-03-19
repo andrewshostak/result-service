@@ -246,18 +246,6 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFoundInExternalAPI(
 func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedStatus() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
-	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
-
-	matchesResponse := testutils.FakeMatchesResponse()
-	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
-	matchesResponse.Leagues[0].Matches[0].Away.ID = teamSeeds[1].ExternalTeamID
-	matchesResponse.Leagues[0].Matches[0].StatusID = 11111
-	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = startsAt.UTC().Format(time.RFC3339)
-	jsonResponse, err := json.Marshal(matchesResponse)
-	s.Require().NoError(err)
-
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse))
-
 	matchToCreate := repository.Match{
 		StartsAt:     gofakeit.Date(),
 		HomeTeamID:   uint(teamSeeds[0].TeamID),
@@ -270,6 +258,85 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 		m.MatchID = match.ID
 		m.Status = string(models.StatusMatchNotStarted)
 	}))
+
+	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+	matchesResponse := testutils.FakeMatchesResponse()
+	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
+	matchesResponse.Leagues[0].Matches[0].Away.ID = teamSeeds[1].ExternalTeamID
+	matchesResponse.Leagues[0].Matches[0].StatusID = 11111
+	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = startsAt.UTC().Format(time.RFC3339)
+	jsonResponse, err := json.Marshal(matchesResponse)
+	s.Require().NoError(err)
+
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse))
+
+	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/triggers/result_check"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", "Bearer anything")
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Equal(http.StatusNoContent, resp.StatusCode)
+
+	// TODO: check external match is saved (here and in other tests)
+
+	matches := testutils.ListMatches(s.T(), s.db)
+	s.Equal([]repository.Match{
+		{
+			ID:           match.ID,
+			HomeTeamID:   match.HomeTeamID,
+			AwayTeamID:   match.AwayTeamID,
+			StartsAt:     match.StartsAt,
+			ResultStatus: string(models.Cancelled),
+		},
+	}, matches)
+}
+
+func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	matchToCreate := repository.Match{
+		StartsAt:     gofakeit.Date(),
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
+		ResultStatus: string(models.Scheduled),
+	}
+	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
+
+	externalMatch := testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
+		m.MatchID = match.ID
+		m.Status = string(models.StatusMatchNotStarted)
+	}))
+
+	path := "/subscription/123"
+	_ = testutils.CreateSubscription(s.T(), s.db, testutils.FakeRepositorySubscription(func(sub *repository.Subscription) {
+		sub.MatchID = match.ID
+		sub.Url = s.smockerAdminURL + path
+		sub.Key = gofakeit.UUID()
+	}))
+
+	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+	matchesResponse := testutils.FakeMatchesResponse()
+	matchesResponse.Leagues[0].Matches[0].ID = externalMatch.ID
+	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
+	matchesResponse.Leagues[0].Matches[0].Away.ID = teamSeeds[1].ExternalTeamID
+	matchesResponse.Leagues[0].Matches[0].StatusID = 6
+	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = startsAt.UTC().Format(time.RFC3339)
+	jsonResponse, err := json.Marshal(matchesResponse)
+	s.Require().NoError(err)
+
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse))
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
 
@@ -297,7 +364,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 			HomeTeamID:   match.HomeTeamID,
 			AwayTeamID:   match.AwayTeamID,
 			StartsAt:     match.StartsAt,
-			ResultStatus: string(models.Cancelled),
+			ResultStatus: string(models.Received),
 		},
 	}, matches)
 }
