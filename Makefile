@@ -22,6 +22,6 @@ update-mocks:
 	mockery --name=Logger --dir internal/app/subscription --output internal/app/subscription/mocks --case snake
 
 functional-tests:
-	go test -v -tags functional ./functionaltests/...
+	go test -v -count=1 -tags functional ./functionaltests/...
 
 .PHONY: update-mocks

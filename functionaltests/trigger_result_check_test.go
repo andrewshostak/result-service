@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/andrewshostak/result-service/internal/adapters/http/client/fotmob"
 	"github.com/andrewshostak/result-service/internal/adapters/http/server/handler"
 	"github.com/andrewshostak/result-service/internal/adapters/repository"
 	"github.com/andrewshostak/result-service/internal/app/models"
@@ -128,8 +129,6 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalMatchRelationNotfou
 }
 
 func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsError() {
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusInternalServerError, `internal server error`)
-
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	matchToCreate := repository.Match{
@@ -143,6 +142,9 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsError() {
 		m.MatchID = match.ID
 		m.Status = string(models.StatusMatchNotStarted)
 	}))
+
+	queryParams := map[string]interface{}{"date": matchToCreate.StartsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusInternalServerError, `internal server error`, queryParams)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
 
@@ -185,8 +187,6 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsError() {
 }
 
 func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFoundInExternalAPI() {
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, `{"leagues": [{"matches": []}]}`)
-
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	matchToCreate := repository.Match{
@@ -200,6 +200,9 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFoundInExternalAPI(
 		m.MatchID = match.ID
 		m.Status = string(models.StatusMatchNotStarted)
 	}))
+
+	queryParams := map[string]interface{}{"date": matchToCreate.StartsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, `{"leagues": [{"matches": []}]}`, queryParams)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
 
@@ -253,14 +256,14 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 		ResultStatus: string(models.Scheduled),
 	}
 	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
-	_ = testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
-		m.ID = matchesResponse.Leagues[0].Matches[0].ID
+	externalMatch := testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
 		m.MatchID = match.ID
 		m.Status = string(models.StatusMatchNotStarted)
 	}))
 
 	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
 	matchesResponse := testutils.FakeMatchesResponse()
+	matchesResponse.Leagues[0].Matches[0].ID = externalMatch.ID
 	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
 	matchesResponse.Leagues[0].Matches[0].Away.ID = teamSeeds[1].ExternalTeamID
 	matchesResponse.Leagues[0].Matches[0].StatusID = 11111
@@ -268,7 +271,8 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 	jsonResponse, err := json.Marshal(matchesResponse)
 	s.Require().NoError(err)
 
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse))
+	queryParams := map[string]interface{}{"date": matchToCreate.StartsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse), queryParams)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
 
@@ -289,8 +293,6 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 
 	s.Equal(http.StatusNoContent, resp.StatusCode)
 
-	// TODO: check external match is saved (here and in other tests)
-
 	matches := testutils.ListMatches(s.T(), s.db)
 	s.Equal([]repository.Match{
 		{
@@ -301,6 +303,18 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 			ResultStatus: string(models.Cancelled),
 		},
 	}, matches)
+
+	// TODO: check external match is saved (here and in other tests)
+	externalMatches := testutils.ListExternalMatches(s.T(), s.db)
+	s.Equal([]repository.ExternalMatch{
+		{
+			ID:        externalMatch.ID,
+			MatchID:   match.ID,
+			HomeScore: matchesResponse.Leagues[0].Matches[0].Home.Score,
+			AwayScore: matchesResponse.Leagues[0].Matches[0].Away.Score,
+			Status:    string(models.StatusMatchUnknown),
+		},
+	}, externalMatches)
 }
 
 func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
@@ -319,10 +333,9 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 		m.Status = string(models.StatusMatchNotStarted)
 	}))
 
-	path := "/subscription/123"
 	_ = testutils.CreateSubscription(s.T(), s.db, testutils.FakeRepositorySubscription(func(sub *repository.Subscription) {
 		sub.MatchID = match.ID
-		sub.Url = s.smockerAdminURL + path
+		sub.Url = gofakeit.URL()
 		sub.Key = gofakeit.UUID()
 	}))
 
@@ -336,7 +349,8 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 	jsonResponse, err := json.Marshal(matchesResponse)
 	s.Require().NoError(err)
 
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse))
+	queryParams := map[string]interface{}{"date": matchToCreate.StartsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse), queryParams)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
 
@@ -367,4 +381,15 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 			ResultStatus: string(models.Received),
 		},
 	}, matches)
+
+	externalMatches := testutils.ListExternalMatches(s.T(), s.db)
+	s.Equal([]repository.ExternalMatch{
+		{
+			ID:        externalMatch.ID,
+			MatchID:   match.ID,
+			HomeScore: matchesResponse.Leagues[0].Matches[0].Home.Score,
+			AwayScore: matchesResponse.Leagues[0].Matches[0].Away.Score,
+			Status:    string(models.StatusMatchFinished),
+		},
+	}, externalMatches)
 }

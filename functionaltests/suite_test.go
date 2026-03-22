@@ -49,6 +49,7 @@ func (s *FunctionalTestSuite) SetupSuite() {
 
 	s.T().Log("starting postgresql container...")
 
+	// TODO: create separate functions for running each container
 	pgContainer, err := postgres.Run(ctx,
 		"postgres:15.4-alpine",
 		postgres.WithDatabase("postgres"),
@@ -81,7 +82,7 @@ func (s *FunctionalTestSuite) SetupSuite() {
 			nw.Name: {"cloud-tasks-emulator"},
 		},
 		ExposedPorts: []string{"8123/tcp"},
-		Cmd:          []string{"-host", "0.0.0.0", "-port", "8123", "-queue", "projects/test-project/locations/europe-west3/queues/check-result"},
+		Cmd:          []string{"-host", "0.0.0.0", "-port", "8123", "-queue", "projects/test-project/locations/europe-west3/queues/check-result", "-queue", "projects/test-project/locations/europe-west3/queues/notify-subscriber"},
 		WaitingFor:   wait.ForListeningPort("8123/tcp"),
 	}
 
@@ -103,6 +104,13 @@ func (s *FunctionalTestSuite) SetupSuite() {
 		},
 		ExposedPorts: []string{"8080/tcp", "8081/tcp"},
 		WaitingFor:   wait.ForHTTP("/sessions").WithPort("8081/tcp"),
+		// TODO: apply verbose output depending on a flag presence
+		//LogConsumerCfg: &testcontainers.LogConsumerConfig{
+		//	Consumers: []testcontainers.LogConsumer{&TestLogConsumer{prefix: "SMOCKER"}},
+		//},
+		//Env: map[string]string{
+		//	"SMOCKER_LOG_LEVEL": "debug",
+		//},
 	}
 
 	smockerContainer, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -148,6 +156,10 @@ func (s *FunctionalTestSuite) SetupSuite() {
 		Cmd: []string{"./bin/server"},
 		WaitingFor: wait.ForListeningPort("8080/tcp").
 			WithStartupTimeout(20 * time.Second),
+		// TODO: apply verbose output depending on a flag presence
+		//LogConsumerCfg: &testcontainers.LogConsumerConfig{
+		//	Consumers: []testcontainers.LogConsumer{&TestLogConsumer{prefix: "APP"}},
+		//},
 	}
 
 	appContainer, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -248,10 +260,11 @@ func (s *FunctionalTestSuite) cleanDatabase() {
 }
 
 func (s *FunctionalTestSuite) resetSmocker() {
-	req, _ := http.NewRequest(http.MethodDelete, s.smockerAdminURL+"/sessions", nil)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := http.Post(s.smockerAdminURL+"/reset", "application/json", nil)
 	s.Require().NoError(err)
 	defer resp.Body.Close()
+
+	s.Require().Equal(http.StatusOK, resp.StatusCode, "failed to reset smocker")
 }
 
 func (s *FunctionalTestSuite) DB() *sqlx.DB {
@@ -264,4 +277,14 @@ func (s *FunctionalTestSuite) APIBaseURL() string {
 
 func TestServerSuite(t *testing.T) {
 	suite.Run(t, new(FunctionalTestSuite))
+}
+
+type TestLogConsumer struct {
+	prefix string
+}
+
+// Accept is called for each new log row
+func (g *TestLogConsumer) Accept(l testcontainers.Log) {
+	// adding prefix for readability
+	fmt.Printf("[%s] %s", g.prefix, string(l.Content))
 }

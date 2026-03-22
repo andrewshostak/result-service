@@ -14,7 +14,7 @@ import (
 
 const matchesPath = "/api/data/matches"
 
-const dateFormat = "20060102"
+const DateFormat = "20060102"
 
 type FotmobClient struct {
 	httpClient HTTPManager
@@ -58,7 +58,7 @@ func (c *FotmobClient) fetchMatchesByDate(ctx context.Context, date time.Time) (
 	}
 
 	q := req.URL.Query()
-	q.Add("date", date.Format(dateFormat))
+	q.Add("date", date.Format(DateFormat))
 	q.Add("timezone", c.config.Timezone)
 	req.URL.RawQuery = q.Encode()
 

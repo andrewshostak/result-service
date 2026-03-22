@@ -9,14 +9,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func MockHTTPRequest(t *testing.T, baseUrl string, path string, method string, returnedStatus int, returnedBody string) {
+func MockHTTPRequest(t *testing.T, baseUrl string, path string, method string, returnedStatus int, returnedBody string, queryParams map[string]interface{}) {
 	t.Helper()
 
 	mockConfig := []map[string]interface{}{
 		{
 			"request": map[string]interface{}{
-				"method": method,
-				"path":   path,
+				"method":       method,
+				"path":         path,
+				"query_params": queryParams,
 			},
 			"response": map[string]interface{}{
 				"status": returnedStatus,
@@ -26,6 +27,7 @@ func MockHTTPRequest(t *testing.T, baseUrl string, path string, method string, r
 	}
 
 	body, _ := json.Marshal(mockConfig)
-	_, err := http.Post(baseUrl+"/mocks", "application/json", bytes.NewBuffer(body))
+	response, err := http.Post(baseUrl+"/mocks", "application/json", bytes.NewBuffer(body))
 	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, response.StatusCode)
 }

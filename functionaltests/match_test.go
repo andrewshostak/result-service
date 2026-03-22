@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/andrewshostak/result-service/internal/adapters/http/client/fotmob"
 	"github.com/andrewshostak/result-service/internal/adapters/http/server/handler"
 	"github.com/andrewshostak/result-service/internal/adapters/repository"
 	"github.com/andrewshostak/result-service/internal/app/models"
@@ -20,6 +21,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+	s.Require().NoError(err)
 
 	matchesResponse := testutils.FakeMatchesResponse()
 	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
@@ -29,7 +31,8 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 	jsonResponse, err := json.Marshal(matchesResponse)
 	s.Require().NoError(err)
 
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse))
+	queryParams := map[string]interface{}{"date": startsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse), queryParams)
 
 	requestPayload := handler.CreateMatchRequest{
 		StartsAt:  startsAt,
@@ -243,11 +246,14 @@ func (s *FunctionalTestSuite) TestCreateMatch_AlreadyExistsNonScheduled() {
 }
 
 func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIReturnsError() {
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusInternalServerError, `internal server error`)
-
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
-	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+	startsAt, err := time.Parse(time.RFC3339, "2026-01-01T20:00:00Z")
+	s.Require().NoError(err)
+
+	queryParams := map[string]interface{}{"date": startsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusInternalServerError, `internal server error`, queryParams)
+
 	requestPayload := handler.CreateMatchRequest{
 		StartsAt:  startsAt,
 		AliasHome: teamSeeds[0].Alias,
@@ -284,9 +290,12 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIReturnsError() {
 func (s *FunctionalTestSuite) TestCreateMatch_MatchNotFoundInExternalAPI() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, `{"leagues": [{"matches": []}]}`)
+	startsAt, err := time.Parse(time.RFC3339, "2026-01-03T20:00:00Z")
+	s.Require().NoError(err)
 
-	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+	queryParams := map[string]interface{}{"date": startsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, `{"leagues": [{"matches": []}]}`, queryParams)
+
 	requestPayload := handler.CreateMatchRequest{
 		StartsAt:  startsAt,
 		AliasHome: teamSeeds[0].Alias,
@@ -326,7 +335,8 @@ func (s *FunctionalTestSuite) TestCreateMatch_MatchNotFoundInExternalAPI() {
 func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIStatusDoesntAllowScheduling() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
-	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+	startsAt, err := time.Parse(time.RFC3339, "2026-01-02T20:00:00Z")
+	s.Require().NoError(err)
 
 	matchesResponse := testutils.FakeMatchesResponse()
 	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
@@ -336,7 +346,8 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIStatusDoesntAllowSchedu
 	jsonResponse, err := json.Marshal(matchesResponse)
 	s.Require().NoError(err)
 
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse))
+	queryParams := map[string]interface{}{"date": startsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse), queryParams)
 
 	requestPayload := handler.CreateMatchRequest{
 		StartsAt:  startsAt,
