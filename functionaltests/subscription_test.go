@@ -238,7 +238,7 @@ func (s *FunctionalTestSuite) TestDeleteSubscription_Success() {
 		Status:  string(models.PendingSub),
 	})
 
-	_ = testutils.CreateCheckResultTask(s.T(), s.db, createdMatch.ID, "hello/task/1", gofakeit.Date())
+	_ = testutils.CreateCheckResultTask(s.T(), s.db, repository.CheckResultTask{MatchID: createdMatch.ID, Name: "hello/task/1", ExecuteAt: gofakeit.Date()})
 
 	url := s.apiBaseURL + "/v1/subscriptions"
 	req, err := http.NewRequest(http.MethodDelete, url, nil)

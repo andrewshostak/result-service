@@ -115,6 +115,7 @@ func FakeCheckResultTask(options ...Option[models.CheckResultTask]) models.Check
 		MatchID:       uint(gofakeit.Uint8()),
 		Name:          gofakeit.Name(),
 		AttemptNumber: uint(gofakeit.IntRange(1, 9)),
+		ExecuteAt:     gofakeit.Date(),
 	}
 
 	applyOptions(&task, options...)

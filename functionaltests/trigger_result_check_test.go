@@ -5,6 +5,7 @@ package functionaltests
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -262,6 +263,8 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 	}))
 
 	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+	s.Require().NoError(err)
+
 	matchesResponse := testutils.FakeMatchesResponse()
 	matchesResponse.Leagues[0].Matches[0].ID = externalMatch.ID
 	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
@@ -304,7 +307,6 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 		},
 	}, matches)
 
-	// TODO: check external match is saved (here and in other tests)
 	externalMatches := testutils.ListExternalMatches(s.T(), s.db)
 	s.Equal([]repository.ExternalMatch{
 		{
@@ -339,7 +341,11 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 		sub.Key = gofakeit.UUID()
 	}))
 
+	checkResultTask := testutils.CreateCheckResultTask(s.T(), s.db, repository.CheckResultTask{MatchID: match.ID, ExecuteAt: match.StartsAt.Add(115 * time.Minute)})
+
 	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+	s.Require().NoError(err)
+
 	matchesResponse := testutils.FakeMatchesResponse()
 	matchesResponse.Leagues[0].Matches[0].ID = externalMatch.ID
 	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
@@ -392,4 +398,113 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 			Status:    string(models.StatusMatchFinished),
 		},
 	}, externalMatches)
+
+	checkResultTasks := testutils.ListCheckResultTasks(s.T(), s.db)
+	s.Equal([]repository.CheckResultTask{
+		{
+			ID:            checkResultTask.ID,
+			MatchID:       checkResultTask.MatchID,
+			Name:          checkResultTask.Name,
+			AttemptNumber: checkResultTask.AttemptNumber,
+			ExecuteAt:     checkResultTask.ExecuteAt,
+			CreatedAt:     checkResultTask.CreatedAt,
+		},
+	}, checkResultTasks)
 }
+
+func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinished() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	matchToCreate := repository.Match{
+		StartsAt:     time.Now().Add(time.Duration(gofakeit.RandomInt([]int{1, 2, 4, 8})) * time.Hour),
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
+		ResultStatus: string(models.Scheduled),
+	}
+	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
+
+	externalMatch := testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
+		m.MatchID = match.ID
+		m.Status = string(models.StatusMatchNotStarted)
+	}))
+
+	_ = testutils.CreateSubscription(s.T(), s.db, testutils.FakeRepositorySubscription(func(sub *repository.Subscription) {
+		sub.MatchID = match.ID
+		sub.Url = gofakeit.URL()
+		sub.Key = gofakeit.UUID()
+	}))
+
+	checkResultTask := testutils.CreateCheckResultTask(s.T(), s.db, repository.CheckResultTask{MatchID: match.ID, ExecuteAt: match.StartsAt.Add(115 * time.Minute)})
+
+	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
+	s.Require().NoError(err)
+
+	matchesResponse := testutils.FakeMatchesResponse()
+	matchesResponse.Leagues[0].Matches[0].ID = externalMatch.ID
+	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
+	matchesResponse.Leagues[0].Matches[0].Away.ID = teamSeeds[1].ExternalTeamID
+	matchesResponse.Leagues[0].Matches[0].StatusID = 3 // live 2nd half
+	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = startsAt.UTC().Format(time.RFC3339)
+	jsonResponse, err := json.Marshal(matchesResponse)
+	s.Require().NoError(err)
+
+	queryParams := map[string]interface{}{"date": matchToCreate.StartsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse), queryParams)
+
+	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/triggers/result_check"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", "Bearer anything")
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Equal(http.StatusNoContent, resp.StatusCode)
+
+	matches := testutils.ListMatches(s.T(), s.db)
+	s.Equal([]repository.Match{
+		{
+			ID:           match.ID,
+			HomeTeamID:   match.HomeTeamID,
+			AwayTeamID:   match.AwayTeamID,
+			StartsAt:     match.StartsAt,
+			ResultStatus: string(models.Scheduled),
+		},
+	}, matches)
+
+	externalMatches := testutils.ListExternalMatches(s.T(), s.db)
+	s.Equal([]repository.ExternalMatch{
+		{
+			ID:        externalMatch.ID,
+			MatchID:   match.ID,
+			HomeScore: matchesResponse.Leagues[0].Matches[0].Home.Score,
+			AwayScore: matchesResponse.Leagues[0].Matches[0].Away.Score,
+			Status:    string(models.StatusMatchInProgress),
+		},
+	}, externalMatches)
+
+	checkResultTasks := testutils.ListCheckResultTasks(s.T(), s.db)
+	s.Equal([]repository.CheckResultTask{
+		{
+			ID:            checkResultTask.ID,
+			MatchID:       match.ID,
+			Name:          fmt.Sprintf("projects/test-project/locations/europe-west3/queues/check-result/tasks/match-%d-attempt-2", match.ID),
+			AttemptNumber: checkResultTask.AttemptNumber + 1,
+			ExecuteAt:     match.StartsAt.Add(115 * time.Minute).Add(5 * time.Minute),
+			CreatedAt:     checkResultTask.CreatedAt,
+		},
+	}, checkResultTasks)
+}
+
+// TODO
+// func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinishedAndCheckResultTaskNotFound() {
+//}

@@ -2,7 +2,6 @@ package testutils
 
 import (
 	"testing"
-	"time"
 
 	"github.com/andrewshostak/result-service/internal/adapters/repository"
 	"github.com/jmoiron/sqlx"
@@ -70,13 +69,13 @@ func CreateExternalMatch(t *testing.T, db *sqlx.DB, externalMatch repository.Ext
 	return created
 }
 
-func CreateCheckResultTask(t *testing.T, db *sqlx.DB, matchID uint, name string, executeAt time.Time) repository.CheckResultTask {
+func CreateCheckResultTask(t *testing.T, db *sqlx.DB, task repository.CheckResultTask) repository.CheckResultTask {
 	t.Helper()
 
 	var created repository.CheckResultTask
 	query := "INSERT INTO check_result_tasks (match_id, name, execute_at) VALUES ($1, $2, $3) RETURNING *"
 
-	err := db.Get(&created, query, matchID, name, executeAt)
+	err := db.Get(&created, query, task.MatchID, task.Name, task.ExecuteAt)
 	require.NoError(t, err)
 
 	return created

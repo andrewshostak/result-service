@@ -23,6 +23,7 @@
   - [ ] trigger result check
   - [ ] trigger subscriber notification
   - [ ] improvements
+    - [ ] access parsed config values in tests: queue names, first attempt delay, interval
     - [ ] verify mocked http request number of calls and bodies
     - [ ] implement better mocking of http requests (with-pattern)
     - [ ] add cases for invalid request bodies
