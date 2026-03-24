@@ -4,6 +4,9 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
+
+	"github.com/brianvoe/gofakeit/v6"
 )
 
 func CompareRequest(t *testing.T, expected, actual *http.Request) bool {
@@ -34,4 +37,9 @@ func CompareRequest(t *testing.T, expected, actual *http.Request) bool {
 	}
 
 	return true
+}
+
+func RandomFutureDate(t *testing.T) time.Time {
+	t.Helper()
+	return time.Now().Add(time.Duration(gofakeit.IntRange(0, 10000)) * time.Minute)
 }
