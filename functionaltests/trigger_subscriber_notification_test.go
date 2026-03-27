@@ -58,11 +58,6 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriptionAlre
 	}
 	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
 
-	_ = testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
-		m.MatchID = match.ID
-		m.Status = string(models.StatusMatchFinished)
-	}))
-
 	subscription := testutils.CreateSubscription(s.T(), s.db, testutils.FakeRepositorySubscription(func(sub *repository.Subscription) {
 		sub.MatchID = match.ID
 		sub.Url = gofakeit.URL()
@@ -98,4 +93,51 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriptionAlre
 	s.Equal(subscription.Status, subscriptions[0].Status)
 	s.Nil(subscriptions[0].SubscriberError)
 	s.Nil(subscriptions[0].NotifiedAt)
+}
+
+func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_ExternalMatchRelationNotfound() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	matchToCreate := repository.Match{
+		StartsAt:     testutils.RandomFutureDate(s.T()),
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
+		ResultStatus: string(models.Received),
+	}
+	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
+
+	subscription := testutils.CreateSubscription(s.T(), s.db, testutils.FakeRepositorySubscription(func(sub *repository.Subscription) {
+		sub.MatchID = match.ID
+		sub.Url = gofakeit.URL()
+		sub.Key = gofakeit.UUID()
+		sub.Status = string(models.PendingSub)
+	}))
+
+	requestPayload := handler.TriggerSubscriptionNotificationRequest{SubscriptionID: subscription.ID}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/triggers/subscriber_notification"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", "Bearer anything")
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Equal(http.StatusInternalServerError, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Equal("match relation external match doesn't exist", response.Error)
+	s.Equal(string(models.CodeInternalServerError), response.Code)
 }

@@ -125,7 +125,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalMatchRelationNotfou
 	var response handler.ErrorResponse
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
-	s.Equal("match relation external match does not exist", response.Error)
+	s.Equal("match relation external match doesn't exist", response.Error)
 	s.Equal(string(models.CodeInternalServerError), response.Code)
 }
 

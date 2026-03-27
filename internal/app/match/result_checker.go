@@ -54,8 +54,8 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	}
 
 	if match.ExternalMatch == nil {
-		s.logger.Error().Uint("match_id", matchID).Msg("match relation external match does not exist")
-		return errors.New("match relation external match does not exist")
+		s.logger.Error().Uint("match_id", matchID).Msg("match relation external match doesn't exist")
+		return errors.New("match relation external match doesn't exist")
 	}
 
 	matches, err := s.externalAPIClient.GetMatches(ctx, match.StartsAt)

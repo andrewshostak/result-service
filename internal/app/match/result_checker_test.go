@@ -130,7 +130,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&match, nil).Once()
 				return m
 			},
-			expectedErr: errors.New("match relation external match does not exist"),
+			expectedErr: errors.New("match relation external match doesn't exist"),
 		},
 		{
 			name:  "it returns an error when matches retrieval from external api fails and match update fails",
