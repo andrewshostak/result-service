@@ -17,6 +17,36 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 )
 
+func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_InvalidPayload() {
+	requestPayload := handler.TriggerSubscriptionNotificationRequest{}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/triggers/subscriber_notification"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", "Bearer anything")
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Contains(response.Error, "required")
+	s.Equal(string(models.CodeInvalidRequest), response.Code)
+}
+
 func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriptionNotFound() {
 	subscriptionID := uint(gofakeit.Uint8())
 	requestPayload := handler.TriggerSubscriptionNotificationRequest{SubscriptionID: subscriptionID}
@@ -36,7 +66,7 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriptionNotF
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusBadRequest, resp.StatusCode)
+	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -83,7 +113,7 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriptionAlre
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusNoContent, resp.StatusCode)
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 
 	subscriptions := testutils.ListSubscriptionsByMatch(s.T(), s.db, match.ID)
 	s.Equal(subscription.ID, subscriptions[0].ID)
@@ -131,7 +161,7 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_ExternalMatchRel
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusInternalServerError, resp.StatusCode)
+	s.Require().Equal(http.StatusInternalServerError, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -186,7 +216,7 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriberReturn
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusInternalServerError, resp.StatusCode)
+	s.Require().Equal(http.StatusInternalServerError, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -251,7 +281,7 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriberReturn
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusNoContent, resp.StatusCode)
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 
 	subscriptions := testutils.ListSubscriptionsByMatch(s.T(), s.db, match.ID)
 	s.Equal(subscription.ID, subscriptions[0].ID)

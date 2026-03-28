@@ -49,7 +49,7 @@ func (s *FunctionalTestSuite) TestCreateSubscription_Success() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusNoContent, resp.StatusCode)
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 
 	subs := testutils.ListSubscriptionsByMatch(s.T(), s.db, created.ID)
 	s.Equal(1, len(subs))
@@ -81,7 +81,7 @@ func (s *FunctionalTestSuite) TestCreateSubscription_InvalidPayload() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusBadRequest, resp.StatusCode)
+	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -115,7 +115,7 @@ func (s *FunctionalTestSuite) TestCreateSubscription_MatchNotFound() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusBadRequest, resp.StatusCode)
+	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -159,7 +159,7 @@ func (s *FunctionalTestSuite) TestCreateSubscription_MatchResultNotScheduled() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusUnprocessableEntity, resp.StatusCode)
+	s.Require().Equal(http.StatusUnprocessableEntity, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -210,7 +210,7 @@ func (s *FunctionalTestSuite) TestCreateSubscription_SubscriptionAlreadyExists()
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusNoContent, resp.StatusCode)
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 
 	subs := testutils.ListSubscriptionsByMatch(s.T(), s.db, created.ID)
 	s.Equal(1, len(subs))
@@ -260,7 +260,7 @@ func (s *FunctionalTestSuite) TestDeleteSubscription_Success() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusNoContent, resp.StatusCode)
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 
 	subs := testutils.ListSubscriptionsByMatch(s.T(), s.db, createdMatch.ID)
 	s.Equal(0, len(subs))
@@ -270,6 +270,31 @@ func (s *FunctionalTestSuite) TestDeleteSubscription_Success() {
 
 	matches := testutils.ListMatches(s.T(), s.db)
 	s.Equal(0, len(matches))
+}
+
+func (s *FunctionalTestSuite) TestDeleteSubscription_InvalidPayload() {
+	url := s.apiBaseURL + "/v1/subscriptions"
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", secretKey)
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Contains(response.Error, "required")
+	s.Equal(string(models.CodeInvalidRequest), response.Code)
 }
 
 func (s *FunctionalTestSuite) TestDeleteSubscription_SuccessOtherMatchSubscriptionsExist() {
@@ -320,7 +345,7 @@ func (s *FunctionalTestSuite) TestDeleteSubscription_SuccessOtherMatchSubscripti
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusNoContent, resp.StatusCode)
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 
 	subs := testutils.ListSubscriptionsByMatch(s.T(), s.db, createdMatch.ID)
 	s.Equal(1, len(subs))
@@ -371,7 +396,7 @@ func (s *FunctionalTestSuite) TestDeleteSubscription_CheckResultTaskRelationDoes
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusNoContent, resp.StatusCode)
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 
 	subs := testutils.ListSubscriptionsByMatch(s.T(), s.db, createdMatch.ID)
 	s.Equal(0, len(subs))
@@ -403,7 +428,7 @@ func (s *FunctionalTestSuite) TestDeleteSubscription_AliasNotFound() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusBadRequest, resp.StatusCode)
+	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -440,7 +465,7 @@ func (s *FunctionalTestSuite) TestDeleteSubscription_MatchNotFound() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusBadRequest, resp.StatusCode)
+	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -485,7 +510,7 @@ func (s *FunctionalTestSuite) TestDeleteSubscription_SubscriptionNotFound() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusBadRequest, resp.StatusCode)
+	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -538,7 +563,7 @@ func (s *FunctionalTestSuite) TestDeleteSubscription_SubscriberAlreadyNotified()
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusUnprocessableEntity, resp.StatusCode)
+	s.Require().Equal(http.StatusUnprocessableEntity, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)

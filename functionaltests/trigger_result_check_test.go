@@ -18,6 +18,36 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 )
 
+func (s *FunctionalTestSuite) TestTriggerResultCheck_InvalidPayload() {
+	requestPayload := handler.TriggerResultCheckRequest{}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/triggers/result_check"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", "Bearer anything")
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Contains(response.Error, "required")
+	s.Equal(string(models.CodeInvalidRequest), response.Code)
+}
+
 func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFound() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
@@ -46,7 +76,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFound() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusBadRequest, resp.StatusCode)
+	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -86,7 +116,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotScheduled() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusNoContent, resp.StatusCode)
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 }
 
 func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalMatchRelationNotfound() {
@@ -117,7 +147,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalMatchRelationNotfou
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusInternalServerError, resp.StatusCode)
+	s.Require().Equal(http.StatusInternalServerError, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -164,7 +194,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsError() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusInternalServerError, resp.StatusCode)
+	s.Require().Equal(http.StatusInternalServerError, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -222,7 +252,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsInvalidRe
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusInternalServerError, resp.StatusCode)
+	s.Require().Equal(http.StatusInternalServerError, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -280,7 +310,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFoundInExternalAPI(
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusNoContent, resp.StatusCode)
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 
 	matches := testutils.ListMatches(s.T(), s.db)
 	s.Equal([]repository.Match{
@@ -349,7 +379,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusNoContent, resp.StatusCode)
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 
 	matches := testutils.ListMatches(s.T(), s.db)
 	s.Equal([]repository.Match{
@@ -427,7 +457,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusNoContent, resp.StatusCode)
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 
 	matches := testutils.ListMatches(s.T(), s.db)
 	s.Equal([]repository.Match{
@@ -517,7 +547,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinished() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusNoContent, resp.StatusCode)
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 
 	matches := testutils.ListMatches(s.T(), s.db)
 	s.Equal([]repository.Match{
@@ -605,7 +635,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinishedAndCheckRes
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusInternalServerError, resp.StatusCode)
+	s.Require().Equal(http.StatusInternalServerError, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)

@@ -26,7 +26,7 @@
     - [ ] access parsed config values in tests: queue names, first attempt delay, interval
     - [ ] verify mocked http request number of calls and bodies
     - [ ] implement better mocking of http requests (with-pattern)
-    - [ ] add cases for invalid request bodies
+    - [X] add cases for invalid request bodies
     - [ ] verify gcloud was reached
     - [ ] add cases for error response from gcloud tasks
   - [ ] auth middleware

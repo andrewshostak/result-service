@@ -55,7 +55,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusOK, resp.StatusCode)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -102,6 +102,36 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 	}, checkResultTasks)
 }
 
+func (s *FunctionalTestSuite) TestCreateMatch_InvalidPayload() {
+	requestPayload := handler.CreateMatchRequest{}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/matches"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", secretKey)
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Contains(response.Error, "required")
+	s.Equal(string(models.CodeInvalidRequest), response.Code)
+}
+
 func (s *FunctionalTestSuite) TestCreateMatch_AliasNotFound() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
@@ -128,7 +158,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_AliasNotFound() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusBadRequest, resp.StatusCode)
+	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -178,7 +208,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_AlreadyExistsScheduled() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusOK, resp.StatusCode)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -230,7 +260,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_AlreadyExistsNonScheduled() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusUnprocessableEntity, resp.StatusCode)
+	s.Require().Equal(http.StatusUnprocessableEntity, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -275,7 +305,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIReturnsError() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusInternalServerError, resp.StatusCode)
+	s.Require().Equal(http.StatusInternalServerError, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -317,7 +347,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIReturnsInvalidResponseB
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusInternalServerError, resp.StatusCode)
+	s.Require().Equal(http.StatusInternalServerError, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -359,7 +389,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_MatchNotFoundInExternalAPI() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusUnprocessableEntity, resp.StatusCode)
+	s.Require().Equal(http.StatusUnprocessableEntity, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
@@ -412,7 +442,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIStatusDoesntAllowSchedu
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Equal(http.StatusUnprocessableEntity, resp.StatusCode)
+	s.Require().Equal(http.StatusUnprocessableEntity, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
