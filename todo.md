@@ -20,14 +20,14 @@
   - [X] create match
   - [X] create subscription
   - [X] delete subscription
-  - [ ] trigger result check
-  - [ ] trigger subscriber notification
+  - [X] trigger result check
+  - [X] trigger subscriber notification
   - [ ] improvements
     - [ ] access parsed config values in tests: queue names, first attempt delay, interval
     - [ ] verify mocked http request number of calls and bodies
     - [ ] implement better mocking of http requests (with-pattern)
     - [ ] add cases for invalid request bodies
-    - [ ] verify gcloud was reaached
+    - [ ] verify gcloud was reached
     - [ ] add cases for error response from gcloud tasks
   - [ ] auth middleware
   - [ ] google middleware

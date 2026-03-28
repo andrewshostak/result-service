@@ -187,6 +187,64 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsError() {
 	}, matches)
 }
 
+func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsInvalidResponseBody() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	matchToCreate := repository.Match{
+		StartsAt:     testutils.RandomFutureDate(s.T()),
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
+		ResultStatus: string(models.Scheduled),
+	}
+	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
+	_ = testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
+		m.MatchID = match.ID
+		m.Status = string(models.StatusMatchNotStarted)
+	}))
+
+	queryParams := map[string]interface{}{"date": matchToCreate.StartsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, `!@#!@#`, queryParams)
+
+	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/triggers/result_check"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", "Bearer anything")
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Equal(http.StatusInternalServerError, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Equal("failed to get matches from external api: failed to fetch matches by date: failed to decode get matches by date response body: invalid character '!' looking for beginning of value", response.Error)
+	s.Equal(string(models.CodeInternalServerError), response.Code)
+
+	matches := testutils.ListMatches(s.T(), s.db)
+	s.Equal([]repository.Match{
+		{
+			ID:           match.ID,
+			HomeTeamID:   match.HomeTeamID,
+			AwayTeamID:   match.AwayTeamID,
+			StartsAt:     match.StartsAt,
+			ResultStatus: string(models.APIError),
+		},
+	}, matches)
+}
+
 func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFoundInExternalAPI() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
