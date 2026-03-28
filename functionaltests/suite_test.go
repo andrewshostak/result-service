@@ -35,6 +35,7 @@ type FunctionalTestSuite struct {
 
 	apiBaseURL      string
 	smockerAdminURL string
+	smockerBaseURL  string
 	httpClient      *http.Client
 }
 
@@ -96,13 +97,15 @@ func (s *FunctionalTestSuite) SetupSuite() {
 
 	s.T().Log("starting smoker container...")
 
+	const smockerAlias = "smocker"
+	const smockerPort, smockerAdminPort = "8080", "8081"
 	smockerReq := testcontainers.ContainerRequest{
 		Image:    "thiht/smocker:latest",
 		Networks: []string{nw.Name},
 		NetworkAliases: map[string][]string{
-			nw.Name: {"smocker"},
+			nw.Name: {smockerAlias},
 		},
-		ExposedPorts: []string{"8080/tcp", "8081/tcp"},
+		ExposedPorts: []string{fmt.Sprintf("%s/tcp", smockerPort), fmt.Sprintf("%s/tcp", smockerAdminPort)},
 		WaitingFor:   wait.ForHTTP("/sessions").WithPort("8081/tcp"),
 		// TODO: apply verbose output depending on a flag presence
 		//LogConsumerCfg: &testcontainers.LogConsumerConfig{
@@ -122,8 +125,9 @@ func (s *FunctionalTestSuite) SetupSuite() {
 	s.smocker = smockerContainer
 
 	adminHost, _ := smockerContainer.Host(ctx)
-	adminPort, _ := smockerContainer.MappedPort(ctx, "8081")
+	adminPort, _ := smockerContainer.MappedPort(ctx, smockerAdminPort)
 	s.smockerAdminURL = fmt.Sprintf("http://%s:%s", adminHost, adminPort.Port())
+	s.externalAPIBaseURL = fmt.Sprintf("http://%s:%s", smockerAlias, smockerPort)
 
 	// start application container
 	s.T().Log("Starting application container...")
@@ -145,7 +149,7 @@ func (s *FunctionalTestSuite) SetupSuite() {
 
 			"SECRET_KEY":                         "i_am_a_secret_key",
 			"HASHED_API_KEYS":                    "a87a39c7ddb9682faa412e209834b92d96470cc21878f391c719b3357a8126387b3817628dca009b5e5a66a9e576bbf9361d8b60a7f85f5cfd3f17c15cfed6b5",
-			"FOTMOB_API_BASE_URL":                "http://smocker:8080",
+			"FOTMOB_API_BASE_URL":                s.externalAPIBaseURL,
 			"GOOGLE_CLOUD_PROJECT_ID":            "test-project",
 			"GOOGLE_CLOUD_REGION":                "europe-west3",
 			"GOOGLE_CLOUD_BASE_URL":              "cloud-tasks-emulator:8123",
