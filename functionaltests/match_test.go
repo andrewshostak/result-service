@@ -287,6 +287,48 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIReturnsError() {
 	s.Equal(string(models.CodeInternalServerError), response.Code)
 }
 
+func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIReturnsInvalidResponseBody() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	startsAt, err := time.Parse(time.RFC3339, "2026-01-01T20:00:00Z")
+	s.Require().NoError(err)
+
+	queryParams := map[string]interface{}{"date": startsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, `!@#!@#`, queryParams)
+
+	requestPayload := handler.CreateMatchRequest{
+		StartsAt:  startsAt,
+		AliasHome: teamSeeds[0].Alias,
+		AliasAway: teamSeeds[1].Alias,
+	}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/matches"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", secretKey)
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Equal(http.StatusInternalServerError, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Equal("failed to get matches from external api: failed to fetch matches by date: failed to decode get matches by date response body: invalid character '!' looking for beginning of value", response.Error)
+	s.Equal(string(models.CodeInternalServerError), response.Code)
+}
+
 func (s *FunctionalTestSuite) TestCreateMatch_MatchNotFoundInExternalAPI() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
