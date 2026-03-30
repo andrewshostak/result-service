@@ -21,4 +21,7 @@ update-mocks:
 	mockery --name=TaskClient --dir internal/app/subscription --output internal/app/subscription/mocks --case snake
 	mockery --name=Logger --dir internal/app/subscription --output internal/app/subscription/mocks --case snake
 
+functional-tests:
+	go test -v -count=1 -tags functional ./functionaltests/...
+
 .PHONY: update-mocks

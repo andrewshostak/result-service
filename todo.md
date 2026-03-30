@@ -1,20 +1,44 @@
 ### List of improvements after first release
-- configure timeout (should be less than or equal to GCP configured timeout)
-- hide secrets from `app.yaml` & commit `app.yaml` with hidden secrets (or example.app.yaml)
-- replace gorm with sqlc
-- configure CI
-- fix concurrent map reads/writes
-- graceful shutdown
-- make gin and zerolog friends
-- make gin and gorm friends
-- get two aliases on match creation endpoint concurrently
-- notify subscribers concurrently
-- create match and external match in transaction
-- fix broken gorm errors checks
-- update external match and match in transaction
-- add response bodies from API calls to error messages
-- add unit tests for the project
-- add linter
-- make sure docker-compose works and commit changes
-- make it work with multiple instances
-- errs.go: use one type ItemNotFoundError instead of AliasNotFoundError MatchNotFoundError SubscriptionNotFoundError
+- [X] configure timeouts
+- [X] implement hexagonal architecture in the service
+- [ ] unit tests 
+  - [ ] clients
+    - [X] external api
+    - [X] notifier
+    - [ ] task
+  - [ ] handlers
+    - [ ] alias
+    - [ ] match
+    - [ ] subscription
+      - [ ] create
+      - [ ] delete
+    - [ ] trigger
+      - [ ] check result
+      - [ ] notify subscriber
+- [ ] functional tests
+  - [X] search aliases
+  - [X] create match
+  - [X] create subscription
+  - [X] delete subscription
+  - [X] trigger result check
+  - [X] trigger subscriber notification
+  - [ ] improvements
+    - [ ] access parsed config values in tests: queue names, first attempt delay, interval
+    - [ ] verify mocked http request number of calls and bodies
+    - [ ] implement better mocking of http requests (with-pattern)
+    - [X] add cases for invalid request bodies
+    - [ ] verify gcloud was reached
+    - [ ] add cases for error response from gcloud tasks
+  - [ ] auth middleware
+  - [ ] google middleware
+- [ ] migrate from gorm to sqlc
+- [ ] db changes:
+  - [ ] move starts_at column from matches table to external_matches table
+  - [ ] do not use external value as primary key
+- [ ] when result status fails then subscription status should be set to cancelled as well (not remain 'pending')
+- [ ] configure CI in github
+  - [ ] tests
+  - [ ] linter
+- [ ] implement graceful shutdown
+- [ ] investigate possible replacement zerolog with slog (if not - make gin and zerolog friends)
+- [ ] find a proper way of handling secrets (remove secrets from `service.yaml`)

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
 	"github.com/andrewshostak/result-service/config"
 	"github.com/andrewshostak/result-service/internal/adapters/http/client/fotmob"
 	"github.com/andrewshostak/result-service/internal/adapters/http/client/notifier"
@@ -16,9 +15,11 @@ import (
 	"github.com/andrewshostak/result-service/internal/app/alias"
 	"github.com/andrewshostak/result-service/internal/app/match"
 	"github.com/andrewshostak/result-service/internal/app/subscription"
+	"github.com/andrewshostak/result-service/internal/infra/cloudtasks"
 	"github.com/andrewshostak/result-service/internal/infra/http/server"
 	loggerinternal "github.com/andrewshostak/result-service/internal/infra/logger"
 	"github.com/andrewshostak/result-service/internal/infra/postgres"
+	"github.com/gin-gonic/gin"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/spf13/cobra"
 )
@@ -44,7 +45,7 @@ func startServer(_ *cobra.Command, _ []string) {
 	httpClient := http.Client{Timeout: cfg.App.TriggersTimeout - (2 * time.Second)}
 
 	ctx := context.Background()
-	cloudTasksClient, err := cloudtasks.NewClient(ctx)
+	cloudTasksClient, err := cloudtasks.NewClient(ctx, gin.Mode(), cfg.GoogleCloud)
 	if err != nil {
 		panic(err)
 	}

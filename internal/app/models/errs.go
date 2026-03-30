@@ -1,14 +1,14 @@
 package models
 
-type code string
+type Code string
 
 const (
-	CodeResourceNotFound      code = "resource_not_found"
-	CodeResourceAlreadyExists code = "resource_already_exists"
-	CodeUnprocessableContent  code = "unprocessable_content"
-	CodeInternalServerError   code = "internal_server_error"
-	CodeInvalidRequest        code = "invalid_request"
-	CodeTimeout               code = "timeout"
+	CodeResourceNotFound      Code = "resource_not_found"
+	CodeResourceAlreadyExists Code = "resource_already_exists"
+	CodeUnprocessableContent  Code = "unprocessable_content"
+	CodeInternalServerError   Code = "internal_server_error"
+	CodeInvalidRequest        Code = "invalid_request"
+	CodeTimeout               Code = "timeout"
 )
 
 func NewResourceNotFoundError(error error) ResourceNotFoundError {
@@ -17,7 +17,7 @@ func NewResourceNotFoundError(error error) ResourceNotFoundError {
 
 type ResourceNotFoundError struct {
 	Err  error
-	Code code
+	Code Code
 }
 
 func (e ResourceNotFoundError) Error() string {
@@ -30,7 +30,7 @@ func NewResourceAlreadyExistsError(error error) ResourceAlreadyExistsError {
 
 type ResourceAlreadyExistsError struct {
 	Err  error
-	Code code
+	Code Code
 }
 
 func (e ResourceAlreadyExistsError) Error() string {
@@ -43,7 +43,7 @@ func NewUnprocessableContentError(error error) UnprocessableContentError {
 
 type UnprocessableContentError struct {
 	Err  error
-	Code code
+	Code Code
 }
 
 func (e UnprocessableContentError) Error() string {

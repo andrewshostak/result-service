@@ -26,19 +26,19 @@ func (h *MatchHandler) Create(c *gin.Context) {
 
 	result, err := h.matchService.Create(c.Request.Context(), params.ToDomain())
 	if errors.As(err, &models.UnprocessableContentError{}) {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error(), "code": models.CodeUnprocessableContent})
+		c.JSON(http.StatusUnprocessableEntity, NewErrorResponse(models.CodeUnprocessableContent, err))
 
 		return
 	}
 
 	if errors.As(err, &models.ResourceNotFoundError{}) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": models.CodeResourceNotFound})
+		c.JSON(http.StatusBadRequest, NewErrorResponse(models.CodeResourceNotFound, err))
 
 		return
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": models.CodeInternalServerError})
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(models.CodeInternalServerError, err))
 
 		return
 	}

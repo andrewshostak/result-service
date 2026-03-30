@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/andrewshostak/result-service/config"
 	"github.com/andrewshostak/result-service/internal/app/models"
@@ -44,10 +43,6 @@ func NewMatchService(
 }
 
 func (s *MatchService) Create(ctx context.Context, request models.CreateMatchRequest) (uint, error) {
-	if request.StartsAt.Before(time.Now()) {
-		return 0, models.NewUnprocessableContentError(errors.New("match starting time must be in the future"))
-	}
-
 	aliasHome, err := s.findAlias(ctx, request.AliasHome)
 	if err != nil {
 		return 0, fmt.Errorf("failed to find home team alias: %w", err)
@@ -106,7 +101,7 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 		return 0, fmt.Errorf("failed to save match with team ids %d and %d starting at %s: %w", aliasHome.TeamID, aliasAway.TeamID, externalMatch.Time, err)
 	}
 
-	externalMatchID := uint(externalMatch.ID)
+	externalMatchID := externalMatch.ID
 	_, err = s.externalMatchRepository.Save(ctx, &externalMatchID, externalMatch.ToExternalMatch(match.ID))
 	if err != nil {
 		return 0, fmt.Errorf("failed to save external match with id %d and match id %d: %w", externalMatchID, match.ID, err)
@@ -160,7 +155,7 @@ func (s *MatchService) findAlias(ctx context.Context, alias string) (*models.Ali
 
 func (s *MatchService) findExternalMatch(externalHomeTeamID, externalAwayTeamID uint, matches []models.ExternalAPIMatch) (*models.ExternalAPIMatch, error) {
 	for _, match := range matches {
-		if match.HomeID == int(externalHomeTeamID) && match.AwayID == int(externalAwayTeamID) {
+		if match.HomeID == externalHomeTeamID && match.AwayID == externalAwayTeamID {
 			return &match, nil
 		}
 	}

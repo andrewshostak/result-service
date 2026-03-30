@@ -18,14 +18,14 @@ func NewAliasHandler(aliasService AliasService) *AliasHandler {
 func (h *AliasHandler) Search(c *gin.Context) {
 	var params SearchAliasRequest
 	if err := c.ShouldBindQuery(&params); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": models.CodeInvalidRequest})
+		c.JSON(http.StatusBadRequest, NewErrorResponse(models.CodeInvalidRequest, err))
 
 		return
 	}
 
 	result, err := h.aliasService.Search(c.Request.Context(), params.Search)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": models.CodeInternalServerError})
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(models.CodeInternalServerError, err))
 
 		return
 	}

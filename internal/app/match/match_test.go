@@ -51,11 +51,11 @@ func TestMatchService_Create(t *testing.T) {
 
 	externalMatchID := uint(gofakeit.Uint32())
 	externalMatch := testutils.FakeExternalAPIMatch(func(r *models.ExternalAPIMatch) {
-		r.ID = int(externalMatchID)
+		r.ID = externalMatchID
 		r.Time = startsAt.UTC()
-		r.HomeID = int(aliasHome.ExternalTeam.ID)
+		r.HomeID = aliasHome.ExternalTeam.ID
 		r.HomeScore = 0
-		r.AwayID = int(aliasAway.ExternalTeam.ID)
+		r.AwayID = aliasAway.ExternalTeam.ID
 		r.AwayScore = 0
 		r.Status = models.StatusMatchNotStarted
 	})
@@ -86,11 +86,6 @@ func TestMatchService_Create(t *testing.T) {
 		result                    uint
 		expectedErr               error
 	}{
-		{
-			name:        "it returns an error when match starting date is not valid",
-			input:       models.CreateMatchRequest{StartsAt: time.Now().Add(-1 * time.Hour)},
-			expectedErr: errors.New("match starting time must be in the future"),
-		},
 		{
 			name:  "it returns an error when home team alias finding fails",
 			input: createMatchRequest,
@@ -277,10 +272,10 @@ func TestMatchService_Create(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt.UTC()).Return(
 					[]models.ExternalAPIMatch{
 						testutils.FakeExternalAPIMatch(func(r *models.ExternalAPIMatch) {
-							r.ID = int(externalMatchID)
+							r.ID = externalMatchID
 							r.Time = startsAt.UTC()
-							r.HomeID = int(aliasHome.ExternalTeam.ID)
-							r.AwayID = int(aliasAway.ExternalTeam.ID)
+							r.HomeID = aliasHome.ExternalTeam.ID
+							r.AwayID = aliasAway.ExternalTeam.ID
 							r.HomeScore = 0
 							r.AwayScore = 0
 							r.Status = models.StatusMatchUnknown

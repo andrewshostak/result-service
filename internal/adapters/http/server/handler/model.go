@@ -38,6 +38,18 @@ type TriggerSubscriptionNotificationRequest struct {
 	SubscriptionID uint `json:"subscription_id" binding:"required"`
 }
 
+type ErrorResponse struct {
+	Code  string `json:"code"`
+	Error string `json:"error"`
+}
+
+func NewErrorResponse(code models.Code, error error) ErrorResponse {
+	return ErrorResponse{
+		Code:  string(code),
+		Error: error.Error(),
+	}
+}
+
 func (cmr *CreateMatchRequest) ToDomain() models.CreateMatchRequest {
 	return models.CreateMatchRequest{
 		StartsAt:  cmr.StartsAt,

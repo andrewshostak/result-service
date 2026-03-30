@@ -112,16 +112,16 @@ type League struct {
 }
 
 type ExternalAPITeam struct {
-	ID          int
+	ID          uint
 	Name        string
 	LeagueNames []string
 	CountryCode string
 }
 
 type ExternalAPIMatch struct {
-	ID        int
-	HomeID    int
-	AwayID    int
+	ID        uint
+	HomeID    uint
+	AwayID    uint
 	HomeScore int
 	AwayScore int
 	Time      time.Time
@@ -142,7 +142,7 @@ type SubscriberNotification struct {
 
 func (m *ExternalAPIMatch) ToExternalMatch(matchID uint) ExternalMatch {
 	return ExternalMatch{
-		ID:        uint(m.ID),
+		ID:        m.ID,
 		MatchID:   matchID,
 		HomeScore: m.HomeScore,
 		AwayScore: m.AwayScore,

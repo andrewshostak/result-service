@@ -54,8 +54,8 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	}
 
 	if match.ExternalMatch == nil {
-		s.logger.Error().Uint("match_id", matchID).Msg("match relation external match does not exist")
-		return errors.New("match relation external match does not exist")
+		s.logger.Error().Uint("match_id", matchID).Msg("match relation external match doesn't exist")
+		return errors.New("match relation external match doesn't exist")
 	}
 
 	matches, err := s.externalAPIClient.GetMatches(ctx, match.StartsAt)
@@ -93,7 +93,7 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 
 func (s *ResultCheckerService) findExternalMatchByID(externalID uint, matches []models.ExternalAPIMatch) *models.ExternalAPIMatch {
 	for _, match := range matches {
-		if match.ID == int(externalID) {
+		if match.ID == externalID {
 			return &match
 		}
 	}
@@ -101,6 +101,7 @@ func (s *ResultCheckerService) findExternalMatchByID(externalID uint, matches []
 	return nil
 }
 
+// TODO: update external match as well
 func (s *ResultCheckerService) handleMatchWithUnexpectedStatus(ctx context.Context, matchID uint, externalMatchStatus models.ExternalMatchStatus) error {
 	s.logger.Error().Uint("match_id", matchID).Msgf("result check cancelled: external match status is %s", externalMatchStatus)
 
@@ -179,6 +180,8 @@ func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID 
 	return nil
 }
 
+// handleNotFoundMatch updates statuses of match and external match.
+// When a match is postponed to another date - it is removed from original date matches. In that case retrying doesn't make sense, so returning nil.
 func (s *ResultCheckerService) handleNotFoundMatch(ctx context.Context, externalMatch models.ExternalMatch) error {
 	externalMatch.Status = models.StatusMatchUnknown
 	if _, err := s.externalMatchRepository.Save(ctx, &externalMatch.MatchID, externalMatch); err != nil {
