@@ -90,7 +90,7 @@ func (s *SubscriptionService) Delete(ctx context.Context, request models.DeleteS
 
 	subscription, err := s.subscriptionRepository.One(ctx, match.ID, request.SecretKey, request.BaseURL)
 	if err != nil {
-		s.logger.Info().
+		s.logger.Error().
 			Err(err).
 			Uint("match_id", match.ID).
 			Str("base_url", request.BaseURL).
