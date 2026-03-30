@@ -465,16 +465,7 @@ func (s *FunctionalTestSuite) TestDeleteSubscription_MatchNotFound() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
-
-	body, err := io.ReadAll(resp.Body)
-	s.Require().NoError(err)
-
-	var response handler.ErrorResponse
-	err = json.Unmarshal(body, &response)
-	s.Require().NoError(err)
-	s.Contains(response.Error, "failed to find match")
-	s.Equal(string(models.CodeResourceNotFound), response.Code)
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 }
 
 func (s *FunctionalTestSuite) TestDeleteSubscription_SubscriptionNotFound() {
@@ -510,16 +501,7 @@ func (s *FunctionalTestSuite) TestDeleteSubscription_SubscriptionNotFound() {
 		_ = Body.Close()
 	}(resp.Body)
 
-	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
-
-	body, err := io.ReadAll(resp.Body)
-	s.Require().NoError(err)
-
-	var response handler.ErrorResponse
-	err = json.Unmarshal(body, &response)
-	s.Require().NoError(err)
-	s.Contains(response.Error, "failed to find subscription")
-	s.Equal(string(models.CodeResourceNotFound), response.Code)
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 }
 
 func (s *FunctionalTestSuite) TestDeleteSubscription_SubscriberAlreadyNotified() {

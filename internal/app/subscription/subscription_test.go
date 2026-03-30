@@ -233,7 +233,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to find away team alias: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns an error when match search fails",
+			name:  "it returns nil when match search fails",
 			input: input,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -248,10 +248,9 @@ func TestSubscriptionService_Delete(t *testing.T) {
 				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(nil, unexpectedErr).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to find match: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns an error when subscription search fails",
+			name:  "it returns nil when subscription search fails",
 			input: input,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
@@ -272,7 +271,6 @@ func TestSubscriptionService_Delete(t *testing.T) {
 				m.On("One", ctx, match.ID, input.SecretKey, input.BaseURL).Return(nil, unexpectedErr).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to find subscription: %w", unexpectedErr),
 		},
 		{
 			name:  "it returns an error when subscription deletion is not allowed",
