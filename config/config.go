@@ -53,11 +53,13 @@ type PG struct {
 type GoogleCloud struct {
 	ProjectID           string `env:"GOOGLE_CLOUD_PROJECT_ID,required"`
 	Region              string `env:"GOOGLE_CLOUD_REGION,required"`
-	TasksBaseURL        string `env:"GOOGLE_CLOUD_BASE_URL,required"` // Base URL to be passed as 'audience' param when creating a cloud task. Then cloud tasks will call this URL.
+	TargetURL           string `env:"GOOGLE_CLOUD_TARGET_URL,required"` // target URL to be passed as 'audience' param when creating a cloud task. Then cloud tasks will call this URL.
 	ServiceAccountEmail string `env:"GOOGLE_CLOUD_SERVICE_ACCOUNT_EMAIL,required"`
 
 	CheckResultQueueName      string `env:"GOOGLE_CLOUD_CHECK_RESULT_QUEUE_NAME,required" envDefault:"check-result"`
 	NotifySubscriberQueueName string `env:"GOOGLE_CLOUD_NOTIFY_SUBSCRIBER_QUEUE_NAME,required" envDefault:"notify-subscriber"`
+
+	TasksURL string `env:"GOOGLE_CLOUD_TASKS_URL"` // needed for functional tests only. leave empty for real environments
 }
 
 func Parse[T any]() T {
