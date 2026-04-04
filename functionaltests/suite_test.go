@@ -152,8 +152,9 @@ func (s *FunctionalTestSuite) SetupSuite() {
 			"FOTMOB_API_BASE_URL":                s.smockerBaseURL,
 			"GOOGLE_CLOUD_PROJECT_ID":            "test-project",
 			"GOOGLE_CLOUD_REGION":                "europe-west3",
-			"GOOGLE_CLOUD_BASE_URL":              "cloud-tasks-emulator:8123",
+			"GOOGLE_CLOUD_TARGET_URL":            "localhost:8080",
 			"GOOGLE_CLOUD_SERVICE_ACCOUNT_EMAIL": "test-sa@test-project.iam.gserviceaccount.com",
+			"GOOGLE_CLOUD_TASKS_URL":             "cloud-tasks-emulator:8123",
 			// better to have an absolute path. if it doesn't work - try google-test-credentials.json
 			"GOOGLE_APPLICATION_CREDENTIALS": "/app/google-test-credentials.json",
 		},

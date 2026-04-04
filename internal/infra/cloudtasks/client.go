@@ -13,10 +13,10 @@ import (
 
 func NewClient(ctx context.Context, mode string, cfg config.GoogleCloud) (*cloudtasks.Client, error) {
 	var opts []option.ClientOption
-	opts = append(opts, option.WithEndpoint(cfg.TasksBaseURL))
 
 	if mode == gin.TestMode {
 		opts = append(opts,
+			option.WithEndpoint(cfg.TasksURL),
 			option.WithoutAuthentication(),
 			option.WithGRPCDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())),
 		)

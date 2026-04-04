@@ -49,7 +49,7 @@ func (c *TaskClient) GetResultCheckTask(ctx context.Context, matchID uint, attem
 }
 
 func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*models.Task, error) {
-	targetURL := fmt.Sprintf("%s%s", c.config.TasksBaseURL, checkResultPath)
+	targetURL := fmt.Sprintf("%s%s", c.config.TargetURL, checkResultPath)
 
 	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", c.config.ProjectID, c.config.Region, c.config.CheckResultQueueName)
 
@@ -76,7 +76,7 @@ func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, atte
 					AuthorizationHeader: &taskspb.HttpRequest_OidcToken{
 						OidcToken: &taskspb.OidcToken{
 							ServiceAccountEmail: c.config.ServiceAccountEmail,
-							Audience:            c.config.TasksBaseURL,
+							Audience:            c.config.TargetURL,
 						},
 					},
 				},
@@ -86,6 +86,7 @@ func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, atte
 
 	createdTask, err := c.client.CreateTask(ctx, req)
 	if err != nil {
+		fmt.Printf("failed to create task: %s\n", err.Error())
 		if c.isTaskAlreadyExistsError(err) {
 			return nil, models.NewResourceAlreadyExistsError(fmt.Errorf("result-check task already exists: %w", err))
 		}
@@ -111,7 +112,7 @@ func (c *TaskClient) DeleteResultCheckTask(ctx context.Context, taskName string)
 }
 
 func (c *TaskClient) ScheduleSubscriberNotification(ctx context.Context, subscriptionID uint) error {
-	targetURL := fmt.Sprintf("%s%s", c.config.TasksBaseURL, notifySubscriberPath)
+	targetURL := fmt.Sprintf("%s%s", c.config.TargetURL, notifySubscriberPath)
 
 	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", c.config.ProjectID, c.config.Region, c.config.NotifySubscriberQueueName)
 
@@ -137,7 +138,7 @@ func (c *TaskClient) ScheduleSubscriberNotification(ctx context.Context, subscri
 					AuthorizationHeader: &taskspb.HttpRequest_OidcToken{
 						OidcToken: &taskspb.OidcToken{
 							ServiceAccountEmail: c.config.ServiceAccountEmail,
-							Audience:            c.config.TasksBaseURL,
+							Audience:            c.config.TargetURL,
 						},
 					},
 				},

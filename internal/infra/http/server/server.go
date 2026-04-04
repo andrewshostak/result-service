@@ -29,7 +29,7 @@ func registerRoutes(r *gin.Engine, cfg config.Server, handlers Handlers) {
 		Use(middleware.Timeout(cfg.App.Timeout))
 
 	googleAuth := v1.Group("").
-		Use(middleware.ValidateGoogleAuth(cfg.GoogleCloud.TasksBaseURL)).
+		Use(middleware.ValidateGoogleAuth(cfg.GoogleCloud.TargetURL)).
 		Use(middleware.Timeout(cfg.App.TriggersTimeout))
 
 	apiKey.POST("/matches", handlers.MatchHandler.Create)
