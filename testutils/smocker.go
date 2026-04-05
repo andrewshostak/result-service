@@ -17,6 +17,7 @@ type mockSettings struct {
 	queryParams  url.Values
 	statusCode   int
 	responseBody any
+	times        int
 }
 
 type MockOption func(*mockSettings)
@@ -45,6 +46,12 @@ func WithQueryParams(queryParams url.Values) MockOption {
 	}
 }
 
+func WithTimes(times int) MockOption {
+	return func(e *mockSettings) {
+		e.times = times
+	}
+}
+
 func MockHTTPRequest(t *testing.T, baseUrl, path string, opts ...MockOption) {
 	t.Helper()
 
@@ -53,6 +60,7 @@ func MockHTTPRequest(t *testing.T, baseUrl, path string, opts ...MockOption) {
 		statusCode: http.StatusOK,
 		path:       path,
 		baseURL:    baseUrl,
+		times:      1,
 	}
 
 	for _, opt := range opts {
@@ -68,6 +76,7 @@ func MockHTTPRequest(t *testing.T, baseUrl, path string, opts ...MockOption) {
 		Response: mockResponse{
 			Status: settings.statusCode,
 		},
+		Context: mockContext{Times: settings.times},
 	}
 
 	for key, val := range settings.queryParams {
@@ -90,6 +99,7 @@ func MockHTTPRequest(t *testing.T, baseUrl, path string, opts ...MockOption) {
 type smockerExpectation struct {
 	Request  mockRequest  `yaml:"request"`
 	Response mockResponse `yaml:"response"`
+	Context  mockContext  `yaml:"context"`
 }
 
 type mockRequest struct {
@@ -102,4 +112,8 @@ type mockRequest struct {
 type mockResponse struct {
 	Status int    `yaml:"status"`
 	Body   string `yaml:"body,omitempty"`
+}
+
+type mockContext struct {
+	Times int `yaml:"times,omitempty"`
 }
