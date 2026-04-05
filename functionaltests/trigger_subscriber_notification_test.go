@@ -197,7 +197,10 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriberReturn
 		sub.Status = string(models.PendingSub)
 	}))
 
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, path, http.MethodPatch, http.StatusInternalServerError, "", map[string]interface{}{})
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, path,
+		testutils.WithMethod(http.MethodPatch),
+		testutils.WithStatusCode(http.StatusInternalServerError),
+	)
 
 	requestPayload := handler.TriggerSubscriptionNotificationRequest{SubscriptionID: subscription.ID}
 
@@ -262,7 +265,10 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriberReturn
 		sub.Status = string(models.PendingSub)
 	}))
 
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, path, http.MethodPatch, http.StatusNoContent, "", map[string]interface{}{})
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, path,
+		testutils.WithMethod(http.MethodPatch),
+		testutils.WithStatusCode(http.StatusNoContent),
+	)
 
 	requestPayload := handler.TriggerSubscriptionNotificationRequest{SubscriptionID: subscription.ID}
 

@@ -174,8 +174,12 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsError() {
 		m.Status = string(models.StatusMatchNotStarted)
 	}))
 
-	queryParams := map[string]interface{}{"date": matchToCreate.StartsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusInternalServerError, `internal server error`, queryParams)
+	queryParams := map[string][]string{"date": {matchToCreate.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
+		testutils.WithStatusCode(http.StatusInternalServerError),
+		testutils.WithResponseBody(`internal server error`),
+		testutils.WithQueryParams(queryParams),
+	)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
 
@@ -232,8 +236,11 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsInvalidRe
 		m.Status = string(models.StatusMatchNotStarted)
 	}))
 
-	queryParams := map[string]interface{}{"date": matchToCreate.StartsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, `!@#!@#`, queryParams)
+	queryParams := map[string][]string{"date": {matchToCreate.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
+		testutils.WithResponseBody(`!@#!@#`),
+		testutils.WithQueryParams(queryParams),
+	)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
 
@@ -290,8 +297,11 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFoundInExternalAPI(
 		m.Status = string(models.StatusMatchNotStarted)
 	}))
 
-	queryParams := map[string]interface{}{"date": matchToCreate.StartsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, `{"leagues": [{"matches": []}]}`, queryParams)
+	queryParams := map[string][]string{"date": {matchToCreate.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
+		testutils.WithResponseBody(`{"leagues": [{"matches": []}]}`),
+		testutils.WithQueryParams(queryParams),
+	)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
 
@@ -359,8 +369,11 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 	jsonResponse, err := json.Marshal(matchesResponse)
 	s.Require().NoError(err)
 
-	queryParams := map[string]interface{}{"date": match.StartsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse), queryParams)
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
+		testutils.WithResponseBody(string(jsonResponse)),
+		testutils.WithQueryParams(queryParams),
+	)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
 
@@ -437,8 +450,11 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 	jsonResponse, err := json.Marshal(matchesResponse)
 	s.Require().NoError(err)
 
-	queryParams := map[string]interface{}{"date": match.StartsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse), queryParams)
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
+		testutils.WithResponseBody(string(jsonResponse)),
+		testutils.WithQueryParams(queryParams),
+	)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
 
@@ -527,8 +543,11 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinished() {
 	jsonResponse, err := json.Marshal(matchesResponse)
 	s.Require().NoError(err)
 
-	queryParams := map[string]interface{}{"date": match.StartsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse), queryParams)
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
+		testutils.WithResponseBody(string(jsonResponse)),
+		testutils.WithQueryParams(queryParams),
+	)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
 
@@ -615,8 +634,11 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinishedAndCheckRes
 	jsonResponse, err := json.Marshal(matchesResponse)
 	s.Require().NoError(err)
 
-	queryParams := map[string]interface{}{"date": match.StartsAt.Format(fotmob.DateFormat), "timezone": "Europe/London"}
-	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches", http.MethodGet, http.StatusOK, string(jsonResponse), queryParams)
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
+		testutils.WithResponseBody(string(jsonResponse)),
+		testutils.WithQueryParams(queryParams),
+	)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
 
