@@ -17,6 +17,7 @@ type mockSettings struct {
 	queryParams  url.Values
 	statusCode   int
 	responseBody any
+	requestBody  any
 	times        int
 }
 
@@ -49,6 +50,12 @@ func WithQueryParams(queryParams url.Values) MockOption {
 func WithTimes(times int) MockOption {
 	return func(e *mockSettings) {
 		e.times = times
+	}
+}
+
+func WithRequestBody(body any) MockOption {
+	return func(s *mockSettings) {
+		s.requestBody = body
 	}
 }
 
@@ -87,6 +94,10 @@ func MockHTTPRequest(t *testing.T, baseUrl, path string, opts ...MockOption) {
 		payload.Response.Body = v
 	}
 
+	if v, ok := settings.requestBody.(string); ok {
+		payload.Request.Body = v
+	}
+
 	var buf bytes.Buffer
 	err := yaml.NewEncoder(&buf).Encode([]smockerExpectation{payload})
 	require.NoError(t, err)
@@ -106,7 +117,7 @@ type mockRequest struct {
 	Method      string              `yaml:"method"`
 	Path        string              `yaml:"path"`
 	QueryParams map[string][]string `yaml:"query_params,omitempty"`
-	Body        interface{}         `yaml:"body,omitempty"`
+	Body        string              `yaml:"body,omitempty"`
 }
 
 type mockResponse struct {
