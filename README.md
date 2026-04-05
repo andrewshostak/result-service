@@ -254,3 +254,10 @@ To back-fill aliases data a separate command is created. The command description
 - For each team the command does the next actions in database 
   - checks if `alias` already exists
   - if not, creates a `team`, `alias`, `external_team` in transaction
+
+## Commands
+
+Run a particular functional test:
+```
+go test -v -count=1 -tags functional ./functionaltests/... -testify.m TestCreateMatch_ExternalAPIReturnsError
+```
