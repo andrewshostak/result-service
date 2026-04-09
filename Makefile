@@ -20,6 +20,8 @@ update-mocks:
 	mockery --name=SubscriptionRepository --dir internal/app/subscription --output internal/app/subscription/mocks --case snake
 	mockery --name=TaskClient --dir internal/app/subscription --output internal/app/subscription/mocks --case snake
 	mockery --name=Logger --dir internal/app/subscription --output internal/app/subscription/mocks --case snake
+	# clients
+	mockery --name=CloudTasksClient --dir internal/adapters/http/client/task --output internal/adapters/http/client/task/mocks --case snake
 
 functional-tests:
 	go test -v -count=1 -tags functional ./functionaltests/...
