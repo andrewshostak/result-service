@@ -205,6 +205,7 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriberReturn
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, path,
 		testutils.WithMethod(http.MethodPatch),
 		testutils.WithRequestBody(string(payload)),
+		testutils.WithRequestHeaders(http.Header{"Authorization": {subscription.Key}, "Content-Type": {"application/json"}}),
 		testutils.WithStatusCode(http.StatusInternalServerError),
 	)
 
@@ -278,6 +279,7 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriberReturn
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, path,
 		testutils.WithMethod(http.MethodPatch),
 		testutils.WithRequestBody(string(payload)),
+		testutils.WithRequestHeaders(http.Header{"Authorization": {subscription.Key}, "Content-Type": {"application/json"}}),
 		testutils.WithStatusCode(http.StatusNoContent),
 	)
 

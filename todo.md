@@ -24,11 +24,12 @@
   - [X] trigger subscriber notification
   - [ ] improvements
     - [ ] access parsed config values in tests: queue names, first attempt delay, interval
-    - [ ] verify mocked http request number of calls and request bodies
+    - [X] verify mocked http request number of calls and request bodies, request headers
     - [X] implement better mocking of http requests (functional options pattern)
     - [X] add cases for invalid request bodies
     - [ ] verify gcloud was reached
     - [ ] add cases for error response from gcloud tasks
+    - [ ] fix shaky tests
   - [ ] auth middleware
   - [ ] google middleware
 - [ ] migrate from gorm to sqlc

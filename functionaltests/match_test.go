@@ -33,8 +33,9 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 
 	queryParams := map[string][]string{"date": {startsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
-		testutils.WithResponseBody(string(jsonResponse)),
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
+		testutils.WithResponseBody(string(jsonResponse)),
 	)
 
 	requestPayload := handler.CreateMatchRequest{
@@ -287,8 +288,9 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIReturnsError() {
 	queryParams := map[string][]string{"date": {startsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithStatusCode(http.StatusInternalServerError),
-		testutils.WithResponseBody("internal server error"),
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
+		testutils.WithResponseBody("internal server error"),
 	)
 
 	requestPayload := handler.CreateMatchRequest{
@@ -332,8 +334,9 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIReturnsInvalidResponseB
 
 	queryParams := map[string][]string{"date": {startsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
-		testutils.WithResponseBody(`!@#!@#`),
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
+		testutils.WithResponseBody(`!@#!@#`),
 	)
 
 	requestPayload := handler.CreateMatchRequest{
@@ -377,8 +380,9 @@ func (s *FunctionalTestSuite) TestCreateMatch_MatchNotFoundInExternalAPI() {
 
 	queryParams := map[string][]string{"date": {startsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
-		testutils.WithResponseBody(`{"leagues": [{"matches": []}]}`),
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
+		testutils.WithResponseBody(`{"leagues": [{"matches": []}]}`),
 	)
 
 	requestPayload := handler.CreateMatchRequest{
@@ -433,8 +437,9 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIStatusDoesntAllowSchedu
 
 	queryParams := map[string][]string{"date": {startsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
-		testutils.WithResponseBody(string(jsonResponse)),
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
+		testutils.WithResponseBody(string(jsonResponse)),
 	)
 
 	requestPayload := handler.CreateMatchRequest{

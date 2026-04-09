@@ -11,14 +11,15 @@ import (
 )
 
 type mockSettings struct {
-	baseURL      string
-	method       string
-	path         string
-	queryParams  url.Values
-	statusCode   int
-	responseBody any
-	requestBody  any
-	times        int
+	baseURL        string
+	method         string
+	path           string
+	queryParams    url.Values
+	statusCode     int
+	responseBody   any
+	requestBody    any
+	requestHeaders http.Header
+	times          int
 }
 
 type MockOption func(*mockSettings)
@@ -59,6 +60,12 @@ func WithRequestBody(body any) MockOption {
 	}
 }
 
+func WithRequestHeaders(h http.Header) MockOption {
+	return func(e *mockSettings) {
+		e.requestHeaders = h
+	}
+}
+
 func MockHTTPRequest(t *testing.T, baseUrl, path string, opts ...MockOption) {
 	t.Helper()
 
@@ -79,6 +86,7 @@ func MockHTTPRequest(t *testing.T, baseUrl, path string, opts ...MockOption) {
 			Path:        settings.path,
 			Method:      settings.method,
 			QueryParams: map[string][]string{},
+			Headers:     map[string][]string{},
 		},
 		Response: mockResponse{
 			Status: settings.statusCode,
@@ -88,6 +96,10 @@ func MockHTTPRequest(t *testing.T, baseUrl, path string, opts ...MockOption) {
 
 	for key, val := range settings.queryParams {
 		payload.Request.QueryParams[key] = val
+	}
+
+	for key, val := range settings.requestHeaders {
+		payload.Request.Headers[key] = val
 	}
 
 	if v, ok := settings.responseBody.(string); ok {
@@ -117,6 +129,7 @@ type mockRequest struct {
 	Method      string              `yaml:"method"`
 	Path        string              `yaml:"path"`
 	QueryParams map[string][]string `yaml:"query_params,omitempty"`
+	Headers     map[string][]string `yaml:"headers,omitempty"`
 	Body        string              `yaml:"body,omitempty"`
 }
 
