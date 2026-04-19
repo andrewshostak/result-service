@@ -2,12 +2,12 @@
 - [X] configure timeouts
 - [X] implement hexagonal architecture in the service
 - [ ] unit tests 
-  - [ ] clients
+  - [X] clients
     - [X] external api
     - [X] notifier
-    - [ ] task
+    - [X] task
   - [ ] handlers
-    - [ ] alias
+    - [X] alias
     - [ ] match
     - [ ] subscription
       - [ ] create

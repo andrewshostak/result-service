@@ -22,6 +22,8 @@ update-mocks:
 	mockery --name=Logger --dir internal/app/subscription --output internal/app/subscription/mocks --case snake
 	# clients
 	mockery --name=CloudTasksClient --dir internal/adapters/http/client/task --output internal/adapters/http/client/task/mocks --case snake
+	# handler
+	mockery --name=AliasService --dir internal/adapters/http/server/handler --output internal/adapters/http/server/handler/mocks --case snake
 
 functional-tests:
 	go test -v -count=1 -tags functional ./functionaltests/...
