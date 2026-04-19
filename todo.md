@@ -8,7 +8,7 @@
     - [X] task
   - [ ] handlers
     - [X] alias
-    - [ ] match
+    - [X] match
     - [ ] subscription
       - [ ] create
       - [ ] delete
