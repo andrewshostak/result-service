@@ -85,7 +85,6 @@ func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, atte
 
 	createdTask, err := c.client.CreateTask(ctx, req)
 	if err != nil {
-		fmt.Printf("failed to create task: %s\n", err.Error())
 		if c.isTaskAlreadyExistsError(err) {
 			return nil, models.NewResourceAlreadyExistsError(fmt.Errorf("result-check task already exists: %w", err))
 		}
