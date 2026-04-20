@@ -75,6 +75,7 @@ func TestAliasHandler_Search(t *testing.T) {
 
 			h := handler.NewAliasHandler(tt.aliasService(t))
 			h.Search(c)
+			c.Writer.Flush()
 
 			require.Equal(t, tt.expectedStatus, w.Code)
 

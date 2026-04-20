@@ -57,7 +57,7 @@ func TestMatchHandler_Create(t *testing.T) {
 			matchService: func(t *testing.T) *mocks.MatchService {
 				t.Helper()
 				m := mocks.NewMatchService(t)
-				m.On("Create", mock.Anything, validRequestBody.ToDomain()).
+				m.On("Create", mock.AnythingOfType("context.backgroundCtx"), validRequestBody.ToDomain()).
 					Return(uint(0), models.NewUnprocessableContentError(errors.New("match already exists"))).
 					Once()
 				return m
@@ -74,7 +74,7 @@ func TestMatchHandler_Create(t *testing.T) {
 			matchService: func(t *testing.T) *mocks.MatchService {
 				t.Helper()
 				m := mocks.NewMatchService(t)
-				m.On("Create", mock.Anything, validRequestBody.ToDomain()).
+				m.On("Create", mock.AnythingOfType("context.backgroundCtx"), validRequestBody.ToDomain()).
 					Return(uint(0), models.NewResourceNotFoundError(errors.New("alias not found"))).
 					Once()
 				return m
@@ -91,7 +91,7 @@ func TestMatchHandler_Create(t *testing.T) {
 			matchService: func(t *testing.T) *mocks.MatchService {
 				t.Helper()
 				m := mocks.NewMatchService(t)
-				m.On("Create", mock.Anything, validRequestBody.ToDomain()).
+				m.On("Create", mock.AnythingOfType("context.backgroundCtx"), validRequestBody.ToDomain()).
 					Return(uint(0), errors.New("unexpected error")).
 					Once()
 				return m
@@ -108,7 +108,7 @@ func TestMatchHandler_Create(t *testing.T) {
 			matchService: func(t *testing.T) *mocks.MatchService {
 				t.Helper()
 				m := mocks.NewMatchService(t)
-				m.On("Create", mock.Anything, validRequestBody.ToDomain()).
+				m.On("Create", mock.AnythingOfType("context.backgroundCtx"), validRequestBody.ToDomain()).
 					Return(matchID, nil).
 					Once()
 				return m
@@ -126,6 +126,7 @@ func TestMatchHandler_Create(t *testing.T) {
 
 			h := handler.NewMatchHandler(tt.matchService(t))
 			h.Create(c)
+			c.Writer.Flush()
 
 			require.Equal(t, tt.expectedStatus, w.Code)
 

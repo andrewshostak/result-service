@@ -9,9 +9,9 @@
   - [ ] handlers
     - [X] alias
     - [X] match
-    - [ ] subscription
-      - [ ] create
-      - [ ] delete
+    - [X] subscription
+      - [X] create
+      - [X] delete
     - [ ] trigger
       - [ ] check result
       - [ ] notify subscriber

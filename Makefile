@@ -25,6 +25,7 @@ update-mocks:
 	# handler
 	mockery --name=AliasService --dir internal/adapters/http/server/handler --output internal/adapters/http/server/handler/mocks --case snake
 	mockery --name=MatchService --dir internal/adapters/http/server/handler --output internal/adapters/http/server/handler/mocks --case snake
+	mockery --name=SubscriptionService --dir internal/adapters/http/server/handler --output internal/adapters/http/server/handler/mocks --case snake
 
 functional-tests:
 	go test -v -count=1 -tags functional ./functionaltests/...
