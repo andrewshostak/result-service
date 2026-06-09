@@ -81,6 +81,7 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	}
 
 	switch externalAPIMatch.Status {
+	// TODO: add a case when match was paused after some time and its status is 'not_started'
 	case models.StatusMatchInProgress:
 		return s.handleInPlayMatch(ctx, *match)
 	case models.StatusMatchFinished:

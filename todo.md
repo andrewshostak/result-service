@@ -1,20 +1,20 @@
 ### List of improvements after first release
 - [X] configure timeouts
 - [X] implement hexagonal architecture in the service
-- [ ] unit tests 
+- [X] unit tests 
   - [X] clients
     - [X] external api
     - [X] notifier
     - [X] task
-  - [ ] handlers
+  - [X] handlers
     - [X] alias
     - [X] match
     - [X] subscription
       - [X] create
       - [X] delete
-    - [ ] trigger
-      - [ ] check result
-      - [ ] notify subscriber
+    - [X] trigger
+      - [X] check result
+      - [X] notify subscriber
 - [ ] functional tests
   - [X] search aliases
   - [X] create match
