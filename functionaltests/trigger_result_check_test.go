@@ -174,7 +174,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsError() {
 		m.Status = string(models.StatusMatchNotStarted)
 	}))
 
-	queryParams := map[string][]string{"date": {matchToCreate.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	queryParams := map[string][]string{"date": {matchToCreate.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithStatusCode(http.StatusInternalServerError),
 		testutils.WithQueryParams(queryParams),
@@ -237,7 +237,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsInvalidRe
 		m.Status = string(models.StatusMatchNotStarted)
 	}))
 
-	queryParams := map[string][]string{"date": {matchToCreate.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	queryParams := map[string][]string{"date": {matchToCreate.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
@@ -299,7 +299,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFoundInExternalAPI(
 		m.Status = string(models.StatusMatchNotStarted)
 	}))
 
-	queryParams := map[string][]string{"date": {matchToCreate.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	queryParams := map[string][]string{"date": {matchToCreate.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
@@ -372,7 +372,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 	jsonResponse, err := json.Marshal(matchesResponse)
 	s.Require().NoError(err)
 
-	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
@@ -454,7 +454,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 	jsonResponse, err := json.Marshal(matchesResponse)
 	s.Require().NoError(err)
 
-	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
@@ -548,7 +548,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinished() {
 	jsonResponse, err := json.Marshal(matchesResponse)
 	s.Require().NoError(err)
 
-	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
@@ -640,7 +640,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinishedAndCheckRes
 	jsonResponse, err := json.Marshal(matchesResponse)
 	s.Require().NoError(err)
 
-	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),

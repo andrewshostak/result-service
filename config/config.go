@@ -33,7 +33,6 @@ type App struct {
 
 type ExternalAPI struct {
 	FotmobAPIBaseURL string `env:"FOTMOB_API_BASE_URL" envDefault:"https://www.fotmob.com"`
-	Timezone         string `env:"FOTMOB_API_TIMEZONE" envDefault:"Europe/London"`
 }
 
 type ResultCheck struct {
