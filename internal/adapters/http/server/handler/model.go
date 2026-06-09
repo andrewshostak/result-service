@@ -52,7 +52,7 @@ func NewErrorResponse(code models.Code, error error) ErrorResponse {
 
 func (cmr *CreateMatchRequest) ToDomain() models.CreateMatchRequest {
 	return models.CreateMatchRequest{
-		StartsAt:  cmr.StartsAt,
+		StartsAt:  cmr.StartsAt.UTC(),
 		AliasHome: cmr.AliasHome,
 		AliasAway: cmr.AliasAway,
 	}
@@ -68,7 +68,7 @@ func (csr *CreateSubscriptionRequest) ToDomain() models.CreateSubscriptionReques
 
 func (dsr *DeleteSubscriptionRequest) ToDomain() models.DeleteSubscriptionRequest {
 	return models.DeleteSubscriptionRequest{
-		StartsAt:  dsr.StartsAt,
+		StartsAt:  dsr.StartsAt.UTC(),
 		AliasHome: dsr.AliasHome,
 		AliasAway: dsr.AliasAway,
 		BaseURL:   dsr.BaseURL,

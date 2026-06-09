@@ -31,7 +31,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 	jsonResponse, err := json.Marshal(matchesResponse)
 	s.Require().NoError(err)
 
-	queryParams := map[string][]string{"date": {startsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	queryParams := map[string][]string{"date": {startsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
@@ -285,7 +285,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIReturnsError() {
 	startsAt, err := time.Parse(time.RFC3339, "2026-01-02T20:00:00Z")
 	s.Require().NoError(err)
 
-	queryParams := map[string][]string{"date": {startsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	queryParams := map[string][]string{"date": {startsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithStatusCode(http.StatusInternalServerError),
 		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
@@ -332,7 +332,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIReturnsInvalidResponseB
 	startsAt, err := time.Parse(time.RFC3339, "2026-01-03T20:00:00Z")
 	s.Require().NoError(err)
 
-	queryParams := map[string][]string{"date": {startsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	queryParams := map[string][]string{"date": {startsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
@@ -378,7 +378,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_MatchNotFoundInExternalAPI() {
 	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
 	s.Require().NoError(err)
 
-	queryParams := map[string][]string{"date": {startsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	queryParams := map[string][]string{"date": {startsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
@@ -435,7 +435,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIStatusDoesntAllowSchedu
 	jsonResponse, err := json.Marshal(matchesResponse)
 	s.Require().NoError(err)
 
-	queryParams := map[string][]string{"date": {startsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
+	queryParams := map[string][]string{"date": {startsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),

@@ -29,12 +29,11 @@ func TestFotmobClient_GetMatches(t *testing.T) {
 
 	cfg := config.ExternalAPI{
 		FotmobAPIBaseURL: gofakeit.URL(),
-		Timezone:         "Europe/London",
 	}
 
 	date := gofakeit.Date()
 
-	reqUrl := cfg.FotmobAPIBaseURL + fmt.Sprintf("/api/data/matches?date=%s&timezone=%s", date.Format(fotmob.DateFormat), url.QueryEscape(cfg.Timezone))
+	reqUrl := cfg.FotmobAPIBaseURL + fmt.Sprintf("/api/data/matches?date=%s&timezone=%s", date.Format(fotmob.DateFormat), url.QueryEscape(fotmob.Timezone))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqUrl, nil)
 	require.NoError(t, err)
 	req.Header.Set("User-Agent", "golang-app")
@@ -161,12 +160,11 @@ func TestFotmobClient_GetTeams(t *testing.T) {
 
 	cfg := config.ExternalAPI{
 		FotmobAPIBaseURL: gofakeit.URL(),
-		Timezone:         "Europe/London",
 	}
 
 	date := gofakeit.Date()
 
-	reqUrl := cfg.FotmobAPIBaseURL + fmt.Sprintf("/api/data/matches?date=%s&timezone=%s", date.Format(fotmob.DateFormat), url.QueryEscape(cfg.Timezone))
+	reqUrl := cfg.FotmobAPIBaseURL + fmt.Sprintf("/api/data/matches?date=%s&timezone=%s", date.Format(fotmob.DateFormat), url.QueryEscape(fotmob.Timezone))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqUrl, nil)
 	require.NoError(t, err)
 	req.Header.Set("User-Agent", "golang-app")

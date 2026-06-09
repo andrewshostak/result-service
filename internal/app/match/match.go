@@ -54,7 +54,7 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 	}
 
 	match, errMatch := s.matchRepository.One(ctx, models.Match{
-		StartsAt:   request.StartsAt.UTC(),
+		StartsAt:   request.StartsAt,
 		HomeTeamID: aliasHome.TeamID,
 		AwayTeamID: aliasAway.TeamID,
 	})
@@ -72,7 +72,7 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 		}
 	}
 
-	matches, err := s.externalAPIClient.GetMatches(ctx, request.StartsAt.UTC())
+	matches, err := s.externalAPIClient.GetMatches(ctx, request.StartsAt)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get matches from external api: %w", err)
 	}
