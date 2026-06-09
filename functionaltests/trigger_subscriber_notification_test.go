@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/andrewshostak/result-service/internal/adapters/http/client/notifier"
 	"github.com/andrewshostak/result-service/internal/adapters/http/server/handler"
 	"github.com/andrewshostak/result-service/internal/adapters/repository"
 	"github.com/andrewshostak/result-service/internal/app/models"
@@ -184,7 +185,7 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriberReturn
 	}
 	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
 
-	_ = testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
+	externalMatch := testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
 		m.MatchID = match.ID
 		m.Status = string(models.StatusMatchFinished)
 	}))
@@ -197,8 +198,14 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriberReturn
 		sub.Status = string(models.PendingSub)
 	}))
 
+	expectedRequestBody := notifier.NotificationBody{Home: uint(externalMatch.HomeScore), Away: uint(externalMatch.AwayScore)}
+	payload, err := json.Marshal(expectedRequestBody)
+	s.Require().NoError(err)
+
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, path,
 		testutils.WithMethod(http.MethodPatch),
+		testutils.WithRequestBody(string(payload)),
+		testutils.WithRequestHeaders(http.Header{"Authorization": {subscription.Key}, "Content-Type": {"application/json"}}),
 		testutils.WithStatusCode(http.StatusInternalServerError),
 	)
 
@@ -252,7 +259,7 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriberReturn
 	}
 	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
 
-	_ = testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
+	externalMatch := testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
 		m.MatchID = match.ID
 		m.Status = string(models.StatusMatchFinished)
 	}))
@@ -265,8 +272,14 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriberReturn
 		sub.Status = string(models.PendingSub)
 	}))
 
+	expectedRequestBody := notifier.NotificationBody{Home: uint(externalMatch.HomeScore), Away: uint(externalMatch.AwayScore)}
+	payload, err := json.Marshal(expectedRequestBody)
+	s.Require().NoError(err)
+
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, path,
 		testutils.WithMethod(http.MethodPatch),
+		testutils.WithRequestBody(string(payload)),
+		testutils.WithRequestHeaders(http.Header{"Authorization": {subscription.Key}, "Content-Type": {"application/json"}}),
 		testutils.WithStatusCode(http.StatusNoContent),
 	)
 

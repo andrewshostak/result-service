@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
 	taskspb "cloud.google.com/go/cloudtasks/apiv2/cloudtaskspb"
 	"github.com/andrewshostak/result-service/config"
 	"github.com/andrewshostak/result-service/internal/app/models"
@@ -25,12 +24,12 @@ const (
 )
 
 type TaskClient struct {
-	client           *cloudtasks.Client
+	client           CloudTasksClient
 	config           config.GoogleCloud
 	dispatchDeadline time.Duration
 }
 
-func NewClient(config config.GoogleCloud, dispatchDeadline time.Duration, client *cloudtasks.Client) *TaskClient {
+func NewClient(config config.GoogleCloud, dispatchDeadline time.Duration, client CloudTasksClient) *TaskClient {
 	return &TaskClient{config: config, dispatchDeadline: dispatchDeadline, client: client}
 }
 
@@ -86,7 +85,6 @@ func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, atte
 
 	createdTask, err := c.client.CreateTask(ctx, req)
 	if err != nil {
-		fmt.Printf("failed to create task: %s\n", err.Error())
 		if c.isTaskAlreadyExistsError(err) {
 			return nil, models.NewResourceAlreadyExistsError(fmt.Errorf("result-check task already exists: %w", err))
 		}

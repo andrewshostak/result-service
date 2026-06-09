@@ -11,12 +11,15 @@ import (
 )
 
 type mockSettings struct {
-	baseURL      string
-	method       string
-	path         string
-	queryParams  url.Values
-	statusCode   int
-	responseBody any
+	baseURL        string
+	method         string
+	path           string
+	queryParams    url.Values
+	statusCode     int
+	responseBody   any
+	requestBody    any
+	requestHeaders http.Header
+	times          int
 }
 
 type MockOption func(*mockSettings)
@@ -45,6 +48,24 @@ func WithQueryParams(queryParams url.Values) MockOption {
 	}
 }
 
+func WithTimes(times int) MockOption {
+	return func(e *mockSettings) {
+		e.times = times
+	}
+}
+
+func WithRequestBody(body any) MockOption {
+	return func(s *mockSettings) {
+		s.requestBody = body
+	}
+}
+
+func WithRequestHeaders(h http.Header) MockOption {
+	return func(e *mockSettings) {
+		e.requestHeaders = h
+	}
+}
+
 func MockHTTPRequest(t *testing.T, baseUrl, path string, opts ...MockOption) {
 	t.Helper()
 
@@ -53,6 +74,7 @@ func MockHTTPRequest(t *testing.T, baseUrl, path string, opts ...MockOption) {
 		statusCode: http.StatusOK,
 		path:       path,
 		baseURL:    baseUrl,
+		times:      1,
 	}
 
 	for _, opt := range opts {
@@ -64,18 +86,28 @@ func MockHTTPRequest(t *testing.T, baseUrl, path string, opts ...MockOption) {
 			Path:        settings.path,
 			Method:      settings.method,
 			QueryParams: map[string][]string{},
+			Headers:     map[string][]string{},
 		},
 		Response: mockResponse{
 			Status: settings.statusCode,
 		},
+		Context: mockContext{Times: settings.times},
 	}
 
 	for key, val := range settings.queryParams {
 		payload.Request.QueryParams[key] = val
 	}
 
+	for key, val := range settings.requestHeaders {
+		payload.Request.Headers[key] = val
+	}
+
 	if v, ok := settings.responseBody.(string); ok {
 		payload.Response.Body = v
+	}
+
+	if v, ok := settings.requestBody.(string); ok {
+		payload.Request.Body = v
 	}
 
 	var buf bytes.Buffer
@@ -90,16 +122,22 @@ func MockHTTPRequest(t *testing.T, baseUrl, path string, opts ...MockOption) {
 type smockerExpectation struct {
 	Request  mockRequest  `yaml:"request"`
 	Response mockResponse `yaml:"response"`
+	Context  mockContext  `yaml:"context"`
 }
 
 type mockRequest struct {
 	Method      string              `yaml:"method"`
 	Path        string              `yaml:"path"`
 	QueryParams map[string][]string `yaml:"query_params,omitempty"`
-	Body        interface{}         `yaml:"body,omitempty"`
+	Headers     map[string][]string `yaml:"headers,omitempty"`
+	Body        string              `yaml:"body,omitempty"`
 }
 
 type mockResponse struct {
 	Status int    `yaml:"status"`
 	Body   string `yaml:"body,omitempty"`
+}
+
+type mockContext struct {
+	Times int `yaml:"times,omitempty"`
 }

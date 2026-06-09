@@ -1,20 +1,20 @@
 ### List of improvements after first release
 - [X] configure timeouts
 - [X] implement hexagonal architecture in the service
-- [ ] unit tests 
-  - [ ] clients
+- [X] unit tests 
+  - [X] clients
     - [X] external api
     - [X] notifier
-    - [ ] task
-  - [ ] handlers
-    - [ ] alias
-    - [ ] match
-    - [ ] subscription
-      - [ ] create
-      - [ ] delete
-    - [ ] trigger
-      - [ ] check result
-      - [ ] notify subscriber
+    - [X] task
+  - [X] handlers
+    - [X] alias
+    - [X] match
+    - [X] subscription
+      - [X] create
+      - [X] delete
+    - [X] trigger
+      - [X] check result
+      - [X] notify subscriber
 - [ ] functional tests
   - [X] search aliases
   - [X] create match
@@ -24,11 +24,12 @@
   - [X] trigger subscriber notification
   - [ ] improvements
     - [ ] access parsed config values in tests: queue names, first attempt delay, interval
-    - [ ] verify mocked http request number of calls and request bodies
+    - [X] verify mocked http request number of calls and request bodies, request headers
     - [X] implement better mocking of http requests (functional options pattern)
     - [X] add cases for invalid request bodies
     - [ ] verify gcloud was reached
     - [ ] add cases for error response from gcloud tasks
+    - [ ] fix shaky tests
   - [ ] auth middleware
   - [ ] google middleware
 - [ ] migrate from gorm to sqlc

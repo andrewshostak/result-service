@@ -261,3 +261,8 @@ Run a particular functional test:
 ```
 go test -v -count=1 -tags functional ./functionaltests/... -testify.m TestCreateMatch_ExternalAPIReturnsError
 ```
+
+Run in detached mode:
+```
+TESTCONTAINERS_RYUK_DISABLED=true go test -v -count=1 -tags functional ./functionaltests/... -testify.m
+```

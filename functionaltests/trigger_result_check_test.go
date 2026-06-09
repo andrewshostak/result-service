@@ -177,8 +177,9 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsError() {
 	queryParams := map[string][]string{"date": {matchToCreate.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithStatusCode(http.StatusInternalServerError),
-		testutils.WithResponseBody(`internal server error`),
 		testutils.WithQueryParams(queryParams),
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
+		testutils.WithResponseBody(`internal server error`),
 	)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
@@ -238,8 +239,9 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsInvalidRe
 
 	queryParams := map[string][]string{"date": {matchToCreate.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
-		testutils.WithResponseBody(`!@#!@#`),
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
+		testutils.WithResponseBody(`!@#!@#`),
 	)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
@@ -299,8 +301,9 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFoundInExternalAPI(
 
 	queryParams := map[string][]string{"date": {matchToCreate.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
-		testutils.WithResponseBody(`{"leagues": [{"matches": []}]}`),
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
+		testutils.WithResponseBody(`{"leagues": [{"matches": []}]}`),
 	)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
@@ -371,8 +374,9 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 
 	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
-		testutils.WithResponseBody(string(jsonResponse)),
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
+		testutils.WithResponseBody(string(jsonResponse)),
 	)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
@@ -452,8 +456,9 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 
 	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
-		testutils.WithResponseBody(string(jsonResponse)),
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
+		testutils.WithResponseBody(string(jsonResponse)),
 	)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
@@ -545,8 +550,9 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinished() {
 
 	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
-		testutils.WithResponseBody(string(jsonResponse)),
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
+		testutils.WithResponseBody(string(jsonResponse)),
 	)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
@@ -636,8 +642,9 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinishedAndCheckRes
 
 	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"Europe/London"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
-		testutils.WithResponseBody(string(jsonResponse)),
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
+		testutils.WithResponseBody(string(jsonResponse)),
 	)
 
 	requestPayload := handler.TriggerResultCheckRequest{MatchID: match.ID}
