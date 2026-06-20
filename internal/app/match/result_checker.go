@@ -48,8 +48,8 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 		return fmt.Errorf("failed to get match by id: %w", err)
 	}
 
-	if !s.isScheduled(match) {
-		s.logger.Error().Uint("match_id", matchID).Msg(fmt.Sprintf("expected result status to be %s, actual result status is %s", models.Scheduled, match.ResultStatus))
+	if !s.canCheckResult(match) {
+		s.logger.Error().Uint("match_id", matchID).Msg(fmt.Sprintf("result check skipped: unexpected result status %s", match.ResultStatus))
 		return nil
 	}
 
@@ -204,6 +204,6 @@ func (s *ResultCheckerService) updateMatchResultStatus(ctx context.Context, matc
 	return nil
 }
 
-func (s *ResultCheckerService) isScheduled(match *models.Match) bool {
-	return match != nil && match.ResultStatus == models.Scheduled
+func (s *ResultCheckerService) canCheckResult(match *models.Match) bool {
+	return match != nil && (match.ResultStatus == models.Scheduled || match.ResultStatus == models.APIError)
 }

@@ -124,7 +124,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m := mocks.NewMatchRepository(t)
 				match := testutils.FakeMatch(func(r *models.Match) {
 					r.ID = matchID
-					r.ResultStatus = models.Scheduled
+					r.ResultStatus = models.APIError
 					r.ExternalMatch = nil
 				})
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&match, nil).Once()
