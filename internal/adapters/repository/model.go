@@ -52,7 +52,7 @@ type Subscription struct {
 	ID              uint       `gorm:"column:id;primaryKey" db:"id"`
 	Url             string     `gorm:"column:url;unique" db:"url"`
 	MatchID         uint       `gorm:"column:match_id" db:"match_id"`
-	Key             string     `gorm:"column:key;unique" db:"key"`
+	Key             string     `gorm:"column:key" db:"key"`
 	CreatedAt       time.Time  `gorm:"column:created_at" db:"created_at"`
 	Status          string     `gorm:"column:status;default:pending" db:"status"`
 	SubscriberError *string    `gorm:"column:subscriber_error" db:"subscriber_error"`
