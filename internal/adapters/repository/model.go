@@ -7,15 +7,19 @@ import (
 )
 
 type Alias struct {
-	ID     uint   `gorm:"column:id;primaryKey"`
-	TeamID uint   `gorm:"column:team_id"`
-	Alias  string `gorm:"column:alias;unique"`
+	ID        uint      `gorm:"column:id;primaryKey"`
+	TeamID    uint      `gorm:"column:team_id"`
+	Alias     string    `gorm:"column:alias;unique"`
+	CreatedAt time.Time `gorm:"column:created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at"`
 
 	ExternalTeam *ExternalTeam `gorm:"foreignKey:TeamID;references:TeamID"`
 }
 
 type Team struct {
-	ID uint `gorm:"column:id;primaryKey"`
+	ID        uint      `gorm:"column:id;primaryKey"`
+	CreatedAt time.Time `gorm:"column:created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at"`
 
 	Aliases []Alias
 }
@@ -31,6 +35,8 @@ type Match struct {
 	AwayTeamID   uint      `gorm:"column:away_team_id" db:"away_team_id"`
 	StartsAt     time.Time `gorm:"column:starts_at" db:"starts_at"`
 	ResultStatus string    `gorm:"column:result_status;default:not_scheduled" db:"result_status"`
+	CreatedAt    time.Time `gorm:"column:created_at" db:"created_at"`
+	UpdatedAt    time.Time `gorm:"column:updated_at" db:"updated_at"`
 
 	ExternalMatch   *ExternalMatch
 	CheckResultTask *CheckResultTask
@@ -54,6 +60,7 @@ type Subscription struct {
 	MatchID         uint       `gorm:"column:match_id" db:"match_id"`
 	Key             string     `gorm:"column:key" db:"key"`
 	CreatedAt       time.Time  `gorm:"column:created_at" db:"created_at"`
+	UpdatedAt       time.Time  `gorm:"column:updated_at" db:"updated_at"`
 	Status          string     `gorm:"column:status;default:pending" db:"status"`
 	SubscriberError *string    `gorm:"column:subscriber_error" db:"subscriber_error"`
 	NotifiedAt      *time.Time `gorm:"column:notified_at" db:"notified_at"`
@@ -68,6 +75,7 @@ type CheckResultTask struct {
 	AttemptNumber uint      `gorm:"column:attempt_number;default:1" db:"attempt_number"`
 	ExecuteAt     time.Time `gorm:"column:execute_at" db:"execute_at"`
 	CreatedAt     time.Time `gorm:"column:created_at" db:"created_at"`
+	UpdatedAt     time.Time `gorm:"column:updated_at" db:"updated_at"`
 
 	Match *Match `gorm:"foreignKey:MatchID"`
 }
