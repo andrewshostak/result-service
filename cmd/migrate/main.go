@@ -20,19 +20,23 @@ func main() {
 
 	cmdMigrateUp := &cobra.Command{
 		Use:   "up",
-		Short: "migrate all the way up",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return up()
+		Short: "migrate all the way up, or N steps if --steps is provided",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			steps, _ := cmd.Flags().GetInt("steps")
+			return up(steps)
 		},
 	}
+	cmdMigrateUp.Flags().Int("steps", 0, "number of migrations to apply (0 means all the way up)")
 
 	cmdMigrateDown := &cobra.Command{
 		Use:   "down",
-		Short: "migrate all the way down",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return down()
+		Short: "migrate all the way down, or N steps if --steps is provided",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			steps, _ := cmd.Flags().GetInt("steps")
+			return down(steps)
 		},
 	}
+	cmdMigrateDown.Flags().Int("steps", 0, "number of migrations to roll back (0 means all the way down)")
 
 	rootCmd.AddCommand(cmdMigrateUp)
 	rootCmd.AddCommand(cmdMigrateDown)
@@ -42,10 +46,16 @@ func main() {
 	}
 }
 
-func up() error {
+func up(steps int) error {
 	m, l := run()
 
-	err := m.Up()
+	var err error
+	if steps > 0 {
+		err = m.Steps(steps)
+	} else {
+		err = m.Up()
+	}
+
 	if errors.Is(err, migrate.ErrNoChange) {
 		l.Info().Msg("database is up to date")
 		return nil
@@ -60,10 +70,16 @@ func up() error {
 	return nil
 }
 
-func down() error {
+func down(steps int) error {
 	m, l := run()
 
-	err := m.Down()
+	var err error
+	if steps > 0 {
+		err = m.Steps(-steps)
+	} else {
+		err = m.Down()
+	}
+
 	if errors.Is(err, migrate.ErrNoChange) {
 		l.Info().Msg("nothing to migrate down")
 		return nil

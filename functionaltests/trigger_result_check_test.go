@@ -218,6 +218,8 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsError() {
 			AwayTeamID:   match.AwayTeamID,
 			StartsAt:     match.StartsAt,
 			ResultStatus: string(models.APIError),
+			CreatedAt:    match.CreatedAt,
+			UpdatedAt:    matches[0].UpdatedAt,
 		},
 	}, matches)
 }
@@ -280,6 +282,8 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsInvalidRe
 			AwayTeamID:   match.AwayTeamID,
 			StartsAt:     match.StartsAt,
 			ResultStatus: string(models.APIError),
+			CreatedAt:    match.CreatedAt,
+			UpdatedAt:    matches[0].UpdatedAt,
 		},
 	}, matches)
 }
@@ -333,6 +337,8 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFoundInExternalAPI(
 			AwayTeamID:   match.AwayTeamID,
 			StartsAt:     match.StartsAt,
 			ResultStatus: string(models.Cancelled),
+			CreatedAt:    match.CreatedAt,
+			UpdatedAt:    matches[0].UpdatedAt,
 		},
 	}, matches)
 
@@ -406,6 +412,8 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 			AwayTeamID:   match.AwayTeamID,
 			StartsAt:     match.StartsAt,
 			ResultStatus: string(models.Cancelled),
+			CreatedAt:    match.CreatedAt,
+			UpdatedAt:    matches[0].UpdatedAt,
 		},
 	}, matches)
 
@@ -488,6 +496,8 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 			AwayTeamID:   match.AwayTeamID,
 			StartsAt:     match.StartsAt,
 			ResultStatus: string(models.Received),
+			CreatedAt:    match.CreatedAt,
+			UpdatedAt:    matches[0].UpdatedAt,
 		},
 	}, matches)
 
@@ -511,6 +521,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 			AttemptNumber: checkResultTask.AttemptNumber,
 			ExecuteAt:     checkResultTask.ExecuteAt,
 			CreatedAt:     checkResultTask.CreatedAt,
+			UpdatedAt:     checkResultTasks[0].UpdatedAt,
 		},
 	}, checkResultTasks)
 }
@@ -582,6 +593,8 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinished() {
 			AwayTeamID:   match.AwayTeamID,
 			StartsAt:     match.StartsAt,
 			ResultStatus: string(models.Scheduled),
+			CreatedAt:    match.CreatedAt,
+			UpdatedAt:    match.UpdatedAt,
 		},
 	}, matches)
 
@@ -605,6 +618,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinished() {
 			AttemptNumber: checkResultTask.AttemptNumber + 1,
 			ExecuteAt:     match.StartsAt.Add(115 * time.Minute).Add(5 * time.Minute),
 			CreatedAt:     checkResultTask.CreatedAt,
+			UpdatedAt:     checkResultTasks[0].UpdatedAt,
 		},
 	}, checkResultTasks)
 }
@@ -683,6 +697,8 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinishedAndCheckRes
 			AwayTeamID:   match.AwayTeamID,
 			StartsAt:     match.StartsAt,
 			ResultStatus: string(models.Scheduled),
+			CreatedAt:    match.CreatedAt,
+			UpdatedAt:    match.UpdatedAt,
 		},
 	}, matches)
 

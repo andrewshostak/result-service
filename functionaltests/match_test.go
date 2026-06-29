@@ -79,6 +79,8 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 			AwayTeamID:   teamSeeds[1].TeamID,
 			StartsAt:     startsAt,
 			ResultStatus: string(models.Scheduled),
+			CreatedAt:    matches[0].CreatedAt,
+			UpdatedAt:    matches[0].UpdatedAt,
 		},
 	}, matches)
 
@@ -102,6 +104,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 			AttemptNumber: 1,
 			ExecuteAt:     startsAt.Add(115 * time.Minute),
 			CreatedAt:     checkResultTasks[0].CreatedAt,
+			UpdatedAt:     checkResultTasks[0].UpdatedAt,
 		},
 	}, checkResultTasks)
 }
