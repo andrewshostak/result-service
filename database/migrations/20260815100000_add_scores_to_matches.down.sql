@@ -1,0 +1,7 @@
+BEGIN;
+
+ALTER TABLE matches
+    DROP COLUMN IF EXISTS home_score,
+    DROP COLUMN IF EXISTS away_score;
+
+COMMIT;

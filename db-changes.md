@@ -67,6 +67,20 @@ Additionally, `starts_at` is missing — provider-reported match time belongs he
 
 ---
 
+## 5. Add `home_score` and `away_score` to `matches`
+
+Once a result is received, the final score needs to be readable from `matches` directly. Without this, the `SubscriberNotifierService` would have to query `provider_matches` to find the score — making a provider-agnostic component aware of providers.
+
+**Fields added to `matches`:**
+- `home_score` — nullable `smallint`, `NULL` by default, set when `result_status` transitions to `received`
+- `away_score` — nullable `smallint`, `NULL` by default, set when `result_status` transitions to `received`
+
+**Backfill:** existing rows where `result_status = 'received'` must have their scores copied from `external_matches` in the same migration that adds the columns. All other rows correctly remain `NULL`.
+
+**Why:** The `matches` table becomes the single source of truth for the canonical match result. The notifier reads `home_score`/`away_score` from `matches` without knowing or caring which provider delivered them. `provider_matches` retains the per-provider score for auditing and cross-provider comparison.
+
+---
+
 ## 4. Add `created_at` and `updated_at` to all tables
 
 Every table should carry timestamps so there is a consistent audit trail of when rows were created and last modified.
@@ -121,6 +135,8 @@ erDiagram
         Int away_team_id FK
         Date starts_at
         String result_status
+        Int home_score
+        Int away_score
         Date created_at
         Date updated_at
     }

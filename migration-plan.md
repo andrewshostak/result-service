@@ -24,7 +24,7 @@
 
 ---
 
-### PR 2 — Add timestamps to all existing tables
+### PR 2 — Add timestamps to all existing tables ✓ merged
 
 **Migration:**
 - Add `created_at` and `updated_at` (with `DEFAULT NOW()`) to: `teams`, `aliases`, `matches`
@@ -38,9 +38,23 @@
 
 ---
 
+### PR 3 — Add `home_score` and `away_score` to `matches`
+
+**Migration:**
+- Add `home_score` and `away_score` (nullable `smallint`, no default) to `matches`
+- Backfill: for rows where `result_status = 'received'`, copy `home_score`/`away_score` from `external_matches` — these matches already have a final result and must not remain `NULL`
+- All other rows stay `NULL` — correct, no final result yet
+
+**Code:**
+- Add nullable `HomeScore` / `AwayScore` (`*int`) fields to the `Match` gorm model
+
+**Why safe:** nullable columns with no default are fully backward compatible — existing queries, reads, and writes are unaffected. The backfill runs within the migration transaction on a filtered subset of rows.
+
+---
+
 ## Phase 2 — New tables (parallel structures, backfill + dual-write together)
 
-### PR 3 — Add `provider_teams` table
+### PR 4 — Add `provider_teams` table
 
 **Migration:**
 - Create `provider_teams` table (`id`, `team_id`, `provider_id`, `provider_team_id` as string, `created_at`, `updated_at`)
@@ -54,7 +68,7 @@
 
 ---
 
-### PR 4 — Add `provider_matches` table
+### PR 5 — Add `provider_matches` table
 
 **Migration:**
 - Create `provider_matches` table (`id`, `match_id`, `provider_id`, `provider_match_id` as string, `starts_at`, `home_score`, `away_score`, `status`, `provider_status`, `created_at`, `updated_at`)
@@ -63,6 +77,7 @@
 **Code:**
 - Add `ProviderMatchRepository` that writes to `provider_matches`
 - In `ResultCheckerService`, after saving to `external_matches`, also save to `provider_matches` (with `provider_id` from the active provider's `Name()`)
+
 - Reads still come from `external_matches`
 
 **Why safe:** backfill covers all historical data. Dual-write is deployed immediately after, so new match result data lands in both tables from this point on. Old reads are unchanged.
@@ -71,7 +86,7 @@
 
 ## Phase 3 — Code migration
 
-### PR 5 — `ResultProvider` interface + slice injection
+### PR 6 — `ResultProvider` interface + slice injection
 
 **Migration:** none.
 
@@ -86,7 +101,7 @@
 
 ---
 
-### PR 6 — Switch alias lookup to use `provider_teams`
+### PR 7 — Switch alias lookup to use `provider_teams`
 
 **Migration:** none (table already exists and is kept in sync from PR 3).
 
@@ -102,22 +117,23 @@
 
 ## Phase 4 — Switch reads, stop writing to old tables
 
-### PR 7 — Switch all reads to `provider_matches`, remove `external_matches` writes
+### PR 8 — Switch all reads to `provider_matches`, remove `external_matches` writes
 
 **Migration:** none.
 
 **Code:**
 - Update `MatchRepository.One` to join `provider_matches` instead of `external_matches`
-- Update `SubscriberNotifierService` to read scores from `provider_matches` (filtered by provider)
+- Update `ResultCheckerService` to write `home_score`/`away_score` to `matches` when transitioning to `received` — scores come from the provider match that just returned `finished` status
+- Update `SubscriberNotifierService` to read scores from `matches.home_score`/`matches.away_score` directly — no provider awareness needed
 - Remove the `ExternalMatchRepository` write from `ResultCheckerService` (keep only the `ProviderMatchRepository` write introduced in PR 4)
 
-**Why safe:** dual-write has been running since PR 4, so `provider_matches` is fully up to date. Reads switch to the new table only after the data is guaranteed to be there.
+**Why safe:** dual-write has been running since PR 5, so `provider_matches` is fully up to date. Reads switch to the new table only after the data is guaranteed to be there.
 
 ---
 
 ## Phase 5 — Cleanup
 
-### PR 8 — Drop `external_teams` and `external_matches`
+### PR 9 — Drop `external_teams` and `external_matches`
 
 **Migration:**
 - Drop `external_matches`
@@ -127,7 +143,7 @@
 - Remove `ExternalMatchRepository` and `ExternalTeam` gorm model entirely
 - Remove any remaining references
 
-**Why safe:** no code references either table after PRs 6 and 7. Run migration after code is deployed and verified stable.
+**Why safe:** no code references either table after PRs 7 and 8. Run migration after code is deployed and verified stable.
 
 ---
 
@@ -135,13 +151,14 @@
 
 | PR | Type | Depends on |
 |---|---|---|
-| PR 1 — `providers` table | DB only | — |
-| PR 2 — timestamps | DB + gorm models | PR 1 |
-| PR 3 — `provider_teams` + backfill + dual-write | DB + code | PR 1 |
-| PR 4 — `provider_matches` + backfill + dual-write | DB + code | PR 1, PR 5* |
-| PR 5 — `ResultProvider` interface | Code only | — |
-| PR 6 — switch alias reads to `provider_teams` | Code only | PR 3 |
-| PR 7 — switch result reads to `provider_matches` | Code only | PR 4 |
-| PR 8 — drop old tables | DB + code cleanup | PR 6, PR 7 |
+| PR 1 — `providers` table ✓ | DB only | — |
+| PR 2 — timestamps ✓ | DB + gorm models | PR 1 |
+| PR 3 — `home_score` / `away_score` on `matches` | DB + gorm model | — |
+| PR 4 — `provider_teams` + backfill + dual-write | DB + code | PR 1 |
+| PR 5 — `provider_matches` + backfill + dual-write | DB + code | PR 1, PR 6* |
+| PR 6 — `ResultProvider` interface | Code only | — |
+| PR 7 — switch alias reads to `provider_teams` | Code only | PR 4 |
+| PR 8 — switch result reads to `provider_matches` | Code only | PR 5 |
+| PR 9 — drop old tables | DB + code cleanup | PR 7, PR 8 |
 
-*PR 4 needs `provider.Name()` to write the provider identifier when dual-writing, so PR 5 should land first.
+*PR 5 needs `provider.Name()` to write the provider identifier when dual-writing, so PR 6 should land first.
