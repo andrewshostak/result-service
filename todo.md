@@ -37,6 +37,7 @@
   - [ ] move starts_at column from matches table to external_matches table
   - [ ] do not use external value as primary key
 - [ ] when result status fails then subscription status should be set to cancelled as well (not remain 'pending')
+- [ ] enforce `MAX_RETRIES` in `ResultCheckerService.handleInPlayMatch` — the config field exists but is never checked, so result check tasks reschedule indefinitely if a match stays `in_progress`
 - [ ] configure CI in github
   - [ ] tests
   - [ ] linter

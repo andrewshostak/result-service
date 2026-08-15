@@ -35,6 +35,8 @@ type Match struct {
 	AwayTeamID   uint      `gorm:"column:away_team_id" db:"away_team_id"`
 	StartsAt     time.Time `gorm:"column:starts_at" db:"starts_at"`
 	ResultStatus string    `gorm:"column:result_status;default:not_scheduled" db:"result_status"`
+	HomeScore    *int      `gorm:"column:home_score" db:"home_score"`
+	AwayScore    *int      `gorm:"column:away_score" db:"away_score"`
 	CreatedAt    time.Time `gorm:"column:created_at" db:"created_at"`
 	UpdatedAt    time.Time `gorm:"column:updated_at" db:"updated_at"`
 

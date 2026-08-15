@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"io/fs"
 
 	"github.com/andrewshostak/result-service/config"
 	loggerinternal "github.com/andrewshostak/result-service/internal/infra/logger"
@@ -56,7 +57,7 @@ func up(steps int) error {
 		err = m.Up()
 	}
 
-	if errors.Is(err, migrate.ErrNoChange) {
+	if errors.Is(err, migrate.ErrNoChange) || errors.Is(err, fs.ErrNotExist) {
 		l.Info().Msg("database is up to date")
 		return nil
 	}
@@ -80,7 +81,7 @@ func down(steps int) error {
 		err = m.Down()
 	}
 
-	if errors.Is(err, migrate.ErrNoChange) {
+	if errors.Is(err, migrate.ErrNoChange) || errors.Is(err, fs.ErrNotExist) {
 		l.Info().Msg("nothing to migrate down")
 		return nil
 	}
