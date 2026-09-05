@@ -53,6 +53,15 @@ func (r *AliasRepository) SaveInTrx(ctx context.Context, alias string, externalT
 	})
 }
 
+func (r *AliasRepository) SaveForTeam(ctx context.Context, alias string, teamID uint) error {
+	a := Alias{TeamID: teamID, Alias: alias}
+	if err := r.db.WithContext(ctx).Create(&a).Error; err != nil {
+		return fmt.Errorf("failed to create alias: %w", err)
+	}
+
+	return nil
+}
+
 func (r *AliasRepository) Search(ctx context.Context, alias string) ([]models.Alias, error) {
 	var aliases []Alias
 	result := r.db.WithContext(ctx).Where("alias ILIKE ?", "%"+alias+"%").Limit(10).Find(&aliases)

@@ -58,10 +58,11 @@ func run(cmd *cobra.Command, _ []string) {
 	db := postgres.EstablishDatabaseConnection(cfg.PG)
 
 	aliasRepository := repository.NewAliasRepository(db)
+	externalTeamRepository := repository.NewExternalTeamRepository(db)
 
 	fotmobClient := fotmob.NewFotmobClient(&httpClient, logger, cfg.ExternalAPI)
 
-	backfillAliasesService := alias.NewBackfillAliasesService(aliasRepository, fotmobClient, logger)
+	backfillAliasesService := alias.NewBackfillAliasesService(aliasRepository, externalTeamRepository, fotmobClient, logger)
 
 	ctx := context.Background()
 

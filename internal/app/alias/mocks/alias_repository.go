@@ -44,6 +44,24 @@ func (_m *AliasRepository) Find(ctx context.Context, _a1 string) (*models.Alias,
 	return r0, r1
 }
 
+// SaveForTeam provides a mock function with given fields: ctx, _a1, teamID
+func (_m *AliasRepository) SaveForTeam(ctx context.Context, _a1 string, teamID uint) error {
+	ret := _m.Called(ctx, _a1, teamID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveForTeam")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, uint) error); ok {
+		r0 = rf(ctx, _a1, teamID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // SaveInTrx provides a mock function with given fields: ctx, _a1, externalTeamID
 func (_m *AliasRepository) SaveInTrx(ctx context.Context, _a1 string, externalTeamID uint) error {
 	ret := _m.Called(ctx, _a1, externalTeamID)
