@@ -2,6 +2,7 @@ package alias
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"sync"
@@ -11,20 +12,23 @@ import (
 )
 
 type BackfillAliasesService struct {
-	aliasRepository   AliasRepository
-	externalAPIClient ExternalAPIClient
-	logger            Logger
+	aliasRepository        AliasRepository
+	externalTeamRepository ExternalTeamRepository
+	externalAPIClient      ExternalAPIClient
+	logger                 Logger
 }
 
 func NewBackfillAliasesService(
 	aliasRepository AliasRepository,
+	externalTeamRepository ExternalTeamRepository,
 	externalAPIClient ExternalAPIClient,
 	logger Logger,
 ) *BackfillAliasesService {
 	return &BackfillAliasesService{
-		aliasRepository:   aliasRepository,
-		externalAPIClient: externalAPIClient,
-		logger:            logger,
+		aliasRepository:        aliasRepository,
+		externalTeamRepository: externalTeamRepository,
+		externalAPIClient:      externalAPIClient,
+		logger:                 logger,
 	}
 }
 
@@ -91,50 +95,49 @@ func (s *BackfillAliasesService) getTeams(ctx context.Context, dates []time.Time
 func (s *BackfillAliasesService) getIncludedLeagues() []models.League {
 	return []models.League{
 		// european cups
-		{Name: "Champions League", CountryCode: "INT"},  // 2025-12-09,2025-12-10
-		{Name: "Europa League", CountryCode: "INT"},     // 2025-12-11
-		{Name: "Conference League", CountryCode: "INT"}, // 2025-12-11
+		{Name: "Champions League", CountryCode: "INT"},
+		{Name: "Europa League", CountryCode: "INT"},
+		{Name: "Conference League", CountryCode: "INT"},
 		// national teams
-		{Name: "World Cup Qualification UEFA", CountryCode: "INT"},     // 2025-11-18,2025-11-17,2025-11-16,2025-11-15,2025-11-14,2025-11-13
-		{Name: "World Cup Qualification CONMEBOL", CountryCode: "INT"}, // 2025-09-09,
-		{Name: "Copa America", CountryCode: "INT"},                     // 2024-06-21,2024-06-22,2024-06-23,2024-06-24,2024-06-25,2024-06-26
-		{Name: "World Cup", CountryCode: "INT"},                        // 2022-11-20,2022-11-21,2022-11-22,2022-11-23,2022-11-24
-		{Name: "Africa Cup of Nations", CountryCode: "INT"},            // 2025-12-21,2025-12-22,2025-12-23,2025-12-24
+		{Name: "World Cup Qualification UEFA", CountryCode: "INT"},
+		{Name: "World Cup Qualification CONMEBOL", CountryCode: "INT"},
+		{Name: "Copa America", CountryCode: "INT"},
+		{Name: "World Cup", CountryCode: "INT"},
+		{Name: "Africa Cup of Nations", CountryCode: "INT"},
 		// top leagues + ukrainian league
-		{Name: "Premier League", CountryCode: "UKR"},     // 2025-12-12,2025-12-13,2025-12-14
-		{Name: "Premier League", CountryCode: "ENG"},     // 2026-01-06,2026-01-07,2026-01-08
-		{Name: "LaLiga", CountryCode: "ESP"},             // 2025-12-19,2025-12-20,2025-12-21,2025-12-22
-		{Name: "Serie A", CountryCode: "ITA"},            // 2026-01-10,2026-01-11,2026-01-12
-		{Name: "Bundesliga", CountryCode: "GER"},         // 2025-12-19,2025-12-20,2025-12-21
-		{Name: "Ligue 1", CountryCode: "FRA"},            // 2026-01-02,2026-01-03,2026-01-04
-		{Name: "Eredivisie", CountryCode: "NED"},         // 2026-01-09,2026-01-10,2026-01-11
-		{Name: "Belgian Pro League", CountryCode: "BEL"}, // 2025-12-19,2025-12-20,2025-12-21
-		{Name: "Liga Portugal", CountryCode: "POR"},      // 2026-01-16,2026-01-17,2026-01-18,2026-01-19
+		{Name: "Premier League", CountryCode: "UKR"},
+		{Name: "Premier League", CountryCode: "ENG"},
+		{Name: "LaLiga", CountryCode: "ESP"},
+		{Name: "Serie A", CountryCode: "ITA"},
+		{Name: "Bundesliga", CountryCode: "GER"},
+		{Name: "Ligue 1", CountryCode: "FRA"},
+		{Name: "Eredivisie", CountryCode: "NED"},
+		{Name: "Belgian Pro League", CountryCode: "BEL"},
+		{Name: "Liga Portugal", CountryCode: "POR"},
 		// only intersected with euro cups: Champions/Europa/Conference League
-		{Name: "Super Lig", CountryCode: "TUR"},    // 2025-12-19,2025-12-20,2025-12-21,2025-12-22
-		{Name: "Premiership", CountryCode: "SCO"},  // 2026-01-10,2026-01-11
-		{Name: "1. Liga", CountryCode: "CZE"},      // 2025-12-13,2025-12-14
-		{Name: "Super League", CountryCode: "SUI"}, // 2025-12-13,2025-12-14
-		{Name: "Bundesliga", CountryCode: "AUT"},   // 2025-12-13,2025-12-14
-		{Name: "Superligaen", CountryCode: "DEN"},  // 2025-12-05,2025-12-07,2025-12-08
-		{Name: "Eliteserien", CountryCode: "NOR"},  // 2025-11-30
-		{Name: "Ligat Ha'al", CountryCode: "ISR"},  // 2026-01-09,2026-01-10,2026-01-11
-		{Name: "Super League", CountryCode: "GRE"}, // 2026-01-10,2026-01-11
-		{Name: "Super Liga", CountryCode: "SRB"},   // 2025-12-20,2025-12-21,2025-12-22
-		{Name: "Ekstraklasa", CountryCode: "POL"},  // 2025-12-05,2025-12-06,2025-12-07,2025-12-08
-		{Name: "HNL", CountryCode: "CRO"},          // 2025-12-19,2025-12-20,2025-12-21
-		{Name: "Superliga", CountryCode: "ROU"},    // 2025-12-19,2025-12-20,2025-12-21,2025-12-22
-		{Name: "Allsvenskan", CountryCode: "SWE"},  // 2025-11-09
+		{Name: "Super Lig", CountryCode: "TUR"},
+		{Name: "Premiership", CountryCode: "SCO"},
+		{Name: "1. Liga", CountryCode: "CZE"},
+		{Name: "Super League", CountryCode: "SUI"},
+		{Name: "Bundesliga", CountryCode: "AUT"},
+		{Name: "Superligaen", CountryCode: "DEN"},
+		{Name: "Eliteserien", CountryCode: "NOR"},
+		{Name: "Ligat Ha'al", CountryCode: "ISR"},
+		{Name: "Super League", CountryCode: "GRE"},
+		{Name: "Super Liga", CountryCode: "SRB"},
+		{Name: "Ekstraklasa", CountryCode: "POL"},
+		{Name: "HNL", CountryCode: "CRO"},
+		{Name: "Superliga", CountryCode: "ROU"},
+		{Name: "Allsvenskan", CountryCode: "SWE"},
 		// second leagues
-		{Name: "2. Bundesliga", CountryCode: "GER"}, // 2026-01-16,2026-01-17,2026-01-18
-		{Name: "Championship", CountryCode: "ENG"},  // 2026-01-16,2026-01-17
-		{Name: "LaLiga2", CountryCode: "ESP"},       // 2026-01-16,2026-01-17,2026-01-18,2026-01-19
-		{Name: "Ligue 2", CountryCode: "FRA"},       // 2026-01-16,2026-01-17,2026-01-18,2026-01-19
-		{Name: "Serie B", CountryCode: "ITA"},       // 2026-01-16,2026-01-17,2026-01-18
+		{Name: "2. Bundesliga", CountryCode: "GER"},
+		{Name: "Championship", CountryCode: "ENG"},
+		{Name: "LaLiga2", CountryCode: "ESP"},
+		{Name: "Ligue 2", CountryCode: "FRA"},
+		{Name: "Serie B", CountryCode: "ITA"},
 		// other
-		{Name: "Cup", CountryCode: "UKR"},                          // 2026-03-03
-		{Name: "Premier League Qualification", CountryCode: "UKR"}, // 2025-05-29,2025-06-01
-
+		{Name: "Cup", CountryCode: "UKR"},
+		{Name: "Premier League Qualification", CountryCode: "UKR"},
 	}
 }
 
@@ -148,6 +151,29 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.E
 				Uint("external_id", teams[i].ID).
 				Msg("alias already exists")
 			numberOfExisted++
+			continue
+		}
+
+		externalTeam, errExtTeam := s.externalTeamRepository.FindExternalTeam(ctx, uint(teams[i].ID))
+		if errExtTeam != nil && !errors.As(errExtTeam, &models.ResourceNotFoundError{}) {
+			s.logger.Error().
+				Str("alias", teams[i].Name).
+				Uint("external_id", teams[i].ID).
+				Err(errExtTeam).
+				Msg("failed to find external team")
+			continue
+		}
+
+		if externalTeam != nil {
+			if errSaveForTeam := s.aliasRepository.SaveForTeam(ctx, teams[i].Name, externalTeam.TeamID); errSaveForTeam != nil {
+				s.logger.Error().
+					Str("alias", teams[i].Name).
+					Uint("external_id", teams[i].ID).
+					Err(errSaveForTeam).
+					Msg("failed to save alias for existing team")
+				continue
+			}
+			numberOfSaved++
 			continue
 		}
 
