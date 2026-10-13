@@ -75,9 +75,9 @@ func (_m *MatchRepository) Save(ctx context.Context, id *uint, _a2 models.Match)
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: ctx, id, resultStatus
-func (_m *MatchRepository) Update(ctx context.Context, id uint, resultStatus models.ResultStatus) (*models.Match, error) {
-	ret := _m.Called(ctx, id, resultStatus)
+// Update provides a mock function with given fields: ctx, id, _a2
+func (_m *MatchRepository) Update(ctx context.Context, id uint, _a2 models.Match) (*models.Match, error) {
+	ret := _m.Called(ctx, id, _a2)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
@@ -85,19 +85,19 @@ func (_m *MatchRepository) Update(ctx context.Context, id uint, resultStatus mod
 
 	var r0 *models.Match
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint, models.ResultStatus) (*models.Match, error)); ok {
-		return rf(ctx, id, resultStatus)
+	if rf, ok := ret.Get(0).(func(context.Context, uint, models.Match) (*models.Match, error)); ok {
+		return rf(ctx, id, _a2)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint, models.ResultStatus) *models.Match); ok {
-		r0 = rf(ctx, id, resultStatus)
+	if rf, ok := ret.Get(0).(func(context.Context, uint, models.Match) *models.Match); ok {
+		r0 = rf(ctx, id, _a2)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*models.Match)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uint, models.ResultStatus) error); ok {
-		r1 = rf(ctx, id, resultStatus)
+	if rf, ok := ret.Get(1).(func(context.Context, uint, models.Match) error); ok {
+		r1 = rf(ctx, id, _a2)
 	} else {
 		r1 = ret.Error(1)
 	}

@@ -90,13 +90,20 @@ func (r *MatchRepository) Save(ctx context.Context, id *uint, match models.Match
 	return &domain, nil
 }
 
-func (r *MatchRepository) Update(ctx context.Context, id uint, resultStatus models.ResultStatus) (*models.Match, error) {
-	match := Match{ID: id}
-	result := r.db.WithContext(ctx).Model(&match).Updates(Match{ResultStatus: string(resultStatus)})
+func (r *MatchRepository) Update(ctx context.Context, id uint, match models.Match) (*models.Match, error) {
+	toUpdate := map[string]interface{}{
+		"result_status": string(match.ResultStatus),
+	}
+	if match.HomeScore != nil && match.AwayScore != nil {
+		toUpdate["home_score"] = *match.HomeScore
+		toUpdate["away_score"] = *match.AwayScore
+	}
+	m := Match{ID: id}
+	result := r.db.WithContext(ctx).Model(&m).Updates(toUpdate)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to update match: %w", result.Error)
 	}
 
-	domain := toDomainMatch(match)
+	domain := toDomainMatch(m)
 	return &domain, nil
 }

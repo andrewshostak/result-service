@@ -61,7 +61,7 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	matches, err := s.externalAPIClient.GetMatches(ctx, match.StartsAt)
 	if err != nil {
 		s.logger.Error().Uint("match_id", matchID).Err(err)
-		if errUpdate := s.updateMatchResultStatus(ctx, match.ID, models.APIError); errUpdate != nil {
+		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.APIError}); errUpdate != nil {
 			s.logger.Error().Uint("match_id", matchID).Err(errUpdate)
 		}
 
@@ -75,7 +75,7 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 		return s.handleNotFoundMatch(ctx, *match.ExternalMatch)
 	}
 
-	_, err = s.externalMatchRepository.Save(ctx, &match.ExternalMatch.ID, externalAPIMatch.ToExternalMatch(match.ID))
+	externalMatch, err := s.externalMatchRepository.Save(ctx, &match.ExternalMatch.ID, externalAPIMatch.ToExternalMatch(match.ID))
 	if err != nil {
 		return fmt.Errorf("failed to update external match: %w", err)
 	}
@@ -85,7 +85,7 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	case models.StatusMatchInProgress:
 		return s.handleInPlayMatch(ctx, *match)
 	case models.StatusMatchFinished:
-		return s.handleFinishedMatch(ctx, match.ID)
+		return s.handleFinishedMatch(ctx, match.ID, *externalMatch)
 	// if we receive here any other status - that is not expected, we should cancel the result check.
 	default:
 		return s.handleMatchWithUnexpectedStatus(ctx, matchID, externalAPIMatch.Status)
@@ -106,7 +106,7 @@ func (s *ResultCheckerService) findExternalMatchByID(externalID uint, matches []
 func (s *ResultCheckerService) handleMatchWithUnexpectedStatus(ctx context.Context, matchID uint, externalMatchStatus models.ExternalMatchStatus) error {
 	s.logger.Error().Uint("match_id", matchID).Msgf("result check cancelled: external match status is %s", externalMatchStatus)
 
-	if err := s.updateMatchResultStatus(ctx, matchID, models.Cancelled); err != nil {
+	if _, err := s.matchRepository.Update(ctx, matchID, models.Match{ResultStatus: models.Cancelled}); err != nil {
 		return fmt.Errorf("failed to update result status of match: %w", err)
 	}
 
@@ -130,7 +130,7 @@ func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match mode
 	if attemptNumber > s.config.MaxRetries {
 		s.logger.Error().Uint("match_id", match.ID).Msgf("maximum number of attempts %d reached", s.config.MaxRetries)
 
-		if errUpdate := s.updateMatchResultStatus(ctx, match.ID, models.Cancelled); errUpdate != nil {
+		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.Cancelled}); errUpdate != nil {
 			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate)
 			return errUpdate
 		}
@@ -141,7 +141,7 @@ func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match mode
 	task, err := s.taskClient.ScheduleResultCheck(ctx, match.ID, attemptNumber, scheduleAt)
 	if err != nil {
 		s.logger.Error().Uint("match_id", match.ID).Uint("attempt_number", attemptNumber).Time("schedule_at", scheduleAt).Err(err).Msg("failed to re-schedule check result task")
-		if errUpdate := s.updateMatchResultStatus(ctx, match.ID, models.SchedulingError); errUpdate != nil {
+		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.SchedulingError}); errUpdate != nil {
 			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate)
 		}
 
@@ -160,7 +160,7 @@ func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match mode
 	return nil
 }
 
-func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID uint) error {
+func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID uint, externalMatch models.ExternalMatch) error {
 	s.logger.Debug().Uint("match_id", matchID).Msg("match is finished, scheduling subscribers notifications")
 
 	subscriptions, err := s.subscriptionRepository.ListByMatchAndStatus(ctx, matchID, models.PendingSub)
@@ -185,7 +185,7 @@ func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID 
 		}
 	}
 
-	if err := s.updateMatchResultStatus(ctx, matchID, models.Received); err != nil {
+	if _, err := s.matchRepository.Update(ctx, matchID, models.Match{ResultStatus: models.Received, HomeScore: &externalMatch.HomeScore, AwayScore: &externalMatch.AwayScore}); err != nil {
 		return fmt.Errorf("failed to handle finished match: %w", err)
 	}
 
@@ -200,16 +200,8 @@ func (s *ResultCheckerService) handleNotFoundMatch(ctx context.Context, external
 		return fmt.Errorf("failed to update external match: %w", err)
 	}
 
-	if err := s.updateMatchResultStatus(ctx, externalMatch.MatchID, models.Cancelled); err != nil {
+	if _, err := s.matchRepository.Update(ctx, externalMatch.MatchID, models.Match{ResultStatus: models.Cancelled}); err != nil {
 		return fmt.Errorf("failed to update match: %w", err)
-	}
-
-	return nil
-}
-
-func (s *ResultCheckerService) updateMatchResultStatus(ctx context.Context, matchID uint, status models.ResultStatus) error {
-	if _, errUpdate := s.matchRepository.Update(ctx, matchID, status); errUpdate != nil {
-		return fmt.Errorf("failed to update result status to %s: %w", status, errUpdate)
 	}
 
 	return nil

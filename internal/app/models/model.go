@@ -46,6 +46,8 @@ type Match struct {
 	HomeTeamID   uint
 	AwayTeamID   uint
 	ResultStatus ResultStatus
+	HomeScore    *int
+	AwayScore    *int
 
 	ExternalMatch   *ExternalMatch
 	CheckResultTask *CheckResultTask

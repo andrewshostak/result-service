@@ -586,7 +586,7 @@ func TestMatchService_Create(t *testing.T) {
 					StartsAt:     startsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(&savedMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.Scheduled).Return(nil, errUnexpected).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Scheduled}).Return(nil, errUnexpected).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -653,7 +653,7 @@ func TestMatchService_Create(t *testing.T) {
 					StartsAt:     startsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(&savedMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.Scheduled).Return(&updatedMatch, nil).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Scheduled}).Return(&updatedMatch, nil).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -720,7 +720,7 @@ func TestMatchService_Create(t *testing.T) {
 					StartsAt:     startsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(&savedMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.Scheduled).Return(&updatedMatch, nil).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Scheduled}).Return(&updatedMatch, nil).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {

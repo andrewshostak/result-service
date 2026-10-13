@@ -496,6 +496,8 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 			AwayTeamID:   match.AwayTeamID,
 			StartsAt:     match.StartsAt,
 			ResultStatus: string(models.Received),
+			HomeScore:    &matchesResponse.Leagues[0].Matches[0].Home.Score,
+			AwayScore:    &matchesResponse.Leagues[0].Matches[0].Away.Score,
 			CreatedAt:    match.CreatedAt,
 			UpdatedAt:    matches[0].UpdatedAt,
 		},
