@@ -15,7 +15,7 @@ type AliasRepository interface {
 type MatchRepository interface {
 	One(ctx context.Context, search models.Match) (*models.Match, error)
 	Save(ctx context.Context, id *uint, match models.Match) (*models.Match, error)
-	Update(ctx context.Context, id uint, resultStatus models.ResultStatus) (*models.Match, error)
+	Update(ctx context.Context, id uint, match models.Match) (*models.Match, error)
 }
 
 type ExternalMatchRepository interface {

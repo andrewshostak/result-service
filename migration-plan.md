@@ -47,8 +47,9 @@
 
 **Code:**
 - Add nullable `HomeScore` / `AwayScore` (`*int`) fields to the `Match` gorm model
+- In `ResultCheckerService.handleFinishedMatch`, write `home_score`/`away_score` to `matches` when setting `result_status = received` — scores come from the `ExternalAPIMatch` that returned `finished` status
 
-**Why safe:** nullable columns with no default are fully backward compatible — existing queries, reads, and writes are unaffected. The backfill runs within the migration transaction on a filtered subset of rows.
+**Why safe:** nullable columns with no default are fully backward compatible — existing queries and reads are unaffected. Writing scores to `matches` immediately closes the data gap: by the time PR 8 switches the notifier to read from `matches`, all matches received since PR 3 already have scores populated. The notifier still reads from `external_matches` until PR 8.
 
 ---
 
@@ -123,8 +124,7 @@
 
 **Code:**
 - Update `MatchRepository.One` to join `provider_matches` instead of `external_matches`
-- Update `ResultCheckerService` to write `home_score`/`away_score` to `matches` when transitioning to `received` — scores come from the provider match that just returned `finished` status
-- Update `SubscriberNotifierService` to read scores from `matches.home_score`/`matches.away_score` directly — no provider awareness needed
+- Update `SubscriberNotifierService` to read scores from `matches.home_score`/`matches.away_score` directly — no provider awareness needed (writes have been happening since PR 3)
 - Remove the `ExternalMatchRepository` write from `ResultCheckerService` (keep only the `ProviderMatchRepository` write introduced in PR 4)
 
 **Why safe:** dual-write has been running since PR 5, so `provider_matches` is fully up to date. Reads switch to the new table only after the data is guaranteed to be there.
@@ -149,16 +149,16 @@
 
 ## Summary
 
-| PR | Type | Depends on |
-|---|---|---|
-| PR 1 — `providers` table ✓ | DB only | — |
-| PR 2 — timestamps ✓ | DB + gorm models | PR 1 |
-| PR 3 — `home_score` / `away_score` on `matches` | DB + gorm model | — |
-| PR 4 — `provider_teams` + backfill + dual-write | DB + code | PR 1 |
-| PR 5 — `provider_matches` + backfill + dual-write | DB + code | PR 1, PR 6* |
-| PR 6 — `ResultProvider` interface | Code only | — |
-| PR 7 — switch alias reads to `provider_teams` | Code only | PR 4 |
-| PR 8 — switch result reads to `provider_matches` | Code only | PR 5 |
-| PR 9 — drop old tables | DB + code cleanup | PR 7, PR 8 |
+| PR                                                | Type              | Depends on  |
+|---------------------------------------------------|-------------------|-------------|
+| PR 1 — `providers` table ✓                        | DB only           | —           |
+| PR 2 — timestamps ✓                               | DB + gorm models  | PR 1        |
+| PR 3 — `home_score` / `away_score` on `matches` ✓ | DB + gorm model   | —           |
+| PR 4 — `provider_teams` + backfill + dual-write   | DB + code         | PR 1        |
+| PR 5 — `provider_matches` + backfill + dual-write | DB + code         | PR 1, PR 6* |
+| PR 6 — `ResultProvider` interface                 | Code only         | —           |
+| PR 7 — switch alias reads to `provider_teams`     | Code only         | PR 4        |
+| PR 8 — switch result reads to `provider_matches`  | Code only         | PR 5        |
+| PR 9 — drop old tables                            | DB + code cleanup | PR 7, PR 8  |
 
 *PR 5 needs `provider.Name()` to write the provider identifier when dual-writing, so PR 6 should land first.

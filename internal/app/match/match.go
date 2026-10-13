@@ -132,7 +132,7 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 
 	s.logger.Debug().Uint("match_id", match.ID).Time("execute_at", task.ExecuteAt).Msg("match saved & check result task scheduled")
 
-	_, err = s.matchRepository.Update(ctx, match.ID, models.Scheduled)
+	_, err = s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.Scheduled})
 	if err != nil {
 		return 0, fmt.Errorf("failed to update match status to %s: %w", models.Scheduled, err)
 	}

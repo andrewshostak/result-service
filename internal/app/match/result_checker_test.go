@@ -139,7 +139,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.APIError).Return(nil, unexpectedErr).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.APIError}).Return(nil, unexpectedErr).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -159,7 +159,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				updatedMatch := scheduledMatch
 				updatedMatch.ResultStatus = models.APIError
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.APIError).Return(&updatedMatch, nil).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.APIError}).Return(&updatedMatch, nil).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -177,7 +177,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.Cancelled).Return(&models.Match{}, nil).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Cancelled}).Return(&models.Match{}, nil).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -235,7 +235,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.Cancelled).Return(nil, unexpectedErr).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Cancelled}).Return(nil, unexpectedErr).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -256,7 +256,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("Save", ctx, &scheduledMatch.ExternalMatch.MatchID, expectedExternalMatch).Return(&models.ExternalMatch{}, nil).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to update match: %w", fmt.Errorf("failed to update result status to %s: %w", "cancelled", unexpectedErr)),
+			expectedErr: fmt.Errorf("failed to update match: %w", unexpectedErr),
 		},
 		{
 			name:  "it returns an error when external match saving fails",
@@ -288,7 +288,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.Cancelled).Return(nil, unexpectedErr).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Cancelled}).Return(nil, unexpectedErr).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -303,7 +303,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchCancelled).Return(&models.ExternalMatch{}, nil).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to update result status of match: %w", fmt.Errorf("failed to update result status to %s: %w", "cancelled", unexpectedErr)),
+			expectedErr: fmt.Errorf("failed to update result status of match: %w", unexpectedErr),
 		},
 		{
 			name:  "it returns nil when external match status is cancelled and update succeeds",
@@ -314,7 +314,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				cancelledMatch := scheduledMatch
 				cancelledMatch.ResultStatus = models.Cancelled
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.Cancelled).Return(&cancelledMatch, nil).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Cancelled}).Return(&cancelledMatch, nil).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -339,7 +339,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				cancelledMatch := scheduledMatch
 				cancelledMatch.ResultStatus = models.Cancelled
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.Cancelled).Return(&cancelledMatch, nil).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Cancelled}).Return(&cancelledMatch, nil).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -389,7 +389,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				checkResultMatch := scheduledMatch
 				checkResultMatch.CheckResultTask = &models.CheckResultTask{AttemptNumber: 100}
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&checkResultMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.Cancelled).Return(nil, unexpectedErr).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Cancelled}).Return(nil, unexpectedErr).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -404,7 +404,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchInProgress).Return(&models.ExternalMatch{}, nil).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to update result status to %s: %w", models.Cancelled, unexpectedErr),
+			expectedErr: unexpectedErr,
 		},
 		{
 			name:  "it returns nil when max retries are reached",
@@ -415,7 +415,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				checkResultMatch := scheduledMatch
 				checkResultMatch.CheckResultTask = &models.CheckResultTask{AttemptNumber: 100}
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&checkResultMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.Cancelled).Return(&models.Match{}, nil).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Cancelled}).Return(&models.Match{}, nil).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -438,7 +438,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.SchedulingError).Return(&models.Match{}, nil).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.SchedulingError}).Return(&models.Match{}, nil).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -470,7 +470,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.SchedulingError).Return(nil, unexpectedErr).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.SchedulingError}).Return(nil, unexpectedErr).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -614,7 +614,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.Received).Return(nil, unexpectedErr).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Received, HomeScore: &expectedRepositoryMatchFinished.HomeScore, AwayScore: &expectedRepositoryMatchFinished.AwayScore}).Return(nil, unexpectedErr).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -626,7 +626,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
 				t.Helper()
 				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(&models.ExternalMatch{}, nil).Once()
+				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(&expectedRepositoryMatchFinished, nil).Once()
 				return m
 			},
 			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
@@ -635,7 +635,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("ListByMatchAndStatus", ctx, matchID, models.PendingSub).Return([]models.Subscription{}, nil).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to handle finished match: %w", fmt.Errorf("failed to update result status to %s: %w", "received", unexpectedErr)),
+			expectedErr: fmt.Errorf("failed to handle finished match: %w", unexpectedErr),
 		},
 		{
 			name:  "it returns an error when external match status is finished and creation of subscriber notifier task fails",
@@ -716,7 +716,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.Received).Return(&models.Match{}, nil).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Received, HomeScore: &expectedRepositoryMatchFinished.HomeScore, AwayScore: &expectedRepositoryMatchFinished.AwayScore}).Return(&models.Match{}, nil).Once()
 				return m
 			},
 			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
@@ -728,7 +728,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
 				t.Helper()
 				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(&models.ExternalMatch{}, nil).Once()
+				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(&expectedRepositoryMatchFinished, nil).Once()
 				return m
 			},
 			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
