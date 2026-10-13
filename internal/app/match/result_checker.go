@@ -127,6 +127,17 @@ func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match mode
 
 	attemptNumber := match.CheckResultTask.AttemptNumber + 1
 
+	if attemptNumber > s.config.MaxRetries {
+		s.logger.Error().Uint("match_id", match.ID).Msgf("maximum number of attempts %d reached", s.config.MaxRetries)
+
+		if errUpdate := s.updateMatchResultStatus(ctx, match.ID, models.Cancelled); errUpdate != nil {
+			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate)
+			return errUpdate
+		}
+
+		return nil
+	}
+
 	task, err := s.taskClient.ScheduleResultCheck(ctx, match.ID, attemptNumber, scheduleAt)
 	if err != nil {
 		s.logger.Error().Uint("match_id", match.ID).Uint("attempt_number", attemptNumber).Time("schedule_at", scheduleAt).Err(err).Msg("failed to re-schedule check result task")

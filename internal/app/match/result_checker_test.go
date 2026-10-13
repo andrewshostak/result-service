@@ -381,6 +381,57 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			expectedErr: errors.New("match relation result check task doesn't exist"),
 		},
 		{
+			name:  "it returns an error when max retries limit reached and match result status update fails",
+			input: matchID,
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				checkResultMatch := scheduledMatch
+				checkResultMatch.CheckResultTask = &models.CheckResultTask{AttemptNumber: 100}
+				m.On("One", ctx, models.Match{ID: matchID}).Return(&checkResultMatch, nil).Once()
+				m.On("Update", ctx, matchID, models.Cancelled).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
+				t.Helper()
+				m := mocks.NewExternalAPIClient(t)
+				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientInProgress}, nil).Once()
+				return m
+			},
+			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
+				t.Helper()
+				m := mocks.NewExternalMatchRepository(t)
+				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchInProgress).Return(&models.ExternalMatch{}, nil).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to update result status to %s: %w", models.Cancelled, unexpectedErr),
+		},
+		{
+			name:  "it returns nil when max retries are reached",
+			input: matchID,
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				checkResultMatch := scheduledMatch
+				checkResultMatch.CheckResultTask = &models.CheckResultTask{AttemptNumber: 100}
+				m.On("One", ctx, models.Match{ID: matchID}).Return(&checkResultMatch, nil).Once()
+				m.On("Update", ctx, matchID, models.Cancelled).Return(&models.Match{}, nil).Once()
+				return m
+			},
+			externalAPIClient: func(t *testing.T) *mocks.ExternalAPIClient {
+				t.Helper()
+				m := mocks.NewExternalAPIClient(t)
+				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientInProgress}, nil).Once()
+				return m
+			},
+			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
+				t.Helper()
+				m := mocks.NewExternalMatchRepository(t)
+				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchInProgress).Return(&models.ExternalMatch{}, nil).Once()
+				return m
+			},
+		},
+		{
 			name:  "it returns an error when external match status is in progress and task re-scheduling fails",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
@@ -730,7 +781,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			logger := loggerinternal.SetupLogger()
 
 			cfg := config.ResultCheck{
-				MaxRetries:        0,
+				MaxRetries:        75,
 				Interval:          pollingInterval,
 				FirstAttemptDelay: pollingFirstAttemptDelay,
 			}
