@@ -11,12 +11,16 @@ import (
 type AliasRepository interface {
 	Search(ctx context.Context, alias string) ([]models.Alias, error)
 	Find(ctx context.Context, alias string) (*models.Alias, error)
-	SaveInTrx(ctx context.Context, alias string, externalTeamID uint) error
+	SaveInTrx(ctx context.Context, alias string, externalTeamID uint, providerTeam models.ProviderTeam) error
 	SaveForTeam(ctx context.Context, alias string, teamID uint) error
 }
 
 type ExternalTeamRepository interface {
 	FindExternalTeam(ctx context.Context, externalTeamID uint) (*models.ExternalTeam, error)
+}
+
+type ProviderRepository interface {
+	FindByName(ctx context.Context, name string) (*models.Provider, error)
 }
 
 type ExternalAPIClient interface {

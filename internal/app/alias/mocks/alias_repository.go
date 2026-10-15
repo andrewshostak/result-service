@@ -62,17 +62,17 @@ func (_m *AliasRepository) SaveForTeam(ctx context.Context, _a1 string, teamID u
 	return r0
 }
 
-// SaveInTrx provides a mock function with given fields: ctx, _a1, externalTeamID
-func (_m *AliasRepository) SaveInTrx(ctx context.Context, _a1 string, externalTeamID uint) error {
-	ret := _m.Called(ctx, _a1, externalTeamID)
+// SaveInTrx provides a mock function with given fields: ctx, _a1, externalTeamID, providerTeam
+func (_m *AliasRepository) SaveInTrx(ctx context.Context, _a1 string, externalTeamID uint, providerTeam models.ProviderTeam) error {
+	ret := _m.Called(ctx, _a1, externalTeamID, providerTeam)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveInTrx")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, uint) error); ok {
-		r0 = rf(ctx, _a1, externalTeamID)
+	if rf, ok := ret.Get(0).(func(context.Context, string, uint, models.ProviderTeam) error); ok {
+		r0 = rf(ctx, _a1, externalTeamID, providerTeam)
 	} else {
 		r0 = ret.Error(0)
 	}

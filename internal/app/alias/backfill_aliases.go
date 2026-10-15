@@ -14,6 +14,7 @@ import (
 type BackfillAliasesService struct {
 	aliasRepository        AliasRepository
 	externalTeamRepository ExternalTeamRepository
+	providerRepository     ProviderRepository
 	externalAPIClient      ExternalAPIClient
 	logger                 Logger
 }
@@ -21,12 +22,14 @@ type BackfillAliasesService struct {
 func NewBackfillAliasesService(
 	aliasRepository AliasRepository,
 	externalTeamRepository ExternalTeamRepository,
+	providerRepository ProviderRepository,
 	externalAPIClient ExternalAPIClient,
 	logger Logger,
 ) *BackfillAliasesService {
 	return &BackfillAliasesService{
 		aliasRepository:        aliasRepository,
 		externalTeamRepository: externalTeamRepository,
+		providerRepository:     providerRepository,
 		externalAPIClient:      externalAPIClient,
 		logger:                 logger,
 	}
@@ -35,6 +38,11 @@ func NewBackfillAliasesService(
 func (s *BackfillAliasesService) Backfill(ctx context.Context, dates []time.Time) error {
 	s.logger.Info().Times("dates", dates).Msg("starting aliases backfill")
 
+	provider, err := s.providerRepository.FindByName(ctx, "fotmob")
+	if err != nil {
+		return fmt.Errorf("failed to find fotmob provider: %w", err)
+	}
+
 	teams, err := s.getTeams(ctx, dates)
 	if err != nil {
 		return fmt.Errorf("failed to get external matches: %w", err)
@@ -42,7 +50,7 @@ func (s *BackfillAliasesService) Backfill(ctx context.Context, dates []time.Time
 
 	teams = deduplicateByTeamID(teams)
 
-	s.saveTeams(ctx, teams)
+	s.saveTeams(ctx, teams, provider.ID)
 
 	return nil
 }
@@ -141,7 +149,7 @@ func (s *BackfillAliasesService) getIncludedLeagues() []models.League {
 	}
 }
 
-func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.ExternalAPITeam) {
+func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.ExternalAPITeam, fotmobProviderID uint) {
 	numberOfSaved, numberOfExisted := 0, 0
 	for i := range teams {
 		_, err := s.aliasRepository.Find(ctx, teams[i].Name)
@@ -177,7 +185,10 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.E
 			continue
 		}
 
-		errTrx := s.aliasRepository.SaveInTrx(ctx, teams[i].Name, uint(teams[i].ID))
+		errTrx := s.aliasRepository.SaveInTrx(ctx, teams[i].Name, uint(teams[i].ID), models.ProviderTeam{
+			ProviderID:     fotmobProviderID,
+			ProviderTeamID: fmt.Sprintf("%d", teams[i].ID),
+		})
 		if errTrx != nil {
 			s.logger.Error().
 				Str("alias", teams[i].Name).
