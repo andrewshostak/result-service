@@ -23,7 +23,7 @@ type ExternalMatchRepository interface {
 }
 
 type ProviderMatchRepository interface {
-	Save(ctx context.Context, id *uint, providerMatch models.ProviderMatch) (*models.ProviderMatch, error)
+	Save(ctx context.Context, providerMatch models.ProviderMatch) (*models.ProviderMatch, error)
 }
 
 type CheckResultTaskRepository interface {

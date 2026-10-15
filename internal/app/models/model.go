@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -145,13 +146,14 @@ type ExternalAPITeam struct {
 }
 
 type ExternalAPIMatch struct {
-	ID        uint
-	HomeID    uint
-	AwayID    uint
-	HomeScore int
-	AwayScore int
-	Time      time.Time
-	Status    ExternalMatchStatus
+	ID             uint
+	HomeID         uint
+	AwayID         uint
+	HomeScore      int
+	AwayScore      int
+	Time           time.Time
+	Status         ExternalMatchStatus
+	ProviderStatus *string
 }
 
 type Task struct {
@@ -173,5 +175,18 @@ func (m *ExternalAPIMatch) ToExternalMatch(matchID uint) ExternalMatch {
 		HomeScore: m.HomeScore,
 		AwayScore: m.AwayScore,
 		Status:    m.Status,
+	}
+}
+
+func (m *ExternalAPIMatch) ToProviderMatch(matchID uint, providerID uint) ProviderMatch {
+	return ProviderMatch{
+		MatchID:         matchID,
+		ProviderID:      providerID,
+		ProviderMatchID: fmt.Sprintf("%d", m.ID),
+		StartsAt:        m.Time,
+		HomeScore:       m.HomeScore,
+		AwayScore:       m.AwayScore,
+		Status:          m.Status,
+		ProviderStatus:  m.ProviderStatus,
 	}
 }

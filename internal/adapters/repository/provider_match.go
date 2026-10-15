@@ -6,6 +6,7 @@ import (
 
 	"github.com/andrewshostak/result-service/internal/app/models"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type ProviderMatchRepository struct {
@@ -16,7 +17,7 @@ func NewProviderMatchRepository(db *gorm.DB) *ProviderMatchRepository {
 	return &ProviderMatchRepository{db: db}
 }
 
-func (r *ProviderMatchRepository) Save(ctx context.Context, id *uint, providerMatch models.ProviderMatch) (*models.ProviderMatch, error) {
+func (r *ProviderMatchRepository) Save(ctx context.Context, providerMatch models.ProviderMatch) (*models.ProviderMatch, error) {
 	toSave := ProviderMatch{
 		MatchID:         providerMatch.MatchID,
 		ProviderID:      providerMatch.ProviderID,
@@ -27,11 +28,14 @@ func (r *ProviderMatchRepository) Save(ctx context.Context, id *uint, providerMa
 		Status:          string(providerMatch.Status),
 		ProviderStatus:  providerMatch.ProviderStatus,
 	}
-	if id != nil {
-		toSave.ID = *id
-	}
 
-	result := r.db.WithContext(ctx).Save(&toSave)
+	result := r.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "match_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{
+			"provider_match_id", "starts_at", "home_score",
+			"away_score", "status", "provider_status", "updated_at",
+		}),
+	}).Create(&toSave)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to save provider match: %w", result.Error)
 	}

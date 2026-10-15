@@ -9,6 +9,7 @@ update-mocks:
 	mockery --name=AliasRepository --dir internal/app/match --output internal/app/match/mocks --case snake
 	mockery --name=MatchRepository --dir internal/app/match --output internal/app/match/mocks --case snake
 	mockery --name=ExternalMatchRepository --dir internal/app/match --output internal/app/match/mocks --case snake
+	mockery --name=ProviderMatchRepository --dir internal/app/match --output internal/app/match/mocks --case snake
 	mockery --name=CheckResultTaskRepository --dir internal/app/match --output internal/app/match/mocks --case snake
 	mockery --name=ExternalAPIClient --dir internal/app/match --output internal/app/match/mocks --case snake
 	mockery --name=SubscriptionRepository --dir internal/app/match --output internal/app/match/mocks --case snake
