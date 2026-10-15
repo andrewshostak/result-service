@@ -80,6 +80,7 @@ func startServer(_ *cobra.Command, _ []string) {
 		cfg.Result,
 		matchRepository,
 		externalMatchRepository,
+		providerMatchRepository,
 		subscriptionRepository,
 		checkResultTaskRepository,
 		taskClient,
