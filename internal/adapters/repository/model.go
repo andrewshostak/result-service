@@ -24,6 +24,11 @@ type Team struct {
 	Aliases []Alias
 }
 
+type Provider struct {
+	ID   uint   `gorm:"column:id;primaryKey"`
+	Name string `gorm:"column:name"`
+}
+
 type ExternalTeam struct {
 	ID     uint `gorm:"column:id;primaryKey" db:"id"`
 	TeamID uint `gorm:"column:team_id" db:"team_id"`
@@ -105,6 +110,13 @@ func toDomainAliases(aliases []Alias) []models.Alias {
 	}
 
 	return mapped
+}
+
+func toDomainProvider(p Provider) models.Provider {
+	return models.Provider{
+		ID:   p.ID,
+		Name: p.Name,
+	}
 }
 
 func toDomainExternalTeam(t ExternalTeam) models.ExternalTeam {
