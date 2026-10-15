@@ -107,6 +107,24 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 			UpdatedAt:     checkResultTasks[0].UpdatedAt,
 		},
 	}, checkResultTasks)
+
+	providerMatches := testutils.ListProviderMatches(s.T(), s.db)
+	providerStatus := "1"
+	s.Equal([]repository.ProviderMatch{
+		{
+			ID:              1,
+			MatchID:         response.MatchID,
+			ProviderID:      1,
+			ProviderMatchID: fmt.Sprintf("%d", matchesResponse.Leagues[0].Matches[0].ID),
+			StartsAt:        startsAt,
+			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,
+			AwayScore:       matchesResponse.Leagues[0].Matches[0].Away.Score,
+			Status:          string(models.StatusMatchNotStarted),
+			ProviderStatus:  &providerStatus,
+			CreatedAt:       providerMatches[0].CreatedAt,
+			UpdatedAt:       providerMatches[0].UpdatedAt,
+		},
+	}, providerMatches)
 }
 
 func (s *FunctionalTestSuite) TestCreateMatch_InvalidPayload() {

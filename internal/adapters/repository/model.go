@@ -44,17 +44,17 @@ type ProviderTeam struct {
 }
 
 type ProviderMatch struct {
-	ID              uint      `gorm:"column:id;primaryKey"`
-	MatchID         uint      `gorm:"column:match_id"`
-	ProviderID      uint      `gorm:"column:provider_id"`
-	ProviderMatchID string    `gorm:"column:provider_match_id"`
-	StartsAt        time.Time `gorm:"column:starts_at"`
-	HomeScore       int       `gorm:"column:home_score"`
-	AwayScore       int       `gorm:"column:away_score"`
-	Status          string    `gorm:"column:status"`
-	ProviderStatus  *string   `gorm:"column:provider_status"`
-	CreatedAt       time.Time `gorm:"column:created_at"`
-	UpdatedAt       time.Time `gorm:"column:updated_at"`
+	ID              uint      `gorm:"column:id;primaryKey" db:"id"`
+	MatchID         uint      `gorm:"column:match_id" db:"match_id"`
+	ProviderID      uint      `gorm:"column:provider_id" db:"provider_id"`
+	ProviderMatchID string    `gorm:"column:provider_match_id" db:"provider_match_id"`
+	StartsAt        time.Time `gorm:"column:starts_at" db:"starts_at"`
+	HomeScore       int       `gorm:"column:home_score" db:"home_score"`
+	AwayScore       int       `gorm:"column:away_score" db:"away_score"`
+	Status          string    `gorm:"column:status" db:"status"`
+	ProviderStatus  *string   `gorm:"column:provider_status" db:"provider_status"`
+	CreatedAt       time.Time `gorm:"column:created_at" db:"created_at"`
+	UpdatedAt       time.Time `gorm:"column:updated_at" db:"updated_at"`
 }
 
 type Match struct {
