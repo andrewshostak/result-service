@@ -15,9 +15,9 @@ type ProviderMatchRepository struct {
 	mock.Mock
 }
 
-// Save provides a mock function with given fields: ctx, id, providerMatch
-func (_m *ProviderMatchRepository) Save(ctx context.Context, id *uint, providerMatch models.ProviderMatch) (*models.ProviderMatch, error) {
-	ret := _m.Called(ctx, id, providerMatch)
+// Save provides a mock function with given fields: ctx, providerMatch
+func (_m *ProviderMatchRepository) Save(ctx context.Context, providerMatch models.ProviderMatch) (*models.ProviderMatch, error) {
+	ret := _m.Called(ctx, providerMatch)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
@@ -25,19 +25,19 @@ func (_m *ProviderMatchRepository) Save(ctx context.Context, id *uint, providerM
 
 	var r0 *models.ProviderMatch
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *uint, models.ProviderMatch) (*models.ProviderMatch, error)); ok {
-		return rf(ctx, id, providerMatch)
+	if rf, ok := ret.Get(0).(func(context.Context, models.ProviderMatch) (*models.ProviderMatch, error)); ok {
+		return rf(ctx, providerMatch)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *uint, models.ProviderMatch) *models.ProviderMatch); ok {
-		r0 = rf(ctx, id, providerMatch)
+	if rf, ok := ret.Get(0).(func(context.Context, models.ProviderMatch) *models.ProviderMatch); ok {
+		r0 = rf(ctx, providerMatch)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*models.ProviderMatch)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *uint, models.ProviderMatch) error); ok {
-		r1 = rf(ctx, id, providerMatch)
+	if rf, ok := ret.Get(1).(func(context.Context, models.ProviderMatch) error); ok {
+		r1 = rf(ctx, providerMatch)
 	} else {
 		r1 = ret.Error(1)
 	}

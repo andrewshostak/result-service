@@ -289,13 +289,15 @@ func expectedExternalAPIMatch(t *testing.T, match fotmob.Match) models.ExternalA
 	expectedTime, err := time.Parse(time.RFC3339, match.Status.UTCTime)
 	require.NoError(t, err, "failed to parse match starting time")
 
+	status := fmt.Sprintf("%d", match.StatusID)
 	return models.ExternalAPIMatch{
-		ID:        match.ID,
-		HomeID:    match.Home.ID,
-		AwayID:    match.Away.ID,
-		HomeScore: match.Home.Score,
-		AwayScore: match.Away.Score,
-		Time:      expectedTime,
-		Status:    fotmob.ToDomainExternalAPIMatchStatus(match.ID, match.StatusID),
+		ID:             match.ID,
+		HomeID:         match.Home.ID,
+		AwayID:         match.Away.ID,
+		HomeScore:      match.Home.Score,
+		AwayScore:      match.Away.Score,
+		Time:           expectedTime,
+		Status:         fotmob.ToDomainExternalAPIMatchStatus(match.ID, match.StatusID),
+		ProviderStatus: &status,
 	}
 }
