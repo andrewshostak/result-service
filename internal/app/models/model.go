@@ -24,6 +24,18 @@ type DeleteSubscriptionRequest struct {
 	SecretKey string
 }
 
+type Provider struct {
+	ID   uint
+	Name string
+}
+
+type ProviderTeam struct {
+	ID             uint
+	TeamID         uint
+	ProviderID     uint
+	ProviderTeamID string
+}
+
 type ExternalTeam struct {
 	ID     uint
 	TeamID uint
