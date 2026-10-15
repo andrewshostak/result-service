@@ -103,14 +103,16 @@ func toDomainExternalAPIMatches(response MatchesResponse) ([]models.ExternalAPIM
 				return nil, fmt.Errorf("unable to parse match starting time %s: %w", match.Status.UTCTime, err)
 			}
 
+			rawStatus := fmt.Sprintf("%d", match.StatusID)
 			leagueMatches = append(leagueMatches, models.ExternalAPIMatch{
-				ID:        match.ID,
-				HomeID:    match.Home.ID,
-				AwayID:    match.Away.ID,
-				HomeScore: match.Home.Score,
-				AwayScore: match.Away.Score,
-				Time:      startsAt,
-				Status:    ToDomainExternalAPIMatchStatus(match.ID, match.StatusID),
+				ID:             match.ID,
+				HomeID:         match.Home.ID,
+				AwayID:         match.Away.ID,
+				HomeScore:      match.Home.Score,
+				AwayScore:      match.Away.Score,
+				Time:           startsAt,
+				Status:         ToDomainExternalAPIMatchStatus(match.ID, match.StatusID),
+				ProviderStatus: &rawStatus,
 			})
 
 			if isUnknownStatus(match.StatusID) && match.Status.Reason != nil {

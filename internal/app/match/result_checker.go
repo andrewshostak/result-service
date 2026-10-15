@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/andrewshostak/result-service/config"
 	"github.com/andrewshostak/result-service/internal/app/models"
@@ -13,6 +14,7 @@ type ResultCheckerService struct {
 	config                    config.ResultCheck
 	matchRepository           MatchRepository
 	externalMatchRepository   ExternalMatchRepository
+	providerMatchRepository   ProviderMatchRepository
 	subscriptionRepository    SubscriptionRepository
 	checkResultTaskRepository CheckResultTaskRepository
 	externalAPIClient         ExternalAPIClient
@@ -24,6 +26,7 @@ func NewResultCheckerService(
 	config config.ResultCheck,
 	matchRepository MatchRepository,
 	externalMatchRepository ExternalMatchRepository,
+	providerMatchRepository ProviderMatchRepository,
 	subscriptionRepository SubscriptionRepository,
 	checkResultTaskRepository CheckResultTaskRepository,
 	taskClient TaskClient,
@@ -34,6 +37,7 @@ func NewResultCheckerService(
 		config:                    config,
 		matchRepository:           matchRepository,
 		externalMatchRepository:   externalMatchRepository,
+		providerMatchRepository:   providerMatchRepository,
 		subscriptionRepository:    subscriptionRepository,
 		checkResultTaskRepository: checkResultTaskRepository,
 		taskClient:                taskClient,
@@ -72,12 +76,16 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	if externalAPIMatch == nil {
 		s.logger.Info().Uint("match_id", matchID).Msgf("external match with id %d is not found", match.ExternalMatch.ID)
 
-		return s.handleNotFoundMatch(ctx, *match.ExternalMatch)
+		return s.handleNotFoundMatch(ctx, *match.ExternalMatch, match.StartsAt)
 	}
 
 	externalMatch, err := s.externalMatchRepository.Save(ctx, &match.ExternalMatch.ID, externalAPIMatch.ToExternalMatch(match.ID))
 	if err != nil {
 		return fmt.Errorf("failed to update external match: %w", err)
+	}
+	_, err = s.providerMatchRepository.Save(ctx, externalAPIMatch.ToProviderMatch(match.ID, 1))
+	if err != nil {
+		return fmt.Errorf("failed to save provider match with id %d and match id %d: %w", externalAPIMatch.ID, match.ID, err)
 	}
 
 	switch externalAPIMatch.Status {
@@ -194,10 +202,22 @@ func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID 
 
 // handleNotFoundMatch updates statuses of match and external match.
 // When a match is postponed to another date - it is removed from original date matches. In that case retrying doesn't make sense, so returning nil.
-func (s *ResultCheckerService) handleNotFoundMatch(ctx context.Context, externalMatch models.ExternalMatch) error {
+func (s *ResultCheckerService) handleNotFoundMatch(ctx context.Context, externalMatch models.ExternalMatch, startsAt time.Time) error {
 	externalMatch.Status = models.StatusMatchUnknown
-	if _, err := s.externalMatchRepository.Save(ctx, &externalMatch.MatchID, externalMatch); err != nil {
+	if _, err := s.externalMatchRepository.Save(ctx, &externalMatch.ID, externalMatch); err != nil {
 		return fmt.Errorf("failed to update external match: %w", err)
+	}
+
+	if _, err := s.providerMatchRepository.Save(ctx, models.ProviderMatch{
+		MatchID:         externalMatch.MatchID,
+		ProviderID:      1,
+		ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
+		StartsAt:        startsAt,
+		HomeScore:       externalMatch.HomeScore,
+		AwayScore:       externalMatch.AwayScore,
+		Status:          models.StatusMatchUnknown,
+	}); err != nil {
+		return fmt.Errorf("failed to save provider match: %w", err)
 	}
 
 	if _, err := s.matchRepository.Update(ctx, externalMatch.MatchID, models.Match{ResultStatus: models.Cancelled}); err != nil {

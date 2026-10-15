@@ -117,6 +117,17 @@ func CreateTeam(t *testing.T, db *sqlx.DB) uint {
 	return teamID[0]
 }
 
+func ListProviderMatches(t *testing.T, db *sqlx.DB) []repository.ProviderMatch {
+	t.Helper()
+
+	var providerMatches []repository.ProviderMatch
+
+	err := db.Select(&providerMatches, "SELECT * FROM provider_matches")
+	require.NoError(t, err)
+
+	return providerMatches
+}
+
 func ListCheckResultTasks(t *testing.T, db *sqlx.DB) []repository.CheckResultTask {
 	t.Helper()
 

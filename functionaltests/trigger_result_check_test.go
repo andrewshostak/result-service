@@ -352,6 +352,22 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFoundInExternalAPI(
 			Status:    string(models.StatusMatchUnknown),
 		},
 	}, externalMatches)
+
+	providerMatches := testutils.ListProviderMatches(s.T(), s.db)
+	s.Equal([]repository.ProviderMatch{
+		{
+			ID:              1,
+			MatchID:         match.ID,
+			ProviderID:      1,
+			ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
+			StartsAt:        match.StartsAt,
+			HomeScore:       externalMatch.HomeScore,
+			AwayScore:       externalMatch.AwayScore,
+			Status:          string(models.StatusMatchUnknown),
+			CreatedAt:       providerMatches[0].CreatedAt,
+			UpdatedAt:       providerMatches[0].UpdatedAt,
+		},
+	}, providerMatches)
 }
 
 func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedStatus() {
@@ -427,6 +443,24 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 			Status:    string(models.StatusMatchUnknown),
 		},
 	}, externalMatches)
+
+	providerMatches := testutils.ListProviderMatches(s.T(), s.db)
+	providerStatus := "11111"
+	s.Equal([]repository.ProviderMatch{
+		{
+			ID:              1,
+			MatchID:         match.ID,
+			ProviderID:      1,
+			ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
+			StartsAt:        match.StartsAt.Truncate(time.Second),
+			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,
+			AwayScore:       matchesResponse.Leagues[0].Matches[0].Away.Score,
+			Status:          string(models.StatusMatchUnknown),
+			ProviderStatus:  &providerStatus,
+			CreatedAt:       providerMatches[0].CreatedAt,
+			UpdatedAt:       providerMatches[0].UpdatedAt,
+		},
+	}, providerMatches)
 }
 
 func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
@@ -526,6 +560,24 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 			UpdatedAt:     checkResultTasks[0].UpdatedAt,
 		},
 	}, checkResultTasks)
+
+	providerMatches := testutils.ListProviderMatches(s.T(), s.db)
+	providerStatus := "6"
+	s.Equal([]repository.ProviderMatch{
+		{
+			ID:              1,
+			MatchID:         match.ID,
+			ProviderID:      1,
+			ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
+			StartsAt:        match.StartsAt.Truncate(time.Second),
+			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,
+			AwayScore:       matchesResponse.Leagues[0].Matches[0].Away.Score,
+			Status:          string(models.StatusMatchFinished),
+			ProviderStatus:  &providerStatus,
+			CreatedAt:       providerMatches[0].CreatedAt,
+			UpdatedAt:       providerMatches[0].UpdatedAt,
+		},
+	}, providerMatches)
 }
 
 func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinished() {
@@ -623,6 +675,24 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinished() {
 			UpdatedAt:     checkResultTasks[0].UpdatedAt,
 		},
 	}, checkResultTasks)
+
+	providerMatches := testutils.ListProviderMatches(s.T(), s.db)
+	providerStatus := "3"
+	s.Equal([]repository.ProviderMatch{
+		{
+			ID:              1,
+			MatchID:         match.ID,
+			ProviderID:      1,
+			ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
+			StartsAt:        match.StartsAt.Truncate(time.Second),
+			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,
+			AwayScore:       matchesResponse.Leagues[0].Matches[0].Away.Score,
+			Status:          string(models.StatusMatchInProgress),
+			ProviderStatus:  &providerStatus,
+			CreatedAt:       providerMatches[0].CreatedAt,
+			UpdatedAt:       providerMatches[0].UpdatedAt,
+		},
+	}, providerMatches)
 }
 
 func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinishedAndCheckResultTaskNotFound() {
@@ -714,4 +784,22 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinishedAndCheckRes
 			Status:    string(models.StatusMatchInProgress),
 		},
 	}, externalMatches)
+
+	providerMatches := testutils.ListProviderMatches(s.T(), s.db)
+	providerStatus := "3"
+	s.Equal([]repository.ProviderMatch{
+		{
+			ID:              1,
+			MatchID:         match.ID,
+			ProviderID:      1,
+			ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
+			StartsAt:        match.StartsAt.Truncate(time.Second),
+			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,
+			AwayScore:       matchesResponse.Leagues[0].Matches[0].Away.Score,
+			Status:          string(models.StatusMatchInProgress),
+			ProviderStatus:  &providerStatus,
+			CreatedAt:       providerMatches[0].CreatedAt,
+			UpdatedAt:       providerMatches[0].UpdatedAt,
+		},
+	}, providerMatches)
 }

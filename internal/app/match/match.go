@@ -14,6 +14,7 @@ type MatchService struct {
 	aliasRepository           AliasRepository
 	matchRepository           MatchRepository
 	externalMatchRepository   ExternalMatchRepository
+	providerMatchRepository   ProviderMatchRepository
 	checkResultTaskRepository CheckResultTaskRepository
 	externalAPIClient         ExternalAPIClient
 	taskClient                TaskClient
@@ -25,6 +26,7 @@ func NewMatchService(
 	aliasRepository AliasRepository,
 	matchRepository MatchRepository,
 	externalMatchRepository ExternalMatchRepository,
+	providerMatchRepository ProviderMatchRepository,
 	checkResultTaskRepository CheckResultTaskRepository,
 	externalAPIClient ExternalAPIClient,
 	taskClient TaskClient,
@@ -35,6 +37,7 @@ func NewMatchService(
 		aliasRepository:           aliasRepository,
 		matchRepository:           matchRepository,
 		externalMatchRepository:   externalMatchRepository,
+		providerMatchRepository:   providerMatchRepository,
 		checkResultTaskRepository: checkResultTaskRepository,
 		externalAPIClient:         externalAPIClient,
 		taskClient:                taskClient,
@@ -105,6 +108,11 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 	_, err = s.externalMatchRepository.Save(ctx, &externalMatchID, externalMatch.ToExternalMatch(match.ID))
 	if err != nil {
 		return 0, fmt.Errorf("failed to save external match with id %d and match id %d: %w", externalMatchID, match.ID, err)
+	}
+
+	_, err = s.providerMatchRepository.Save(ctx, externalMatch.ToProviderMatch(match.ID, 1))
+	if err != nil {
+		return 0, fmt.Errorf("failed to save provider match with id %d and match id %d: %w", externalMatchID, match.ID, err)
 	}
 
 	task, err := s.taskClient.ScheduleResultCheck(ctx, match.ID, 1, match.StartsAt.Add(s.config.FirstAttemptDelay))

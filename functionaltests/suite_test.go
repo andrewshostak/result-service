@@ -252,10 +252,12 @@ func (s *FunctionalTestSuite) cleanDatabase() {
 	tables := []string{
 		"teams",
 		"external_teams",
+		"provider_teams",
 		"matches",
 		"aliases",
 		"subscriptions",
 		"external_matches",
+		"provider_matches",
 		"check_result_tasks",
 	}
 	for _, table := range tables {
