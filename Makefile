@@ -35,4 +35,7 @@ update-mocks:
 functional-tests:
 	go test -v -count=1 -tags functional ./functionaltests/...
 
-.PHONY: update-mocks
+unit-tests:
+	go test -count=1 -race ./...
+
+.PHONY: update-mocks unit-tests functional-tests
