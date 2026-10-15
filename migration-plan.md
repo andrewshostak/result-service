@@ -147,6 +147,22 @@
 
 ---
 
+### PR 10 — Rename `external_match_status` to `provider_match_status` + docs cleanup
+
+**Migration:**
+- `ALTER TYPE external_match_status RENAME TO provider_match_status`
+
+**Code:** none — GORM uses string values, not the enum type name.
+
+**Docs:**
+- Update `README.md` erDiagram to reflect the final schema (`ProviderTeam`, `ProviderMatch` instead of `ExternalTeam`, `ExternalMatch`; scores on `Match`; timestamps everywhere)
+- Update the backfill description in `README.md` to mention `provider_team`
+- Remove `db-changes.md` — its content is fully covered by the migration plan and the updated README
+
+**Why safe:** after PR 9, `external_matches` is gone and `external_match_status` is only referenced by `provider_matches.status`. Renaming an enum type in PostgreSQL requires no table rewrite and no downtime.
+
+---
+
 ## Summary
 
 | PR                                                | Type              | Depends on  |
@@ -154,11 +170,12 @@
 | PR 1 — `providers` table ✓                        | DB only           | —           |
 | PR 2 — timestamps ✓                               | DB + gorm models  | PR 1        |
 | PR 3 — `home_score` / `away_score` on `matches` ✓ | DB + gorm model   | —           |
-| PR 4 — `provider_teams` + backfill + dual-write   | DB + code         | PR 1        |
+| PR 4 — `provider_teams` + backfill + dual-write ✓ | DB + code         | PR 1        |
 | PR 5 — `provider_matches` + backfill + dual-write | DB + code         | PR 1, PR 6* |
 | PR 6 — `ResultProvider` interface                 | Code only         | —           |
 | PR 7 — switch alias reads to `provider_teams`     | Code only         | PR 4        |
 | PR 8 — switch result reads to `provider_matches`  | Code only         | PR 5        |
 | PR 9 — drop old tables                            | DB + code cleanup | PR 7, PR 8  |
+| PR 10 — rename `external_match_status` enum       | DB only           | PR 9        |
 
 *PR 5 needs `provider.Name()` to write the provider identifier when dual-writing, so PR 6 should land first.
