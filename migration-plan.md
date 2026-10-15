@@ -77,8 +77,10 @@
 
 **Code:**
 - Add `ProviderMatchRepository` that writes to `provider_matches`
-- In `ResultCheckerService`, after saving to `external_matches`, also save to `provider_matches` (with `provider_id` from the active provider's `Name()`)
-
+- Dual-write to `provider_matches` alongside every existing `external_matches` write:
+  - `MatchService.Create` — initial save when a new match is registered (status `not_started`)
+  - `ResultCheckerService.CheckResult` — status/score update after each API poll
+  - `ResultCheckerService.handleNotFoundMatch` — status update to `unknown` when match disappears from the API
 - Reads still come from `external_matches`
 
 **Why safe:** backfill covers all historical data. Dual-write is deployed immediately after, so new match result data lands in both tables from this point on. Old reads are unchanged.

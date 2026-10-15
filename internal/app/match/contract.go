@@ -22,6 +22,10 @@ type ExternalMatchRepository interface {
 	Save(ctx context.Context, id *uint, externalMatch models.ExternalMatch) (*models.ExternalMatch, error)
 }
 
+type ProviderMatchRepository interface {
+	Save(ctx context.Context, id *uint, providerMatch models.ProviderMatch) (*models.ProviderMatch, error)
+}
+
 type CheckResultTaskRepository interface {
 	Save(ctx context.Context, checkResultTask models.CheckResultTask) (*models.CheckResultTask, error)
 }

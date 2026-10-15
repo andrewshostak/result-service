@@ -43,6 +43,20 @@ type ProviderTeam struct {
 	UpdatedAt      time.Time `gorm:"column:updated_at"`
 }
 
+type ProviderMatch struct {
+	ID              uint      `gorm:"column:id;primaryKey"`
+	MatchID         uint      `gorm:"column:match_id"`
+	ProviderID      uint      `gorm:"column:provider_id"`
+	ProviderMatchID string    `gorm:"column:provider_match_id"`
+	StartsAt        time.Time `gorm:"column:starts_at"`
+	HomeScore       int       `gorm:"column:home_score"`
+	AwayScore       int       `gorm:"column:away_score"`
+	Status          string    `gorm:"column:status"`
+	ProviderStatus  *string   `gorm:"column:provider_status"`
+	CreatedAt       time.Time `gorm:"column:created_at"`
+	UpdatedAt       time.Time `gorm:"column:updated_at"`
+}
+
 type Match struct {
 	ID           uint      `gorm:"column:id;primaryKey" db:"id"`
 	HomeTeamID   uint      `gorm:"column:home_team_id" db:"home_team_id"`
@@ -132,6 +146,20 @@ func toDomainExternalTeam(t ExternalTeam) models.ExternalTeam {
 	return models.ExternalTeam{
 		ID:     t.ID,
 		TeamID: t.TeamID,
+	}
+}
+
+func toDomainProviderMatch(p ProviderMatch) models.ProviderMatch {
+	return models.ProviderMatch{
+		ID:              p.ID,
+		MatchID:         p.MatchID,
+		ProviderID:      p.ProviderID,
+		ProviderMatchID: p.ProviderMatchID,
+		StartsAt:        p.StartsAt,
+		HomeScore:       p.HomeScore,
+		AwayScore:       p.AwayScore,
+		Status:          models.ExternalMatchStatus(p.Status),
+		ProviderStatus:  p.ProviderStatus,
 	}
 }
 

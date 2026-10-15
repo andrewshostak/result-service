@@ -36,6 +36,18 @@ type ProviderTeam struct {
 	ProviderTeamID string
 }
 
+type ProviderMatch struct {
+	ID              uint
+	MatchID         uint
+	ProviderID      uint
+	ProviderMatchID string
+	StartsAt        time.Time
+	HomeScore       int
+	AwayScore       int
+	Status          ExternalMatchStatus
+	ProviderStatus  *string
+}
+
 type ExternalTeam struct {
 	ID     uint
 	TeamID uint
