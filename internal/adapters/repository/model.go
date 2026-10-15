@@ -34,6 +34,15 @@ type ExternalTeam struct {
 	TeamID uint `gorm:"column:team_id" db:"team_id"`
 }
 
+type ProviderTeam struct {
+	ID             uint      `gorm:"column:id;primaryKey"`
+	TeamID         uint      `gorm:"column:team_id"`
+	ProviderID     uint      `gorm:"column:provider_id"`
+	ProviderTeamID string    `gorm:"column:provider_team_id"`
+	CreatedAt      time.Time `gorm:"column:created_at"`
+	UpdatedAt      time.Time `gorm:"column:updated_at"`
+}
+
 type Match struct {
 	ID           uint      `gorm:"column:id;primaryKey" db:"id"`
 	HomeTeamID   uint      `gorm:"column:home_team_id" db:"home_team_id"`
