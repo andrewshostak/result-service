@@ -17,7 +17,7 @@ type ResultCheckerService struct {
 	providerMatchRepository   ProviderMatchRepository
 	subscriptionRepository    SubscriptionRepository
 	checkResultTaskRepository CheckResultTaskRepository
-	externalAPIClient         ExternalAPIClient
+	externalAPIClient         ResultProvider
 	taskClient                TaskClient
 	logger                    Logger
 }
@@ -30,7 +30,7 @@ func NewResultCheckerService(
 	subscriptionRepository SubscriptionRepository,
 	checkResultTaskRepository CheckResultTaskRepository,
 	taskClient TaskClient,
-	externalAPIClient ExternalAPIClient,
+	externalAPIClient ResultProvider,
 	logger Logger,
 ) *ResultCheckerService {
 	return &ResultCheckerService{

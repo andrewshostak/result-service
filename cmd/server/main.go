@@ -63,6 +63,8 @@ func startServer(_ *cobra.Command, _ []string) {
 	subscriptionRepository := repository.NewSubscriptionRepository(db)
 	checkResultTaskRepository := repository.NewCheckResultTaskRepository(db)
 
+	providers := []match.ResultProvider{fotmobClient}
+
 	matchService := match.NewMatchService(
 		cfg.Result,
 		aliasRepository,
@@ -70,7 +72,7 @@ func startServer(_ *cobra.Command, _ []string) {
 		externalMatchRepository,
 		providerMatchRepository,
 		checkResultTaskRepository,
-		fotmobClient,
+		providers,
 		taskClient,
 		logger,
 	)

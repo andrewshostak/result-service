@@ -22,6 +22,9 @@
 
 **Why safe:** new table, nothing references it yet. Old code is completely unaffected.
 
+**Open question — is a DB table the right home for providers?**
+Adding a new provider always requires code changes (new client, new backfill command, new mapping logic). A DB row alone is not sufficient — so the table can be misleading: someone may assume that inserting a new row is enough to onboard a provider, when it isn't. An alternative is a code-side map (`name → id`) initialized at startup (e.g. `providers := map[string]uint{"fotmob": 1}`). The IDs become stable constants in code, the extra `FindByName` DB call on every write disappears, and the contract "adding a provider = code change" is made explicit. The downside is that the `provider_id` FK in `provider_matches` and `provider_teams` would reference IDs that only exist as constants rather than rows — which breaks the FK constraint unless the `providers` table (and its rows) is kept as a lookup/validation table. A middle ground: keep the `providers` table for FK integrity but resolve IDs at startup via a one-time query into a local map, avoiding per-request DB lookups.
+
 ---
 
 ### PR 2 — Add timestamps to all existing tables ✓ merged
@@ -66,6 +69,9 @@
 - Wherever `external_teams` is written to (backfill command), also write to `provider_teams`
 
 **Why safe:** new table. Backfill covers all historical data. Dual-write ensures no rows are missed from this point on. Old code reads are unchanged.
+
+**Potential blocker — linking a new provider's teams to existing `team_id`s.**
+When onboarding a second provider, that provider uses its own team identifiers which have no inherent relation to fotmob IDs or to the internal `teams.id`. The backfill command for the new provider cannot simply cast the new provider's team ID to a string and insert it — it must first resolve which internal `team_id` each external team corresponds to. For fotmob this was trivial because `external_teams` already mapped fotmob IDs to internal team IDs. For a new provider there is no such mapping yet. Options: (a) manual mapping table supplied at backfill time (e.g. a CSV of `new_provider_team_id → team_id`); (b) fuzzy match on team name — unreliable; (c) a UI/admin tool that presents unmatched provider teams for a human to link. This needs a concrete answer before a second provider can be onboarded, and should be designed before PR 4-equivalent work for that provider begins.
 
 ---
 
