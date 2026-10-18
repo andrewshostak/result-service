@@ -22,9 +22,6 @@
 
 **Why safe:** new table, nothing references it yet. Old code is completely unaffected.
 
-**Open question — is a DB table the right home for providers?**
-Adding a new provider always requires code changes (new client, new backfill command, new mapping logic). A DB row alone is not sufficient — so the table can be misleading: someone may assume that inserting a new row is enough to onboard a provider, when it isn't. An alternative is a code-side map (`name → id`) initialized at startup (e.g. `providers := map[string]uint{"fotmob": 1}`). The IDs become stable constants in code, the extra `FindByName` DB call on every write disappears, and the contract "adding a provider = code change" is made explicit. The downside is that the `provider_id` FK in `provider_matches` and `provider_teams` would reference IDs that only exist as constants rather than rows — which breaks the FK constraint unless the `providers` table (and its rows) is kept as a lookup/validation table. A middle ground: keep the `providers` table for FK integrity but resolve IDs at startup via a one-time query into a local map, avoiding per-request DB lookups.
-
 ---
 
 ### PR 2 — Add timestamps to all existing tables ✓ merged
@@ -133,9 +130,14 @@ When onboarding a second provider, that provider uses its own team identifiers w
 **Code:**
 - Update `MatchRepository.One` to join `provider_matches` instead of `external_matches`
 - Update `SubscriberNotifierService` to read scores from `matches.home_score`/`matches.away_score` directly — no provider awareness needed (writes have been happening since PR 3)
-- Remove the `ExternalMatchRepository` write from `ResultCheckerService` (keep only the `ProviderMatchRepository` write introduced in PR 4)
+- Remove the `ExternalMatchRepository` write from `ResultCheckerService` (keep only the `ProviderMatchRepository` write introduced in PR 5)
+- Add `ListByMatchID(ctx, matchID) ([]ProviderMatch, error)` to `ProviderMatchRepository`
+- Rewrite `ResultCheckerService.CheckResult` to call `ListByMatchID` instead of relying on the single `match.ExternalMatch` relation: iterate all provider matches, fan out `findExternalMatchByID` across providers for each one, and handle the result per provider — fulfilling the `// TODO: change the logic to get all existing provider matches and iterate through all of them` in `result_checker.go`
 
 **Why safe:** dual-write has been running since PR 5, so `provider_matches` is fully up to date. Reads switch to the new table only after the data is guaranteed to be there.
+
+**Alternative approach — one task per provider per match.**
+Instead of a single `check_result_task` per match that fans out to all providers at check time, `MatchService.Create` could schedule a separate task for each provider that returned the match. `CheckResult` would then receive a provider-scoped task, query only that provider's API, and update only that provider's `provider_match` row. This avoids the `ListByMatchID` + fan-out loop in `CheckResult`, keeps each task independently retryable per provider, and makes it trivial to add or remove a provider without changing the check logic. The trade-off is that task scheduling becomes more complex in `Create` (one `ScheduleResultCheck` call per provider) and the `check_result_tasks` table needs a `provider_id` column to carry the provider context into the task handler.
 
 ---
 
@@ -152,6 +154,24 @@ When onboarding a second provider, that provider uses its own team identifiers w
 - Remove any remaining references
 
 **Why safe:** no code references either table after PRs 7 and 8. Run migration after code is deployed and verified stable.
+
+---
+
+### PR 11 — Drop `providers` table, move provider identity to config
+
+**Migration:**
+- Drop FK constraint `provider_id → providers.id` from `provider_matches`
+- Drop FK constraint `provider_id → providers.id` from `provider_teams`
+- Drop `providers` table
+
+**Code:**
+- Add provider ID constants to config (e.g. `fotmob.providerID = 1` in `config.yaml`)
+- Remove `ProviderRepository` entirely (already done in the current codebase — provider IDs are hardcoded to `1`)
+
+**Why remove the table:**
+Onboarding a new provider always requires a code deployment regardless — new HTTP client, new response mapping, new team-linking logic. A row in `providers` is never sufficient on its own, so the table creates a false impression that a DB insert is enough. Provider IDs are already hardcoded constants in the application (`ToProviderMatch(matchID, 1)`); the table only provides FK validation on data that the application fully controls. Keeping the table means maintaining an extra DB entity in sync with the code for no practical benefit. Moving IDs to config makes the contract explicit: adding a provider is a code+config+migration change, not a DB insert. The `provider_id` column stays in `provider_matches` and `provider_teams` — only the FK constraint and the lookup table are removed.
+
+**Why safe:** dropping FK constraints and a lookup table has no effect on existing data. The `provider_id` values stored in dependent tables remain valid integers; enforcement just moves from the DB to the application.
 
 ---
 
@@ -185,5 +205,6 @@ When onboarding a second provider, that provider uses its own team identifiers w
 | PR 8 — switch result reads to `provider_matches`  | Code only         | PR 5        |
 | PR 9 — drop old tables                            | DB + code cleanup | PR 7, PR 8  |
 | PR 10 — rename `external_match_status` enum       | DB only           | PR 9        |
+| PR 11 — drop `providers` table, IDs to config     | DB + code cleanup | PR 9        |
 
 *PR 5 needs `provider.Name()` to write the provider identifier when dual-writing, so PR 6 should land first.

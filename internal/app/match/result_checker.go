@@ -57,7 +57,7 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 		return nil
 	}
 
-	// TODO: change the logic to get all existing provider matches and iterate through all of them
+	// TODO: change the logic to get all existing provider matches (by match id) and iterate through all of them
 	if match.ExternalMatch == nil {
 		s.logger.Error().Uint("match_id", matchID).Msg("match relation external match doesn't exist")
 		return errors.New("match relation external match doesn't exist")
