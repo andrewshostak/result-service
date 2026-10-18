@@ -343,7 +343,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIReturnsError() {
 	var response handler.ErrorResponse
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
-	s.Equal("failed to get matches from external api: failed to fetch matches by date: failed to get matches by date, status code 500", response.Error)
+	s.Equal("failed to get matches from external api: failed to get matches across providers: failed to get matches from provider fotmob: failed to fetch matches by date: failed to get matches by date, status code 500", response.Error)
 	s.Equal(string(models.CodeInternalServerError), response.Code)
 }
 
@@ -389,7 +389,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIReturnsInvalidResponseB
 	var response handler.ErrorResponse
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
-	s.Equal("failed to get matches from external api: failed to fetch matches by date: failed to decode get matches by date response body: invalid character '!' looking for beginning of value", response.Error)
+	s.Equal("failed to get matches from external api: failed to get matches across providers: failed to get matches from provider fotmob: failed to fetch matches by date: failed to decode get matches by date response body: invalid character '!' looking for beginning of value", response.Error)
 	s.Equal(string(models.CodeInternalServerError), response.Code)
 }
 

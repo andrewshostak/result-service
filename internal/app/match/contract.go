@@ -35,8 +35,9 @@ type SubscriptionRepository interface {
 	Update(ctx context.Context, id uint, subscription models.Subscription) error
 }
 
-type ExternalAPIClient interface {
+type ResultProvider interface {
 	GetMatches(ctx context.Context, date time.Time) ([]models.ExternalAPIMatch, error)
+	Name() string
 }
 
 type TaskClient interface {

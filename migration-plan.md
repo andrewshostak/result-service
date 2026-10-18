@@ -67,6 +67,9 @@
 
 **Why safe:** new table. Backfill covers all historical data. Dual-write ensures no rows are missed from this point on. Old code reads are unchanged.
 
+**Potential blocker — linking a new provider's teams to existing `team_id`s.**
+When onboarding a second provider, that provider uses its own team identifiers which have no inherent relation to fotmob IDs or to the internal `teams.id`. The backfill command for the new provider cannot simply cast the new provider's team ID to a string and insert it — it must first resolve which internal `team_id` each external team corresponds to. For fotmob this was trivial because `external_teams` already mapped fotmob IDs to internal team IDs. For a new provider there is no such mapping yet. Options: (a) manual mapping table supplied at backfill time (e.g. a CSV of `new_provider_team_id → team_id`); (b) fuzzy match on team name — unreliable; (c) a UI/admin tool that presents unmatched provider teams for a human to link. This needs a concrete answer before a second provider can be onboarded, and should be designed before PR 4-equivalent work for that provider begins.
+
 ---
 
 ### PR 5 — Add `provider_matches` table
@@ -127,9 +130,14 @@
 **Code:**
 - Update `MatchRepository.One` to join `provider_matches` instead of `external_matches`
 - Update `SubscriberNotifierService` to read scores from `matches.home_score`/`matches.away_score` directly — no provider awareness needed (writes have been happening since PR 3)
-- Remove the `ExternalMatchRepository` write from `ResultCheckerService` (keep only the `ProviderMatchRepository` write introduced in PR 4)
+- Remove the `ExternalMatchRepository` write from `ResultCheckerService` (keep only the `ProviderMatchRepository` write introduced in PR 5)
+- Add `ListByMatchID(ctx, matchID) ([]ProviderMatch, error)` to `ProviderMatchRepository`
+- Rewrite `ResultCheckerService.CheckResult` to call `ListByMatchID` instead of relying on the single `match.ExternalMatch` relation: iterate all provider matches, fan out `findExternalMatchByID` across providers for each one, and handle the result per provider — fulfilling the `// TODO: change the logic to get all existing provider matches and iterate through all of them` in `result_checker.go`
 
 **Why safe:** dual-write has been running since PR 5, so `provider_matches` is fully up to date. Reads switch to the new table only after the data is guaranteed to be there.
+
+**Alternative approach — one task per provider per match.**
+Instead of a single `check_result_task` per match that fans out to all providers at check time, `MatchService.Create` could schedule a separate task for each provider that returned the match. `CheckResult` would then receive a provider-scoped task, query only that provider's API, and update only that provider's `provider_match` row. This avoids the `ListByMatchID` + fan-out loop in `CheckResult`, keeps each task independently retryable per provider, and makes it trivial to add or remove a provider without changing the check logic. The trade-off is that task scheduling becomes more complex in `Create` (one `ScheduleResultCheck` call per provider) and the `check_result_tasks` table needs a `provider_id` column to carry the provider context into the task handler.
 
 ---
 
@@ -146,6 +154,24 @@
 - Remove any remaining references
 
 **Why safe:** no code references either table after PRs 7 and 8. Run migration after code is deployed and verified stable.
+
+---
+
+### PR 11 — Drop `providers` table, move provider identity to config
+
+**Migration:**
+- Drop FK constraint `provider_id → providers.id` from `provider_matches`
+- Drop FK constraint `provider_id → providers.id` from `provider_teams`
+- Drop `providers` table
+
+**Code:**
+- Add provider ID constants to config (e.g. `fotmob.providerID = 1` in `config.yaml`)
+- Remove `ProviderRepository` entirely (already done in the current codebase — provider IDs are hardcoded to `1`)
+
+**Why remove the table:**
+Onboarding a new provider always requires a code deployment regardless — new HTTP client, new response mapping, new team-linking logic. A row in `providers` is never sufficient on its own, so the table creates a false impression that a DB insert is enough. Provider IDs are already hardcoded constants in the application (`ToProviderMatch(matchID, 1)`); the table only provides FK validation on data that the application fully controls. Keeping the table means maintaining an extra DB entity in sync with the code for no practical benefit. Moving IDs to config makes the contract explicit: adding a provider is a code+config+migration change, not a DB insert. The `provider_id` column stays in `provider_matches` and `provider_teams` — only the FK constraint and the lookup table are removed.
+
+**Why safe:** dropping FK constraints and a lookup table has no effect on existing data. The `provider_id` values stored in dependent tables remain valid integers; enforcement just moves from the DB to the application.
 
 ---
 
@@ -179,5 +205,6 @@
 | PR 8 — switch result reads to `provider_matches`  | Code only         | PR 5        |
 | PR 9 — drop old tables                            | DB + code cleanup | PR 7, PR 8  |
 | PR 10 — rename `external_match_status` enum       | DB only           | PR 9        |
+| PR 11 — drop `providers` table, IDs to config     | DB + code cleanup | PR 9        |
 
 *PR 5 needs `provider.Name()` to write the provider identifier when dual-writing, so PR 6 should land first.

@@ -29,6 +29,10 @@ func NewFotmobClient(httpClient HTTPManager, logger Logger, config config.Extern
 	return &FotmobClient{httpClient: httpClient, logger: logger, config: config}
 }
 
+func (c *FotmobClient) Name() string {
+	return "fotmob"
+}
+
 func (c *FotmobClient) GetTeams(ctx context.Context, date time.Time) ([]models.ExternalAPITeam, error) {
 	response, err := c.fetchMatchesByDate(ctx, date)
 	if err != nil {

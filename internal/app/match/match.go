@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/andrewshostak/result-service/config"
 	"github.com/andrewshostak/result-service/internal/app/models"
@@ -16,7 +17,7 @@ type MatchService struct {
 	externalMatchRepository   ExternalMatchRepository
 	providerMatchRepository   ProviderMatchRepository
 	checkResultTaskRepository CheckResultTaskRepository
-	externalAPIClient         ExternalAPIClient
+	providers                 []ResultProvider
 	taskClient                TaskClient
 	logger                    Logger
 }
@@ -28,7 +29,7 @@ func NewMatchService(
 	externalMatchRepository ExternalMatchRepository,
 	providerMatchRepository ProviderMatchRepository,
 	checkResultTaskRepository CheckResultTaskRepository,
-	externalAPIClient ExternalAPIClient,
+	providers []ResultProvider,
 	taskClient TaskClient,
 	logger Logger,
 ) *MatchService {
@@ -39,7 +40,7 @@ func NewMatchService(
 		externalMatchRepository:   externalMatchRepository,
 		providerMatchRepository:   providerMatchRepository,
 		checkResultTaskRepository: checkResultTaskRepository,
-		externalAPIClient:         externalAPIClient,
+		providers:                 providers,
 		taskClient:                taskClient,
 		logger:                    logger,
 	}
@@ -75,12 +76,12 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 		}
 	}
 
-	matches, err := s.externalAPIClient.GetMatches(ctx, request.StartsAt)
+	providersMatches, err := s.getMatchesFromProviders(ctx, request.StartsAt)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get matches from external api: %w", err)
 	}
 
-	externalMatch, err := s.findExternalMatch(aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, matches)
+	externalMatch, _, err := s.findExternalMatch(aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, providersMatches)
 	if err != nil {
 		return 0, models.NewUnprocessableContentError(errors.New(fmt.Sprintf("external match with home team id %d and away team id %d is not found: %s", aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, err.Error())))
 	}
@@ -161,14 +162,37 @@ func (s *MatchService) findAlias(ctx context.Context, alias string) (*models.Ali
 	return foundAlias, nil
 }
 
-func (s *MatchService) findExternalMatch(externalHomeTeamID, externalAwayTeamID uint, matches []models.ExternalAPIMatch) (*models.ExternalAPIMatch, error) {
-	for _, match := range matches {
-		if match.HomeID == externalHomeTeamID && match.AwayID == externalAwayTeamID {
-			return &match, nil
+func (s *MatchService) findExternalMatch(externalHomeTeamID, externalAwayTeamID uint, providersMatches map[string][]models.ExternalAPIMatch) (*models.ExternalAPIMatch, *string, error) {
+	for provider, matches := range providersMatches {
+		for _, match := range matches {
+			if match.HomeID == externalHomeTeamID && match.AwayID == externalAwayTeamID {
+				return &match, &provider, nil
+			}
 		}
 	}
 
-	return nil, errors.New("match not found")
+	return nil, nil, errors.New("match not found")
+}
+
+func (s *MatchService) getMatchesFromProviders(ctx context.Context, startsAt time.Time) (map[string][]models.ExternalAPIMatch, error) {
+	var matchesErrors []error
+	matches := make(map[string][]models.ExternalAPIMatch)
+	for _, provider := range s.providers {
+		// parallelize in case of multiple providers
+		providerMatches, err := provider.GetMatches(ctx, startsAt)
+		if err != nil {
+			matchesErrors = append(matchesErrors, fmt.Errorf("failed to get matches from provider %s: %w", provider.Name(), err))
+			continue
+		}
+
+		matches[provider.Name()] = providerMatches
+	}
+
+	if len(matches) != 0 {
+		return matches, nil
+	}
+
+	return nil, fmt.Errorf("failed to get matches across providers: %w", errors.Join(matchesErrors...))
 }
 
 func (s *MatchService) isResultCheckSchedulingAllowed(externalMatch models.ExternalAPIMatch) bool {
