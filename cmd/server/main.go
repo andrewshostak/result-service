@@ -86,7 +86,7 @@ func startServer(_ *cobra.Command, _ []string) {
 		subscriptionRepository,
 		checkResultTaskRepository,
 		taskClient,
-		fotmobClient,
+		providers,
 		logger,
 	)
 	subscriberNotifierService := subscription.NewSubscriberNotifierService(subscriptionRepository, matchRepository, notifierClient, logger)

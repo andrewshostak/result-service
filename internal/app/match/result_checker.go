@@ -17,7 +17,7 @@ type ResultCheckerService struct {
 	providerMatchRepository   ProviderMatchRepository
 	subscriptionRepository    SubscriptionRepository
 	checkResultTaskRepository CheckResultTaskRepository
-	externalAPIClient         ResultProvider
+	providers                 []ResultProvider
 	taskClient                TaskClient
 	logger                    Logger
 }
@@ -30,7 +30,7 @@ func NewResultCheckerService(
 	subscriptionRepository SubscriptionRepository,
 	checkResultTaskRepository CheckResultTaskRepository,
 	taskClient TaskClient,
-	externalAPIClient ResultProvider,
+	providers []ResultProvider,
 	logger Logger,
 ) *ResultCheckerService {
 	return &ResultCheckerService{
@@ -41,7 +41,7 @@ func NewResultCheckerService(
 		subscriptionRepository:    subscriptionRepository,
 		checkResultTaskRepository: checkResultTaskRepository,
 		taskClient:                taskClient,
-		externalAPIClient:         externalAPIClient,
+		providers:                 providers,
 		logger:                    logger,
 	}
 }
@@ -57,12 +57,13 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 		return nil
 	}
 
+	// TODO: change the logic to get all existing provider matches and iterate through all of them
 	if match.ExternalMatch == nil {
 		s.logger.Error().Uint("match_id", matchID).Msg("match relation external match doesn't exist")
 		return errors.New("match relation external match doesn't exist")
 	}
 
-	matches, err := s.externalAPIClient.GetMatches(ctx, match.StartsAt)
+	matches, err := s.getMatchesFromProviders(ctx, match.StartsAt)
 	if err != nil {
 		s.logger.Error().Uint("match_id", matchID).Err(err)
 		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.APIError}); errUpdate != nil {
@@ -72,7 +73,7 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 		return fmt.Errorf("failed to get matches from external api: %w", err)
 	}
 
-	externalAPIMatch := s.findExternalMatchByID(match.ExternalMatch.ID, matches)
+	externalAPIMatch, _ := s.findExternalMatchByID(match.ExternalMatch.ID, matches)
 	if externalAPIMatch == nil {
 		s.logger.Info().Uint("match_id", matchID).Msgf("external match with id %d is not found", match.ExternalMatch.ID)
 
@@ -100,14 +101,16 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	}
 }
 
-func (s *ResultCheckerService) findExternalMatchByID(externalID uint, matches []models.ExternalAPIMatch) *models.ExternalAPIMatch {
-	for _, match := range matches {
-		if match.ID == externalID {
-			return &match
+func (s *ResultCheckerService) findExternalMatchByID(externalID uint, matches map[string][]models.ExternalAPIMatch) (*models.ExternalAPIMatch, string) {
+	for providerName, providerMatches := range matches {
+		for _, match := range providerMatches {
+			if match.ID == externalID {
+				return &match, providerName
+			}
 		}
 	}
 
-	return nil
+	return nil, ""
 }
 
 // TODO: update external match as well
@@ -225,6 +228,28 @@ func (s *ResultCheckerService) handleNotFoundMatch(ctx context.Context, external
 	}
 
 	return nil
+}
+
+func (s *ResultCheckerService) getMatchesFromProviders(ctx context.Context, startsAt time.Time) (map[string][]models.ExternalAPIMatch, error) {
+	var matchesErrors []error
+	matches := make(map[string][]models.ExternalAPIMatch)
+	for _, provider := range s.providers {
+		name := provider.Name()
+		// parallelize in case of multiple providers
+		providerMatches, err := provider.GetMatches(ctx, startsAt)
+		if err != nil {
+			matchesErrors = append(matchesErrors, fmt.Errorf("failed to get matches from provider %s: %w", name, err))
+			continue
+		}
+
+		matches[name] = providerMatches
+	}
+
+	if len(matches) != 0 {
+		return matches, nil
+	}
+
+	return nil, fmt.Errorf("failed to get matches from providers: %w", errors.Join(matchesErrors...))
 }
 
 func (s *ResultCheckerService) canCheckResult(match *models.Match) bool {
