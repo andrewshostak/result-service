@@ -33,14 +33,14 @@ type Provider struct {
 type ProviderTeam struct {
 	ID             uint
 	TeamID         uint
-	ProviderID     uint
+	Provider       string
 	ProviderTeamID string
 }
 
 type ProviderMatch struct {
 	ID              uint
 	MatchID         uint
-	ProviderID      uint
+	Provider        string
 	ProviderMatchID string
 	StartsAt        time.Time
 	HomeScore       int
@@ -178,10 +178,10 @@ func (m *ExternalAPIMatch) ToExternalMatch(matchID uint) ExternalMatch {
 	}
 }
 
-func (m *ExternalAPIMatch) ToProviderMatch(matchID uint, providerID uint) ProviderMatch {
+func (m *ExternalAPIMatch) ToProviderMatch(matchID uint, provider string) ProviderMatch {
 	return ProviderMatch{
 		MatchID:         matchID,
-		ProviderID:      providerID,
+		Provider:        provider,
 		ProviderMatchID: fmt.Sprintf("%d", m.ID),
 		StartsAt:        m.Time,
 		HomeScore:       m.HomeScore,

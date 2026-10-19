@@ -49,7 +49,7 @@ func (r *AliasRepository) SaveInTrx(ctx context.Context, alias string, externalT
 			return fmt.Errorf("failed to create external team: %w", err)
 		}
 
-		if err := tx.Create(&ProviderTeam{TeamID: team.ID, ProviderID: providerTeam.ProviderID, ProviderTeamID: providerTeam.ProviderTeamID}).Error; err != nil {
+		if err := tx.Create(&ProviderTeam{TeamID: team.ID, Provider: providerTeam.Provider, ProviderTeamID: providerTeam.ProviderTeamID}).Error; err != nil {
 			return fmt.Errorf("failed to create provider team: %w", err)
 		}
 

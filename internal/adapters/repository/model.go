@@ -37,7 +37,7 @@ type ExternalTeam struct {
 type ProviderTeam struct {
 	ID             uint      `gorm:"column:id;primaryKey"`
 	TeamID         uint      `gorm:"column:team_id"`
-	ProviderID     uint      `gorm:"column:provider_id"`
+	Provider       string    `gorm:"column:provider"`
 	ProviderTeamID string    `gorm:"column:provider_team_id"`
 	CreatedAt      time.Time `gorm:"column:created_at"`
 	UpdatedAt      time.Time `gorm:"column:updated_at"`
@@ -46,7 +46,7 @@ type ProviderTeam struct {
 type ProviderMatch struct {
 	ID              uint      `gorm:"column:id;primaryKey" db:"id"`
 	MatchID         uint      `gorm:"column:match_id" db:"match_id"`
-	ProviderID      uint      `gorm:"column:provider_id" db:"provider_id"`
+	Provider        string    `gorm:"column:provider" db:"provider"`
 	ProviderMatchID string    `gorm:"column:provider_match_id" db:"provider_match_id"`
 	StartsAt        time.Time `gorm:"column:starts_at" db:"starts_at"`
 	HomeScore       int       `gorm:"column:home_score" db:"home_score"`
@@ -153,7 +153,7 @@ func toDomainProviderMatch(p ProviderMatch) models.ProviderMatch {
 	return models.ProviderMatch{
 		ID:              p.ID,
 		MatchID:         p.MatchID,
-		ProviderID:      p.ProviderID,
+		Provider:        p.Provider,
 		ProviderMatchID: p.ProviderMatchID,
 		StartsAt:        p.StartsAt,
 		HomeScore:       p.HomeScore,

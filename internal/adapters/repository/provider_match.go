@@ -20,7 +20,7 @@ func NewProviderMatchRepository(db *gorm.DB) *ProviderMatchRepository {
 func (r *ProviderMatchRepository) Save(ctx context.Context, providerMatch models.ProviderMatch) (*models.ProviderMatch, error) {
 	toSave := ProviderMatch{
 		MatchID:         providerMatch.MatchID,
-		ProviderID:      providerMatch.ProviderID,
+		Provider:        providerMatch.Provider,
 		ProviderMatchID: providerMatch.ProviderMatchID,
 		StartsAt:        providerMatch.StartsAt,
 		HomeScore:       providerMatch.HomeScore,

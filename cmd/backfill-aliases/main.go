@@ -59,11 +59,10 @@ func run(cmd *cobra.Command, _ []string) {
 
 	aliasRepository := repository.NewAliasRepository(db)
 	externalTeamRepository := repository.NewExternalTeamRepository(db)
-	providerRepository := repository.NewProviderRepository(db)
 
 	fotmobClient := fotmob.NewFotmobClient(&httpClient, logger, cfg.ExternalAPI)
 
-	backfillAliasesService := alias.NewBackfillAliasesService(aliasRepository, externalTeamRepository, providerRepository, fotmobClient, logger)
+	backfillAliasesService := alias.NewBackfillAliasesService(aliasRepository, externalTeamRepository, fotmobClient, logger)
 
 	ctx := context.Background()
 
