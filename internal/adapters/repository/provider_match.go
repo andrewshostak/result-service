@@ -30,7 +30,7 @@ func (r *ProviderMatchRepository) Save(ctx context.Context, providerMatch models
 	}
 
 	result := r.db.WithContext(ctx).Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "match_id"}},
+		Columns: []clause.Column{{Name: "provider"}, {Name: "match_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{
 			"provider_match_id", "starts_at", "home_score",
 			"away_score", "status", "provider_status", "updated_at",
