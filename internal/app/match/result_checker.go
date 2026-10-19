@@ -10,6 +10,8 @@ import (
 	"github.com/andrewshostak/result-service/internal/app/models"
 )
 
+const fotmobProvider = "fotmob"
+
 type ResultCheckerService struct {
 	config                    config.ResultCheck
 	matchRepository           MatchRepository
@@ -213,7 +215,7 @@ func (s *ResultCheckerService) handleNotFoundMatch(ctx context.Context, external
 
 	if _, err := s.providerMatchRepository.Save(ctx, models.ProviderMatch{
 		MatchID:         externalMatch.MatchID,
-		Provider:        "fotmob",
+		Provider:        fotmobProvider,
 		ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
 		StartsAt:        startsAt,
 		HomeScore:       externalMatch.HomeScore,
