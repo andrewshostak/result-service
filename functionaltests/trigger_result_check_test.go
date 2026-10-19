@@ -358,7 +358,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFoundInExternalAPI(
 		{
 			ID:              1,
 			MatchID:         match.ID,
-			ProviderID:      1,
+			Provider:        "fotmob",
 			ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
 			StartsAt:        match.StartsAt,
 			HomeScore:       externalMatch.HomeScore,
@@ -450,7 +450,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 		{
 			ID:              1,
 			MatchID:         match.ID,
-			ProviderID:      1,
+			Provider:        "fotmob",
 			ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
 			StartsAt:        match.StartsAt.Truncate(time.Second),
 			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,
@@ -567,7 +567,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 		{
 			ID:              1,
 			MatchID:         match.ID,
-			ProviderID:      1,
+			Provider:        "fotmob",
 			ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
 			StartsAt:        match.StartsAt.Truncate(time.Second),
 			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,
@@ -682,7 +682,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinished() {
 		{
 			ID:              1,
 			MatchID:         match.ID,
-			ProviderID:      1,
+			Provider:        "fotmob",
 			ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
 			StartsAt:        match.StartsAt.Truncate(time.Second),
 			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,
@@ -791,7 +791,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinishedAndCheckRes
 		{
 			ID:              1,
 			MatchID:         match.ID,
-			ProviderID:      1,
+			Provider:        "fotmob",
 			ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
 			StartsAt:        match.StartsAt.Truncate(time.Second),
 			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,

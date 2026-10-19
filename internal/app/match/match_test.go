@@ -68,7 +68,7 @@ func TestMatchService_Create(t *testing.T) {
 		r.Status = models.StatusMatchNotStarted
 	})
 
-	providerMatchSaved := externalMatch.ToProviderMatch(matchID, 1)
+	providerMatchSaved := externalMatch.ToProviderMatch(matchID, "fotmob")
 
 	createdTaskName := gofakeit.Word()
 	clientTask := testutils.FakeTask(func(t *models.Task) {
