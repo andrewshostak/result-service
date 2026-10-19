@@ -72,7 +72,7 @@ When onboarding a second provider, that provider uses its own team identifiers w
 
 ---
 
-### PR 5 — Add `provider_matches` table
+### PR 5 — Add `provider_matches` table ✓
 
 **Migration:**
 - Create `provider_matches` table (`id`, `match_id`, `provider_id`, `provider_match_id` as string, `starts_at`, `home_score`, `away_score`, `status`, `provider_status`, `created_at`, `updated_at`)
@@ -92,7 +92,7 @@ When onboarding a second provider, that provider uses its own team identifiers w
 
 ## Phase 3 — Code migration
 
-### PR 6 — `ResultProvider` interface + slice injection
+### PR 6 — `ResultProvider` interface + slice injection ✓
 
 **Migration:** none.
 
@@ -107,7 +107,7 @@ When onboarding a second provider, that provider uses its own team identifiers w
 
 ---
 
-### PR 7 — Replace `provider_id` with a `provider` string column, drop `providers` table
+### PR 7 — Replace `provider_id` with a `provider` string column, drop `providers` table ✓
 
 **Migration:**
 - Add `provider` text column (nullable) to `provider_matches` and `provider_teams`
