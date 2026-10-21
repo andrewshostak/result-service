@@ -81,12 +81,12 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 
 	providerTeamHome, err := s.providerTeamRepository.FindByTeamAndProvider(ctx, aliasHome.TeamID, fotmobProvider)
 	if err != nil {
-		return 0, models.NewUnprocessableContentError(fmt.Errorf("provider team for home team id %d not found: %w", aliasHome.TeamID, err))
+		return 0, fmt.Errorf("provider team for home team id %d not found: %w", aliasHome.TeamID, err)
 	}
 
 	providerTeamAway, err := s.providerTeamRepository.FindByTeamAndProvider(ctx, aliasAway.TeamID, fotmobProvider)
 	if err != nil {
-		return 0, models.NewUnprocessableContentError(fmt.Errorf("provider team for away team id %d not found: %w", aliasAway.TeamID, err))
+		return 0, fmt.Errorf("provider team for away team id %d not found: %w", aliasAway.TeamID, err)
 	}
 
 	providersMatches, err := s.getMatchesFromProviders(ctx, request.StartsAt)
