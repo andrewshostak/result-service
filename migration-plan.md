@@ -146,6 +146,19 @@ A string column like `provider = 'fotmob'` is self-documenting in the DB and req
 
 ---
 
+### PR 8.5 — Switch backfill command to use `provider_teams` for duplicate detection
+
+**Migration:** none.
+
+**Code:**
+- Add `FindByProviderAndProviderTeamID(ctx, provider, providerTeamID string)` to `ProviderTeamRepository` and its interface
+- In `BackfillAliasesService.saveTeams`, replace the `externalTeamRepository.FindExternalTeam(ctx, uint(teams[i].ID))` call with `providerTeamRepository.FindByProviderAndProviderTeamID(ctx, fotmobProvider, fmt.Sprintf("%d", teams[i].ID))` — same intent (detect whether this external ID is already tracked) but reads from `provider_teams` instead of `external_teams`
+- Wire `ProviderTeamRepository` into `BackfillAliasesService`; remove `ExternalTeamRepository` if it is no longer used elsewhere
+
+**Why safe:** `provider_teams` has been backfilled and kept in sync since PR 4. The lookup produces the same result as the current `external_teams` lookup.
+
+---
+
 ## Phase 4 — Switch reads, stop writing to old tables
 
 ### PR 9 — Switch all reads to `provider_matches`, remove `external_matches` writes
@@ -210,8 +223,9 @@ Instead of a single `check_result_task` per match that fans out to all providers
 | PR 6 — `ResultProvider` interface ✓                 | Code only         | —           |
 | PR 7 — `provider` string column, drop `providers` ✓ | DB + code         | PR 5, PR 6  |
 | PR 8 — switch alias reads to `provider_teams`       | Code only         | PR 4, PR 7  |
+| PR 8.5 — switch backfill to use `provider_teams`    | Code only         | PR 4, PR 8  |
 | PR 9 — switch result reads to `provider_matches`    | Code only         | PR 5, PR 7  |
-| PR 10 — drop old tables                             | DB + code cleanup | PR 8, PR 9  |
+| PR 10 — drop old tables                             | DB + code cleanup | PR 8.5, PR 9 |
 | PR 11 — rename `external_match_status` enum         | DB only           | PR 10       |
 
 *PR 5 needs `provider.Name()` to write the provider identifier when dual-writing, so PR 6 should land first.
