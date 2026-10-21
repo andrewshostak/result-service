@@ -1,16 +1,8 @@
 # Proposed DB Changes
 
-## 1. New table: `providers`
+## 1. ~~New table: `providers`~~ (dropped in PR 7)
 
-A new table to register supported result providers.
-
-**Fields:**
-- `id` — surrogate primary key (auto-increment)
-- `name` — provider name, unique (e.g. `fotmob`)
-
-**Why:** Makes provider identity a first-class concept in the schema instead of a free-form string. Foreign keys from `provider_teams` and `provider_matches` reference this table, so only registered providers can be used.
-
-**Initial data:** one row — `fotmob`.
+~~A new table to register supported result providers was added in PR 1 and dropped in PR 7.~~ Provider identity is now stored as a plain `provider text` column directly in `provider_teams` and `provider_matches`. See PR 7 below.
 
 ---
 
@@ -25,14 +17,14 @@ The current `external_teams` table has two design problems:
 **Fields:**
 - `id` — true surrogate primary key (auto-increment)
 - `team_id` — foreign key to `teams`
-- `provider_id` — foreign key to `providers`
+- `provider` — provider name as a plain string (e.g. `fotmob`)
 - `provider_team_id` — the provider's own ID for this team (stored as string to support both integer and UUID-style IDs across providers)
 
 **Unique constraints:**
-- `(team_id, provider_id)` — one row per team per provider
-- `(provider_id, provider_team_id)` — a provider's team ID is unique within that provider
+- `(team_id, provider)` — one row per team per provider
+- `(provider, provider_team_id)` — a provider's team ID is unique within that provider
 
-**Why:** A team like Real Madrid can now have a fotmob ID and a sofascore ID stored simultaneously. The `id` column is an honest surrogate key. Provider identity is enforced via a foreign key rather than a raw string.
+**Why:** A team like Real Madrid can now have a fotmob ID and a sofascore ID stored simultaneously. The `id` column is an honest surrogate key. Provider identity is stored as a self-documenting string — no join to a `providers` table needed, and adding a new provider requires no schema change.
 
 ---
 
@@ -49,7 +41,7 @@ Additionally, `starts_at` is missing — provider-reported match time belongs he
 **Fields:**
 - `id` — true surrogate primary key (auto-increment)
 - `match_id` — foreign key to `matches`
-- `provider_id` — foreign key to `providers`
+- `provider` — provider name as a plain string (e.g. `fotmob`)
 - `provider_match_id` — the provider's own ID for this match (stored as string to support both integer and UUID-style IDs across providers)
 - `starts_at` — match starting time as reported by this provider
 - `home_score` — home team score as reported by this provider
@@ -58,10 +50,10 @@ Additionally, `starts_at` is missing — provider-reported match time belongs he
 - `provider_status` — raw status value as received from the provider, useful for debugging unknown or unexpected statuses
 
 **Unique constraints:**
-- `(match_id, provider_id)` — one row per match per provider
-- `(provider_id, provider_match_id)` — a provider's match ID is unique within that provider
+- `(provider, match_id)` — one row per match per provider
+- `(provider, provider_match_id)` — a provider's match ID is unique within that provider
 
-**Why:** Multiple providers' data for the same match can be stored in parallel, enabling fallback and cross-provider comparison. The `starts_at` field captures the time each provider reports, which may differ between providers or from the admin-entered time. Provider identity is enforced via foreign key.
+**Why:** Multiple providers' data for the same match can be stored in parallel, enabling fallback and cross-provider comparison. The `starts_at` field captures the time each provider reports, which may differ between providers or from the admin-entered time. Provider identity is stored as a self-documenting string — no join to a `providers` table needed.
 
 **Note on `matches.starts_at`:** The `starts_at` column remains in `matches` — it is needed as the deduplication key (`unique(home_team_id, away_team_id, starts_at)`) and for scheduling result-check tasks. Its value comes from the provider, not from the admin's manually entered time (the admin's time is only used as a date hint to query the provider).
 
@@ -108,13 +100,6 @@ Every table should carry timestamps so there is a consistent audit trail of when
 
 ```mermaid
 erDiagram
-    Provider {
-        Int id PK
-        String name UK
-        Date created_at
-        Date updated_at
-    }
-
     Team {
         Int id PK
         Date created_at
@@ -144,7 +129,7 @@ erDiagram
     ProviderTeam {
         Int id PK
         Int team_id FK
-        Int provider_id FK
+        String provider
         String provider_team_id
         Date created_at
         Date updated_at
@@ -153,7 +138,7 @@ erDiagram
     ProviderMatch {
         Int id PK
         Int match_id FK
-        Int provider_id FK
+        String provider
         String provider_match_id
         Date starts_at
         Int home_score
@@ -189,8 +174,6 @@ erDiagram
     Team ||--o{ Alias : has
     Team ||--o{ Match : "home / away"
     Team ||--o{ ProviderTeam : has
-    Provider ||--o{ ProviderTeam : has
-    Provider ||--o{ ProviderMatch : has
     Match ||--o{ ProviderMatch : has
     Match ||--o{ Subscription : has
     Match ||--|| CheckResultTask : has

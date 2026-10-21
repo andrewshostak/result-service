@@ -19,10 +19,6 @@ type ExternalTeamRepository interface {
 	FindExternalTeam(ctx context.Context, externalTeamID uint) (*models.ExternalTeam, error)
 }
 
-type ProviderRepository interface {
-	FindByName(ctx context.Context, name string) (*models.Provider, error)
-}
-
 type ExternalAPIClient interface {
 	GetTeams(ctx context.Context, date time.Time) ([]models.ExternalAPITeam, error)
 }

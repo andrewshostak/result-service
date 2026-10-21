@@ -81,7 +81,7 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 		return 0, fmt.Errorf("failed to get matches from external api: %w", err)
 	}
 
-	externalMatch, _, err := s.findExternalMatch(aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, providersMatches)
+	externalMatch, providerName, err := s.findExternalMatch(aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, providersMatches)
 	if err != nil {
 		return 0, models.NewUnprocessableContentError(errors.New(fmt.Sprintf("external match with home team id %d and away team id %d is not found: %s", aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, err.Error())))
 	}
@@ -111,7 +111,7 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 		return 0, fmt.Errorf("failed to save external match with id %d and match id %d: %w", externalMatchID, match.ID, err)
 	}
 
-	_, err = s.providerMatchRepository.Save(ctx, externalMatch.ToProviderMatch(match.ID, 1))
+	_, err = s.providerMatchRepository.Save(ctx, externalMatch.ToProviderMatch(match.ID, *providerName))
 	if err != nil {
 		return 0, fmt.Errorf("failed to save provider match with id %d and match id %d: %w", externalMatchID, match.ID, err)
 	}

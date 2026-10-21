@@ -107,7 +107,32 @@ When onboarding a second provider, that provider uses its own team identifiers w
 
 ---
 
-### PR 7 — Switch alias lookup to use `provider_teams`
+### PR 7 — Replace `provider_id` with a `provider` string column, drop `providers` table
+
+**Migration:**
+- Add `provider` text column (nullable) to `provider_matches` and `provider_teams`
+- Backfill: `UPDATE provider_matches SET provider = 'fotmob'` and `UPDATE provider_teams SET provider = 'fotmob'`
+- Set `provider` NOT NULL on both tables
+- Add `UNIQUE (provider, match_id)` to `provider_matches` (replaces the existing `UNIQUE (match_id)`)
+- Drop `UNIQUE (match_id)` from `provider_matches`
+- Drop FK constraint `provider_id → providers.id` from `provider_matches` and `provider_teams`
+- Drop `provider_id` column from `provider_matches` and `provider_teams`
+- Drop `providers` table
+
+**Code:**
+- Replace `ProviderID uint` with `Provider string` in the `ProviderMatch` and `ProviderTeam` domain models and gorm structs
+- Update all call sites: `ToProviderMatch(matchID, 1)` → `ToProviderMatch(matchID, "fotmob")`
+- Update `ON CONFLICT (match_id)` → `ON CONFLICT (provider, match_id)` in `ProviderMatchRepository.Save`
+- Remove `ProviderRepository` entirely (already done in the current codebase)
+
+**Why replace with a string instead of keeping integer IDs in config:**
+A string column like `provider = 'fotmob'` is self-documenting in the DB and requires no on-init config loading or ID map. There is no startup step that could fail or drift out of sync. Adding a new provider means using a new string value — nothing else needs to change. An integer `provider_id` that references a now-dropped table would be an opaque number with no inherent meaning; a string carries the meaning directly. The `UNIQUE (provider, match_id)` constraint replaces the old `UNIQUE (match_id)` and correctly enforces that each provider tracks each internal match at most once.
+
+**Why safe:** adding a nullable column then backfilling before making it NOT NULL is safe under concurrent writes — any rows inserted between the column addition and the backfill will need to set `provider` explicitly, which the dual-write code (updated in the same deployment) already does.
+
+---
+
+### PR 8 — Switch alias lookup to use `provider_teams`
 
 **Migration:** none (table already exists and is kept in sync from PR 3).
 
@@ -123,7 +148,7 @@ When onboarding a second provider, that provider uses its own team identifiers w
 
 ## Phase 4 — Switch reads, stop writing to old tables
 
-### PR 8 — Switch all reads to `provider_matches`, remove `external_matches` writes
+### PR 9 — Switch all reads to `provider_matches`, remove `external_matches` writes
 
 **Migration:** none.
 
@@ -143,7 +168,7 @@ Instead of a single `check_result_task` per match that fans out to all providers
 
 ## Phase 5 — Cleanup
 
-### PR 9 — Drop `external_teams` and `external_matches`
+### PR 10 — Drop `external_teams` and `external_matches`
 
 **Migration:**
 - Drop `external_matches`
@@ -153,29 +178,11 @@ Instead of a single `check_result_task` per match that fans out to all providers
 - Remove `ExternalMatchRepository` and `ExternalTeam` gorm model entirely
 - Remove any remaining references
 
-**Why safe:** no code references either table after PRs 7 and 8. Run migration after code is deployed and verified stable.
+**Why safe:** no code references either table after PRs 8 and 9. Run migration after code is deployed and verified stable.
 
 ---
 
-### PR 11 — Drop `providers` table, move provider identity to config
-
-**Migration:**
-- Drop FK constraint `provider_id → providers.id` from `provider_matches`
-- Drop FK constraint `provider_id → providers.id` from `provider_teams`
-- Drop `providers` table
-
-**Code:**
-- Add provider ID constants to config (e.g. `fotmob.providerID = 1` in `config.yaml`)
-- Remove `ProviderRepository` entirely (already done in the current codebase — provider IDs are hardcoded to `1`)
-
-**Why remove the table:**
-Onboarding a new provider always requires a code deployment regardless — new HTTP client, new response mapping, new team-linking logic. A row in `providers` is never sufficient on its own, so the table creates a false impression that a DB insert is enough. Provider IDs are already hardcoded constants in the application (`ToProviderMatch(matchID, 1)`); the table only provides FK validation on data that the application fully controls. Keeping the table means maintaining an extra DB entity in sync with the code for no practical benefit. Moving IDs to config makes the contract explicit: adding a provider is a code+config+migration change, not a DB insert. The `provider_id` column stays in `provider_matches` and `provider_teams` — only the FK constraint and the lookup table are removed.
-
-**Why safe:** dropping FK constraints and a lookup table has no effect on existing data. The `provider_id` values stored in dependent tables remain valid integers; enforcement just moves from the DB to the application.
-
----
-
-### PR 10 — Rename `external_match_status` to `provider_match_status` + docs cleanup
+### PR 11 — Rename `external_match_status` to `provider_match_status` + docs cleanup
 
 **Migration:**
 - `ALTER TYPE external_match_status RENAME TO provider_match_status`
@@ -193,18 +200,18 @@ Onboarding a new provider always requires a code deployment regardless — new H
 
 ## Summary
 
-| PR                                                | Type              | Depends on  |
-|---------------------------------------------------|-------------------|-------------|
-| PR 1 — `providers` table ✓                        | DB only           | —           |
-| PR 2 — timestamps ✓                               | DB + gorm models  | PR 1        |
-| PR 3 — `home_score` / `away_score` on `matches` ✓ | DB + gorm model   | —           |
-| PR 4 — `provider_teams` + backfill + dual-write ✓ | DB + code         | PR 1        |
-| PR 5 — `provider_matches` + backfill + dual-write | DB + code         | PR 1, PR 6* |
-| PR 6 — `ResultProvider` interface                 | Code only         | —           |
-| PR 7 — switch alias reads to `provider_teams`     | Code only         | PR 4        |
-| PR 8 — switch result reads to `provider_matches`  | Code only         | PR 5        |
-| PR 9 — drop old tables                            | DB + code cleanup | PR 7, PR 8  |
-| PR 10 — rename `external_match_status` enum       | DB only           | PR 9        |
-| PR 11 — drop `providers` table, IDs to config     | DB + code cleanup | PR 9        |
+| PR                                                  | Type              | Depends on  |
+|-----------------------------------------------------|-------------------|-------------|
+| PR 1 — `providers` table ✓                          | DB only           | —           |
+| PR 2 — timestamps ✓                                 | DB + gorm models  | PR 1        |
+| PR 3 — `home_score` / `away_score` on `matches` ✓   | DB + gorm model   | —           |
+| PR 4 — `provider_teams` + backfill + dual-write ✓   | DB + code         | PR 1        |
+| PR 5 — `provider_matches` + backfill + dual-write ✓ | DB + code         | PR 1, PR 6* |
+| PR 6 — `ResultProvider` interface ✓                 | Code only         | —           |
+| PR 7 — `provider` string column, drop `providers` ✓ | DB + code         | PR 5, PR 6  |
+| PR 8 — switch alias reads to `provider_teams`       | Code only         | PR 4, PR 7  |
+| PR 9 — switch result reads to `provider_matches`    | Code only         | PR 5, PR 7  |
+| PR 10 — drop old tables                             | DB + code cleanup | PR 8, PR 9  |
+| PR 11 — rename `external_match_status` enum         | DB only           | PR 10       |
 
 *PR 5 needs `provider.Name()` to write the provider identifier when dual-writing, so PR 6 should land first.

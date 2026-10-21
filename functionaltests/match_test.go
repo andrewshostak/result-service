@@ -114,7 +114,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 		{
 			ID:              1,
 			MatchID:         response.MatchID,
-			ProviderID:      1,
+			Provider:        "fotmob",
 			ProviderMatchID: fmt.Sprintf("%d", matchesResponse.Leagues[0].Matches[0].ID),
 			StartsAt:        startsAt,
 			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,

@@ -80,13 +80,13 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 	expectedRepositoryMatchInProgress := expectedRepositoryMatch
 	expectedRepositoryMatchInProgress.Status = models.StatusMatchInProgress
 
-	expectedProviderMatchFinished := externalMatchClientFinished.ToProviderMatch(matchID, 1)
-	expectedProviderMatchNotStarted := externalMatchClientNotStarted.ToProviderMatch(matchID, 1)
-	expectedProviderMatchCancelled := externalMatchClientCancelled.ToProviderMatch(matchID, 1)
-	expectedProviderMatchInProgress := externalMatchClientInProgress.ToProviderMatch(matchID, 1)
+	expectedProviderMatchFinished := externalMatchClientFinished.ToProviderMatch(matchID, "fotmob")
+	expectedProviderMatchNotStarted := externalMatchClientNotStarted.ToProviderMatch(matchID, "fotmob")
+	expectedProviderMatchCancelled := externalMatchClientCancelled.ToProviderMatch(matchID, "fotmob")
+	expectedProviderMatchInProgress := externalMatchClientInProgress.ToProviderMatch(matchID, "fotmob")
 	expectedProviderMatchNotFound := models.ProviderMatch{
 		MatchID:         matchID,
-		ProviderID:      1,
+		Provider:        "fotmob",
 		ProviderMatchID: fmt.Sprintf("%d", externalMatchID),
 		StartsAt:        startsAt,
 		Status:          models.StatusMatchUnknown,

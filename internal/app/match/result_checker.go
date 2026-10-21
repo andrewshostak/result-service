@@ -10,6 +10,8 @@ import (
 	"github.com/andrewshostak/result-service/internal/app/models"
 )
 
+const fotmobProvider = "fotmob"
+
 type ResultCheckerService struct {
 	config                    config.ResultCheck
 	matchRepository           MatchRepository
@@ -73,7 +75,7 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 		return fmt.Errorf("failed to get matches from external api: %w", err)
 	}
 
-	externalAPIMatch, _ := s.findExternalMatchByID(match.ExternalMatch.ID, matches)
+	externalAPIMatch, providerName := s.findExternalMatchByID(match.ExternalMatch.ID, matches)
 	if externalAPIMatch == nil {
 		s.logger.Info().Uint("match_id", matchID).Msgf("external match with id %d is not found", match.ExternalMatch.ID)
 
@@ -84,7 +86,7 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	if err != nil {
 		return fmt.Errorf("failed to update external match: %w", err)
 	}
-	_, err = s.providerMatchRepository.Save(ctx, externalAPIMatch.ToProviderMatch(match.ID, 1))
+	_, err = s.providerMatchRepository.Save(ctx, externalAPIMatch.ToProviderMatch(match.ID, providerName))
 	if err != nil {
 		return fmt.Errorf("failed to save provider match with id %d and match id %d: %w", externalAPIMatch.ID, match.ID, err)
 	}
@@ -213,7 +215,7 @@ func (s *ResultCheckerService) handleNotFoundMatch(ctx context.Context, external
 
 	if _, err := s.providerMatchRepository.Save(ctx, models.ProviderMatch{
 		MatchID:         externalMatch.MatchID,
-		ProviderID:      1,
+		Provider:        fotmobProvider,
 		ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
 		StartsAt:        startsAt,
 		HomeScore:       externalMatch.HomeScore,
