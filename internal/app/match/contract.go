@@ -22,6 +22,10 @@ type ExternalMatchRepository interface {
 	Save(ctx context.Context, id *uint, externalMatch models.ExternalMatch) (*models.ExternalMatch, error)
 }
 
+type ProviderTeamRepository interface {
+	FindByTeamAndProvider(ctx context.Context, teamID uint, provider string) (*models.ProviderTeam, error)
+}
+
 type ProviderMatchRepository interface {
 	Save(ctx context.Context, providerMatch models.ProviderMatch) (*models.ProviderMatch, error)
 }

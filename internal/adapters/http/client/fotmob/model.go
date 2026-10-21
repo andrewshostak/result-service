@@ -3,6 +3,7 @@ package fotmob
 import (
 	"fmt"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/andrewshostak/result-service/internal/app/models"
@@ -40,7 +41,7 @@ type Reason struct {
 }
 
 type Team struct {
-	ID       uint   `json:"id"`
+	ID       int    `json:"id"`
 	Score    int    `json:"score"`
 	Name     string `json:"name"`
 	LongName string `json:"longName"`
@@ -106,8 +107,8 @@ func toDomainExternalAPIMatches(response MatchesResponse) ([]models.ExternalAPIM
 			rawStatus := fmt.Sprintf("%d", match.StatusID)
 			leagueMatches = append(leagueMatches, models.ExternalAPIMatch{
 				ID:             match.ID,
-				HomeID:         match.Home.ID,
-				AwayID:         match.Away.ID,
+				HomeID:         strconv.Itoa(match.Home.ID),
+				AwayID:         strconv.Itoa(match.Away.ID),
 				HomeScore:      match.Home.Score,
 				AwayScore:      match.Away.Score,
 				Time:           startsAt,

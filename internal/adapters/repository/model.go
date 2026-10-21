@@ -12,8 +12,6 @@ type Alias struct {
 	Alias     string    `gorm:"column:alias;unique"`
 	CreatedAt time.Time `gorm:"column:created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at"`
-
-	ExternalTeam *ExternalTeam `gorm:"foreignKey:TeamID;references:TeamID"`
 }
 
 type Team struct {
@@ -110,18 +108,19 @@ type CheckResultTask struct {
 	Match *Match `gorm:"foreignKey:MatchID"`
 }
 
-func toDomainAlias(a Alias) models.Alias {
-	var externalTeam *models.ExternalTeam
-
-	if a.ExternalTeam != nil {
-		mapped := toDomainExternalTeam(*a.ExternalTeam)
-		externalTeam = &mapped
+func toDomainProviderTeam(pt ProviderTeam) models.ProviderTeam {
+	return models.ProviderTeam{
+		ID:             pt.ID,
+		TeamID:         pt.TeamID,
+		Provider:       pt.Provider,
+		ProviderTeamID: pt.ProviderTeamID,
 	}
+}
 
+func toDomainAlias(a Alias) models.Alias {
 	return models.Alias{
-		Alias:        a.Alias,
-		TeamID:       a.TeamID,
-		ExternalTeam: externalTeam,
+		Alias:  a.Alias,
+		TeamID: a.TeamID,
 	}
 }
 

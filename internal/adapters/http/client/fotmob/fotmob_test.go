@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"testing"
 	"time"
 
@@ -255,7 +256,7 @@ func TestFotmobClient_GetTeams(t *testing.T) {
 
 func expectedExternalAPITeams(response fotmob.MatchesResponse) []models.ExternalAPITeam {
 	var teams []models.ExternalAPITeam
-	seen := make(map[uint]bool)
+	seen := make(map[int]bool)
 
 	for _, league := range response.Leagues {
 		for _, m := range league.Matches {
@@ -292,8 +293,8 @@ func expectedExternalAPIMatch(t *testing.T, match fotmob.Match) models.ExternalA
 	status := fmt.Sprintf("%d", match.StatusID)
 	return models.ExternalAPIMatch{
 		ID:             match.ID,
-		HomeID:         match.Home.ID,
-		AwayID:         match.Away.ID,
+		HomeID:         strconv.Itoa(match.Home.ID),
+		AwayID:         strconv.Itoa(match.Away.ID),
 		HomeScore:      match.Home.Score,
 		AwayScore:      match.Away.Score,
 		Time:           expectedTime,

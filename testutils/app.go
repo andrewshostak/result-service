@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/andrewshostak/result-service/internal/app/models"
@@ -17,9 +18,8 @@ func applyOptions[T any](item *T, updates ...Option[T]) {
 
 func FakeAlias(options ...Option[models.Alias]) models.Alias {
 	alias := models.Alias{
-		TeamID:       uint(gofakeit.Uint8()),
-		Alias:        gofakeit.Name(),
-		ExternalTeam: &models.ExternalTeam{},
+		TeamID: uint(gofakeit.Uint8()),
+		Alias:  gofakeit.Name(),
 	}
 
 	applyOptions(&alias, options...)
@@ -86,8 +86,8 @@ func FakeExternalAPIMatch(options ...Option[models.ExternalAPIMatch]) models.Ext
 
 	externalMatch := models.ExternalAPIMatch{
 		ID:        uint(gofakeit.Uint8()),
-		HomeID:    uint(gofakeit.Uint8()),
-		AwayID:    uint(gofakeit.Uint8()),
+		HomeID:    strconv.Itoa(int(gofakeit.Uint32())),
+		AwayID:    strconv.Itoa(int(gofakeit.Uint32())),
 		HomeScore: gofakeit.IntRange(0, 9),
 		AwayScore: gofakeit.IntRange(0, 9),
 		Time:      gofakeit.Date(),

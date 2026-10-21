@@ -31,10 +31,9 @@ func FakeRepositoryMatch(options ...Option[repository.Match]) repository.Match {
 
 func FakeRepositoryAlias(options ...Option[repository.Alias]) repository.Alias {
 	alias := repository.Alias{
-		ID:           uint(gofakeit.Uint8()),
-		TeamID:       uint(gofakeit.Uint8()),
-		Alias:        gofakeit.Name(),
-		ExternalTeam: &repository.ExternalTeam{},
+		ID:     uint(gofakeit.Uint8()),
+		TeamID: uint(gofakeit.Uint8()),
+		Alias:  gofakeit.Name(),
 	}
 
 	applyOptions(&alias, options...)
