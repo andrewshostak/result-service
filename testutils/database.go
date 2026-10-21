@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/andrewshostak/result-service/internal/adapters/repository"
@@ -33,7 +34,15 @@ func SetupTeamWithRelations(t *testing.T, db *sqlx.DB, alias string, externalTea
 	teamID := CreateTeam(t, db)
 	CreateAlias(t, db, alias, teamID)
 	externalTeam := CreateExternalTeam(t, db, teamID, externalTeamID)
+	CreateProviderTeam(t, db, teamID, strconv.Itoa(externalTeamID))
 	return teamID, externalTeam
+}
+
+func CreateProviderTeam(t *testing.T, db *sqlx.DB, teamID uint, providerTeamID string) {
+	t.Helper()
+
+	_, err := db.Exec("INSERT INTO provider_teams (team_id, provider, provider_team_id) VALUES ($1, 'fotmob', $2)", teamID, providerTeamID)
+	require.NoError(t, err)
 }
 
 func CreateAlias(t *testing.T, db *sqlx.DB, alias string, teamID uint) {
