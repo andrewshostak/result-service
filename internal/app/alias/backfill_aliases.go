@@ -13,20 +13,20 @@ import (
 
 type BackfillAliasesService struct {
 	aliasRepository        AliasRepository
-	externalTeamRepository ExternalTeamRepository
+	providerTeamRepository ProviderTeamRepository
 	externalAPIClient      ExternalAPIClient
 	logger                 Logger
 }
 
 func NewBackfillAliasesService(
 	aliasRepository AliasRepository,
-	externalTeamRepository ExternalTeamRepository,
+	providerTeamRepository ProviderTeamRepository,
 	externalAPIClient ExternalAPIClient,
 	logger Logger,
 ) *BackfillAliasesService {
 	return &BackfillAliasesService{
 		aliasRepository:        aliasRepository,
-		externalTeamRepository: externalTeamRepository,
+		providerTeamRepository: providerTeamRepository,
 		externalAPIClient:      externalAPIClient,
 		logger:                 logger,
 	}
@@ -154,18 +154,18 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.E
 			continue
 		}
 
-		externalTeam, errExtTeam := s.externalTeamRepository.FindExternalTeam(ctx, uint(teams[i].ID))
-		if errExtTeam != nil && !errors.As(errExtTeam, &models.ResourceNotFoundError{}) {
+		providerTeam, errProviderTeam := s.providerTeamRepository.FindByProviderAndProviderTeamID(ctx, fotmobProvider, fmt.Sprintf("%d", teams[i].ID))
+		if errProviderTeam != nil && !errors.As(errProviderTeam, &models.ResourceNotFoundError{}) {
 			s.logger.Error().
 				Str("alias", teams[i].Name).
 				Int("external_id", teams[i].ID).
-				Err(errExtTeam).
-				Msg("failed to find external team")
+				Err(errProviderTeam).
+				Msg("failed to find provider team")
 			continue
 		}
 
-		if externalTeam != nil {
-			if errSaveForTeam := s.aliasRepository.SaveForTeam(ctx, teams[i].Name, externalTeam.TeamID); errSaveForTeam != nil {
+		if providerTeam != nil {
+			if errSaveForTeam := s.aliasRepository.SaveForTeam(ctx, teams[i].Name, providerTeam.TeamID); errSaveForTeam != nil {
 				s.logger.Error().
 					Str("alias", teams[i].Name).
 					Int("external_id", teams[i].ID).

@@ -213,19 +213,19 @@ Instead of a single `check_result_task` per match that fans out to all providers
 
 ## Summary
 
-| PR                                                  | Type              | Depends on  |
-|-----------------------------------------------------|-------------------|-------------|
-| PR 1 — `providers` table ✓                          | DB only           | —           |
-| PR 2 — timestamps ✓                                 | DB + gorm models  | PR 1        |
-| PR 3 — `home_score` / `away_score` on `matches` ✓   | DB + gorm model   | —           |
-| PR 4 — `provider_teams` + backfill + dual-write ✓   | DB + code         | PR 1        |
-| PR 5 — `provider_matches` + backfill + dual-write ✓ | DB + code         | PR 1, PR 6* |
-| PR 6 — `ResultProvider` interface ✓                 | Code only         | —           |
-| PR 7 — `provider` string column, drop `providers` ✓ | DB + code         | PR 5, PR 6  |
-| PR 8 — switch alias reads to `provider_teams`       | Code only         | PR 4, PR 7  |
-| PR 8.5 — switch backfill to use `provider_teams`    | Code only         | PR 4, PR 8  |
-| PR 9 — switch result reads to `provider_matches`    | Code only         | PR 5, PR 7  |
+| PR                                                  | Type              | Depends on   |
+|-----------------------------------------------------|-------------------|--------------|
+| PR 1 — `providers` table ✓                          | DB only           | —            |
+| PR 2 — timestamps ✓                                 | DB + gorm models  | PR 1         |
+| PR 3 — `home_score` / `away_score` on `matches` ✓   | DB + gorm model   | —            |
+| PR 4 — `provider_teams` + backfill + dual-write ✓   | DB + code         | PR 1         |
+| PR 5 — `provider_matches` + backfill + dual-write ✓ | DB + code         | PR 1, PR 6*  |
+| PR 6 — `ResultProvider` interface ✓                 | Code only         | —            |
+| PR 7 — `provider` string column, drop `providers` ✓ | DB + code         | PR 5, PR 6   |
+| PR 8 — switch alias reads to `provider_teams`       | Code only         | PR 4, PR 7   |
+| PR 8.5 — switch backfill to use `provider_teams`    | Code only         | PR 4, PR 8   |
+| PR 9 — switch result reads to `provider_matches`    | Code only         | PR 5, PR 7   |
 | PR 10 — drop old tables                             | DB + code cleanup | PR 8.5, PR 9 |
-| PR 11 — rename `external_match_status` enum         | DB only           | PR 10       |
+| PR 11 — rename `external_match_status` enum         | DB only           | PR 10        |
 
 *PR 5 needs `provider.Name()` to write the provider identifier when dual-writing, so PR 6 should land first.
