@@ -45,15 +45,15 @@ func (s *SubscriberNotifierService) NotifySubscriber(ctx context.Context, subscr
 		return fmt.Errorf("failed to get match: %w", err)
 	}
 
-	if m.ExternalMatch == nil {
-		return fmt.Errorf("match relation external match doesn't exist")
+	if m.HomeScore == nil || m.AwayScore == nil {
+		return fmt.Errorf("match score is not set")
 	}
 
 	err = s.notifierClient.Notify(ctx, models.SubscriberNotification{
 		Url:  sub.Url,
 		Key:  sub.Key,
-		Home: uint(m.ExternalMatch.HomeScore),
-		Away: uint(m.ExternalMatch.AwayScore),
+		Home: uint(*m.HomeScore),
+		Away: uint(*m.AwayScore),
 	})
 	if err != nil {
 		s.logger.Error().Err(err).Uint("subscription_id", sub.ID).Msg("failed to notify subscriber")

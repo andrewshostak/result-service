@@ -66,20 +66,9 @@ type Match struct {
 	CreatedAt    time.Time `gorm:"column:created_at" db:"created_at"`
 	UpdatedAt    time.Time `gorm:"column:updated_at" db:"updated_at"`
 
-	ExternalMatch   *ExternalMatch
 	CheckResultTask *CheckResultTask
 	HomeTeam        *Team `gorm:"foreignKey:HomeTeamID"`
 	AwayTeam        *Team `gorm:"foreignKey:AwayTeamID"`
-}
-
-type ExternalMatch struct {
-	ID        uint   `gorm:"column:id;primaryKey" db:"id"`
-	MatchID   uint   `gorm:"column:match_id" db:"match_id"`
-	HomeScore int    `gorm:"column:home_score" db:"home_score"`
-	AwayScore int    `gorm:"column:away_score" db:"away_score"`
-	Status    string `gorm:"column:status" db:"status"`
-
-	Match *Match `gorm:"foreignKey:MatchID"`
 }
 
 type Subscription struct {
@@ -155,16 +144,6 @@ func toDomainProviderMatch(p ProviderMatch) models.ProviderMatch {
 	}
 }
 
-func toDomainExternalMatch(f ExternalMatch) models.ExternalMatch {
-	return models.ExternalMatch{
-		ID:        f.ID,
-		MatchID:   f.MatchID,
-		HomeScore: f.HomeScore,
-		AwayScore: f.AwayScore,
-		Status:    models.ExternalMatchStatus(f.Status),
-	}
-}
-
 func toDomainCheckResultTask(t CheckResultTask) models.CheckResultTask {
 	return models.CheckResultTask{
 		ID:            t.ID,
@@ -181,11 +160,8 @@ func toDomainMatch(m Match) models.Match {
 		HomeTeamID:   m.HomeTeamID,
 		AwayTeamID:   m.AwayTeamID,
 		ResultStatus: models.ResultStatus(m.ResultStatus),
-	}
-
-	if m.ExternalMatch != nil {
-		externalMatch := toDomainExternalMatch(*m.ExternalMatch)
-		match.ExternalMatch = &externalMatch
+		HomeScore:    m.HomeScore,
+		AwayScore:    m.AwayScore,
 	}
 
 	if m.CheckResultTask != nil {

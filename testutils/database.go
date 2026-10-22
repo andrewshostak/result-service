@@ -66,13 +66,13 @@ func CreateExternalTeam(t *testing.T, db *sqlx.DB, teamID uint, externalTeamID i
 	return created
 }
 
-func CreateExternalMatch(t *testing.T, db *sqlx.DB, externalMatch repository.ExternalMatch) repository.ExternalMatch {
+func CreateProviderMatch(t *testing.T, db *sqlx.DB, providerMatch repository.ProviderMatch) repository.ProviderMatch {
 	t.Helper()
 
-	var created repository.ExternalMatch
-	externalMatchCreationQuery := "INSERT INTO external_matches (match_id, status, home_score, away_score) VALUES ($1, $2, $3, $4) RETURNING *"
+	var created repository.ProviderMatch
+	query := "INSERT INTO provider_matches (match_id, provider, provider_match_id, starts_at, status, home_score, away_score) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *"
 
-	err := db.Get(&created, externalMatchCreationQuery, externalMatch.MatchID, externalMatch.Status, externalMatch.HomeScore, externalMatch.AwayScore)
+	err := db.Get(&created, query, providerMatch.MatchID, providerMatch.Provider, providerMatch.ProviderMatchID, providerMatch.StartsAt, providerMatch.Status, providerMatch.HomeScore, providerMatch.AwayScore)
 	require.NoError(t, err)
 
 	return created
@@ -94,9 +94,9 @@ func CreateMatch(t *testing.T, db *sqlx.DB, match repository.Match) repository.M
 	t.Helper()
 
 	var created repository.Match
-	query := "INSERT INTO matches (home_team_id, away_team_id, starts_at, result_status) VALUES ($1, $2, $3, $4) RETURNING *"
+	query := "INSERT INTO matches (home_team_id, away_team_id, starts_at, result_status, home_score, away_score) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *"
 
-	err := db.Get(&created, query, match.HomeTeamID, match.AwayTeamID, match.StartsAt, match.ResultStatus)
+	err := db.Get(&created, query, match.HomeTeamID, match.AwayTeamID, match.StartsAt, match.ResultStatus, match.HomeScore, match.AwayScore)
 	require.NoError(t, err)
 
 	return created
@@ -146,17 +146,6 @@ func ListCheckResultTasks(t *testing.T, db *sqlx.DB) []repository.CheckResultTas
 	require.NoError(t, err)
 
 	return checkResultTasks
-}
-
-func ListExternalMatches(t *testing.T, db *sqlx.DB) []repository.ExternalMatch {
-	t.Helper()
-
-	var externalMatches []repository.ExternalMatch
-
-	err := db.Select(&externalMatches, "SELECT * FROM external_matches")
-	require.NoError(t, err)
-
-	return externalMatches
 }
 
 func ListMatches(t *testing.T, db *sqlx.DB) []repository.Match {

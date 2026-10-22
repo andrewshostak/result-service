@@ -84,17 +84,6 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 		},
 	}, matches)
 
-	externalMatches := testutils.ListExternalMatches(s.T(), s.db)
-	s.Equal([]repository.ExternalMatch{
-		{
-			ID:        matchesResponse.Leagues[0].Matches[0].ID,
-			MatchID:   response.MatchID,
-			HomeScore: matchesResponse.Leagues[0].Matches[0].Home.Score,
-			AwayScore: matchesResponse.Leagues[0].Matches[0].Away.Score,
-			Status:    string(models.StatusMatchNotStarted),
-		},
-	}, externalMatches)
-
 	checkResultTasks := testutils.ListCheckResultTasks(s.T(), s.db)
 	s.Equal([]repository.CheckResultTask{
 		{

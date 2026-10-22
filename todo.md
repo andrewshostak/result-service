@@ -38,6 +38,7 @@
   - [ ] do not use external value as primary key
 - [ ] when result status fails then subscription status should be set to cancelled as well (not remain 'pending')
 - [X] enforce `MAX_RETRIES` in `ResultCheckerService.handleInPlayMatch` — the config field exists but is never checked, so result check tasks reschedule indefinitely if a match stays `in_progress`
+- [ ] one `check_result_task` per provider per match instead of a single task per match that fans out to all providers in `ResultCheckerService.CheckResult` (see "Alternative approach" under PR 9 in migration-plan.md) — needed once a second result provider is onboarded, to properly arbitrate providers disagreeing on a match's status instead of picking the first one found
 - [ ] configure CI in github
   - [ ] tests
   - [ ] linter

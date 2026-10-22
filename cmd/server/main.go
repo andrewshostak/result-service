@@ -58,7 +58,6 @@ func startServer(_ *cobra.Command, _ []string) {
 
 	aliasRepository := repository.NewAliasRepository(db)
 	matchRepository := repository.NewMatchRepository(db)
-	externalMatchRepository := repository.NewExternalMatchRepository(db)
 	providerTeamRepository := repository.NewProviderTeamRepository(db)
 	providerMatchRepository := repository.NewProviderMatchRepository(db)
 	subscriptionRepository := repository.NewSubscriptionRepository(db)
@@ -70,7 +69,6 @@ func startServer(_ *cobra.Command, _ []string) {
 		cfg.Result,
 		aliasRepository,
 		matchRepository,
-		externalMatchRepository,
 		providerTeamRepository,
 		providerMatchRepository,
 		checkResultTaskRepository,
@@ -83,7 +81,6 @@ func startServer(_ *cobra.Command, _ []string) {
 	resultCheckerService := match.NewResultCheckerService(
 		cfg.Result,
 		matchRepository,
-		externalMatchRepository,
 		providerMatchRepository,
 		subscriptionRepository,
 		checkResultTaskRepository,
