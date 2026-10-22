@@ -141,13 +141,6 @@ func toDomainProvider(p Provider) models.Provider {
 	}
 }
 
-func toDomainExternalTeam(t ExternalTeam) models.ExternalTeam {
-	return models.ExternalTeam{
-		ID:     t.ID,
-		TeamID: t.TeamID,
-	}
-}
-
 func toDomainProviderMatch(p ProviderMatch) models.ProviderMatch {
 	return models.ProviderMatch{
 		ID:              p.ID,

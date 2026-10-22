@@ -15,8 +15,8 @@ type AliasRepository interface {
 	SaveForTeam(ctx context.Context, alias string, teamID uint) error
 }
 
-type ExternalTeamRepository interface {
-	FindExternalTeam(ctx context.Context, externalTeamID uint) (*models.ExternalTeam, error)
+type ProviderTeamRepository interface {
+	FindByProviderAndProviderTeamID(ctx context.Context, provider, providerTeamID string) (*models.ProviderTeam, error)
 }
 
 type ExternalAPIClient interface {
