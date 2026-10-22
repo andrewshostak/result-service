@@ -83,7 +83,6 @@ func startServer(_ *cobra.Command, _ []string) {
 	resultCheckerService := match.NewResultCheckerService(
 		cfg.Result,
 		matchRepository,
-		externalMatchRepository,
 		providerMatchRepository,
 		subscriptionRepository,
 		checkResultTaskRepository,

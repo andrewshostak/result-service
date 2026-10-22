@@ -35,7 +35,6 @@ func (r *MatchRepository) One(ctx context.Context, search models.Match) (*models
 	var match Match
 
 	query := r.db.WithContext(ctx).
-		Preload("ExternalMatch").
 		Preload("CheckResultTask")
 
 	if search.ID != 0 {

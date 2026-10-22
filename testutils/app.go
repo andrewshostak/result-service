@@ -99,6 +99,31 @@ func FakeExternalAPIMatch(options ...Option[models.ExternalAPIMatch]) models.Ext
 	return externalMatch
 }
 
+func FakeProviderMatch(options ...Option[models.ProviderMatch]) models.ProviderMatch {
+	statuses := []models.ExternalMatchStatus{
+		models.StatusMatchNotStarted,
+		models.StatusMatchCancelled,
+		models.StatusMatchInProgress,
+		models.StatusMatchFinished,
+		models.StatusMatchUnknown,
+	}
+
+	providerMatch := models.ProviderMatch{
+		ID:              uint(gofakeit.Uint8()),
+		MatchID:         uint(gofakeit.Uint8()),
+		Provider:        "fotmob",
+		ProviderMatchID: strconv.Itoa(int(gofakeit.Uint32())),
+		StartsAt:        gofakeit.Date(),
+		HomeScore:       gofakeit.IntRange(0, 9),
+		AwayScore:       gofakeit.IntRange(0, 9),
+		Status:          statuses[gofakeit.IntRange(0, len(statuses)-1)],
+	}
+
+	applyOptions(&providerMatch, options...)
+
+	return providerMatch
+}
+
 func FakeTask(options ...Option[models.Task]) models.Task {
 	task := models.Task{
 		Name:      gofakeit.Name(),

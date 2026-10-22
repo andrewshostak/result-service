@@ -15,7 +15,6 @@ const fotmobProvider = "fotmob"
 type ResultCheckerService struct {
 	config                    config.ResultCheck
 	matchRepository           MatchRepository
-	externalMatchRepository   ExternalMatchRepository
 	providerMatchRepository   ProviderMatchRepository
 	subscriptionRepository    SubscriptionRepository
 	checkResultTaskRepository CheckResultTaskRepository
@@ -27,7 +26,6 @@ type ResultCheckerService struct {
 func NewResultCheckerService(
 	config config.ResultCheck,
 	matchRepository MatchRepository,
-	externalMatchRepository ExternalMatchRepository,
 	providerMatchRepository ProviderMatchRepository,
 	subscriptionRepository SubscriptionRepository,
 	checkResultTaskRepository CheckResultTaskRepository,
@@ -38,7 +36,6 @@ func NewResultCheckerService(
 	return &ResultCheckerService{
 		config:                    config,
 		matchRepository:           matchRepository,
-		externalMatchRepository:   externalMatchRepository,
 		providerMatchRepository:   providerMatchRepository,
 		subscriptionRepository:    subscriptionRepository,
 		checkResultTaskRepository: checkResultTaskRepository,
@@ -59,10 +56,14 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 		return nil
 	}
 
-	// TODO: change the logic to get all existing provider matches (by match id) and iterate through all of them
-	if match.ExternalMatch == nil {
-		s.logger.Error().Uint("match_id", matchID).Msg("match relation external match doesn't exist")
-		return errors.New("match relation external match doesn't exist")
+	providerMatches, err := s.providerMatchRepository.ListByMatchID(ctx, matchID)
+	if err != nil {
+		return fmt.Errorf("failed to list provider matches: %w", err)
+	}
+
+	if len(providerMatches) == 0 {
+		s.logger.Error().Uint("match_id", matchID).Msg("match has no provider matches")
+		return errors.New("match has no provider matches")
 	}
 
 	matches, err := s.getMatchesFromProviders(ctx, match.StartsAt)
@@ -75,44 +76,56 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 		return fmt.Errorf("failed to get matches from external api: %w", err)
 	}
 
-	externalAPIMatch, providerName := s.findExternalMatchByID(match.ExternalMatch.ID, matches)
-	if externalAPIMatch == nil {
-		s.logger.Info().Uint("match_id", matchID).Msgf("external match with id %d is not found", match.ExternalMatch.ID)
+	var found *models.ExternalAPIMatch
+	for _, providerMatch := range providerMatches {
+		externalAPIMatch := s.findExternalAPIMatch(providerMatch, matches[providerMatch.Provider])
+		if externalAPIMatch == nil {
+			s.logger.Info().Uint("match_id", matchID).Str("provider", providerMatch.Provider).Msgf("provider match with id %s is not found", providerMatch.ProviderMatchID)
 
-		return s.handleNotFoundMatch(ctx, *match.ExternalMatch, match.StartsAt)
+			if err := s.handleNotFoundMatch(ctx, providerMatch); err != nil {
+				return err
+			}
+
+			continue
+		}
+
+		if _, err := s.providerMatchRepository.Save(ctx, externalAPIMatch.ToProviderMatch(match.ID, providerMatch.Provider)); err != nil {
+			return fmt.Errorf("failed to save provider match with id %d and match id %d: %w", externalAPIMatch.ID, match.ID, err)
+		}
+
+		if found == nil {
+			found = externalAPIMatch
+		}
 	}
 
-	externalMatch, err := s.externalMatchRepository.Save(ctx, &match.ExternalMatch.ID, externalAPIMatch.ToExternalMatch(match.ID))
-	if err != nil {
-		return fmt.Errorf("failed to update external match: %w", err)
-	}
-	_, err = s.providerMatchRepository.Save(ctx, externalAPIMatch.ToProviderMatch(match.ID, providerName))
-	if err != nil {
-		return fmt.Errorf("failed to save provider match with id %d and match id %d: %w", externalAPIMatch.ID, match.ID, err)
+	if found == nil {
+		if _, err := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.Cancelled}); err != nil {
+			return fmt.Errorf("failed to update match: %w", err)
+		}
+
+		return nil
 	}
 
-	switch externalAPIMatch.Status {
+	switch found.Status {
 	// TODO: add a case when match was paused after some time and its status is 'not_started'
 	case models.StatusMatchInProgress:
 		return s.handleInPlayMatch(ctx, *match)
 	case models.StatusMatchFinished:
-		return s.handleFinishedMatch(ctx, match.ID, *externalMatch)
+		return s.handleFinishedMatch(ctx, match.ID, found.HomeScore, found.AwayScore)
 	// if we receive here any other status - that is not expected, we should cancel the result check.
 	default:
-		return s.handleMatchWithUnexpectedStatus(ctx, matchID, externalAPIMatch.Status)
+		return s.handleMatchWithUnexpectedStatus(ctx, matchID, found.Status)
 	}
 }
 
-func (s *ResultCheckerService) findExternalMatchByID(externalID uint, matches map[string][]models.ExternalAPIMatch) (*models.ExternalAPIMatch, string) {
-	for providerName, providerMatches := range matches {
-		for _, match := range providerMatches {
-			if match.ID == externalID {
-				return &match, providerName
-			}
+func (s *ResultCheckerService) findExternalAPIMatch(providerMatch models.ProviderMatch, apiMatches []models.ExternalAPIMatch) *models.ExternalAPIMatch {
+	for _, apiMatch := range apiMatches {
+		if fmt.Sprintf("%d", apiMatch.ID) == providerMatch.ProviderMatchID {
+			return &apiMatch
 		}
 	}
 
-	return nil, ""
+	return nil
 }
 
 // TODO: update external match as well
@@ -173,7 +186,7 @@ func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match mode
 	return nil
 }
 
-func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID uint, externalMatch models.ExternalMatch) error {
+func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID uint, homeScore, awayScore int) error {
 	s.logger.Debug().Uint("match_id", matchID).Msg("match is finished, scheduling subscribers notifications")
 
 	subscriptions, err := s.subscriptionRepository.ListByMatchAndStatus(ctx, matchID, models.PendingSub)
@@ -198,35 +211,19 @@ func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID 
 		}
 	}
 
-	if _, err := s.matchRepository.Update(ctx, matchID, models.Match{ResultStatus: models.Received, HomeScore: &externalMatch.HomeScore, AwayScore: &externalMatch.AwayScore}); err != nil {
+	if _, err := s.matchRepository.Update(ctx, matchID, models.Match{ResultStatus: models.Received, HomeScore: &homeScore, AwayScore: &awayScore}); err != nil {
 		return fmt.Errorf("failed to handle finished match: %w", err)
 	}
 
 	return nil
 }
 
-// handleNotFoundMatch updates statuses of match and external match.
-// When a match is postponed to another date - it is removed from original date matches. In that case retrying doesn't make sense, so returning nil.
-func (s *ResultCheckerService) handleNotFoundMatch(ctx context.Context, externalMatch models.ExternalMatch, startsAt time.Time) error {
-	externalMatch.Status = models.StatusMatchUnknown
-	if _, err := s.externalMatchRepository.Save(ctx, &externalMatch.ID, externalMatch); err != nil {
-		return fmt.Errorf("failed to update external match: %w", err)
-	}
-
-	if _, err := s.providerMatchRepository.Save(ctx, models.ProviderMatch{
-		MatchID:         externalMatch.MatchID,
-		Provider:        fotmobProvider,
-		ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
-		StartsAt:        startsAt,
-		HomeScore:       externalMatch.HomeScore,
-		AwayScore:       externalMatch.AwayScore,
-		Status:          models.StatusMatchUnknown,
-	}); err != nil {
-		return fmt.Errorf("failed to save provider match: %w", err)
-	}
-
-	if _, err := s.matchRepository.Update(ctx, externalMatch.MatchID, models.Match{ResultStatus: models.Cancelled}); err != nil {
-		return fmt.Errorf("failed to update match: %w", err)
+// handleNotFoundMatch marks a single provider's match as unknown.
+// When a match is postponed to another date - it is removed from original date matches. In that case retrying doesn't make sense for that provider.
+func (s *ResultCheckerService) handleNotFoundMatch(ctx context.Context, providerMatch models.ProviderMatch) error {
+	providerMatch.Status = models.StatusMatchUnknown
+	if _, err := s.providerMatchRepository.Save(ctx, providerMatch); err != nil {
+		return fmt.Errorf("failed to update provider match: %w", err)
 	}
 
 	return nil

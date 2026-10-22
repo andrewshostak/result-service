@@ -181,6 +181,8 @@ func toDomainMatch(m Match) models.Match {
 		HomeTeamID:   m.HomeTeamID,
 		AwayTeamID:   m.AwayTeamID,
 		ResultStatus: models.ResultStatus(m.ResultStatus),
+		HomeScore:    m.HomeScore,
+		AwayScore:    m.AwayScore,
 	}
 
 	if m.ExternalMatch != nil {

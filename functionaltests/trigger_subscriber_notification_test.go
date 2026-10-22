@@ -127,7 +127,7 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriptionAlre
 	s.Nil(subscriptions[0].NotifiedAt)
 }
 
-func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_ExternalMatchRelationNotfound() {
+func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_MatchScoreNotSet() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	matchToCreate := repository.Match{
@@ -170,25 +170,23 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_ExternalMatchRel
 	var response handler.ErrorResponse
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
-	s.Equal("match relation external match doesn't exist", response.Error)
+	s.Equal("match score is not set", response.Error)
 	s.Equal(string(models.CodeInternalServerError), response.Code)
 }
 
 func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriberReturnsNonSuccessfulStatusCode() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
+	homeScore, awayScore := gofakeit.IntRange(0, 9), gofakeit.IntRange(0, 9)
 	matchToCreate := repository.Match{
 		StartsAt:     testutils.RandomFutureDate(s.T()),
 		HomeTeamID:   uint(teamSeeds[0].TeamID),
 		AwayTeamID:   uint(teamSeeds[1].TeamID),
 		ResultStatus: string(models.Received),
+		HomeScore:    &homeScore,
+		AwayScore:    &awayScore,
 	}
 	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
-
-	externalMatch := testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
-		m.MatchID = match.ID
-		m.Status = string(models.StatusMatchFinished)
-	}))
 
 	path := fmt.Sprintf("/matches/%d", match.ID)
 	subscription := testutils.CreateSubscription(s.T(), s.db, testutils.FakeRepositorySubscription(func(sub *repository.Subscription) {
@@ -198,7 +196,7 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriberReturn
 		sub.Status = string(models.PendingSub)
 	}))
 
-	expectedRequestBody := notifier.NotificationBody{Home: uint(externalMatch.HomeScore), Away: uint(externalMatch.AwayScore)}
+	expectedRequestBody := notifier.NotificationBody{Home: uint(homeScore), Away: uint(awayScore)}
 	payload, err := json.Marshal(expectedRequestBody)
 	s.Require().NoError(err)
 
@@ -251,18 +249,16 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriberReturn
 func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriberReturnsSuccessfulStatusCode() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
+	homeScore, awayScore := gofakeit.IntRange(0, 9), gofakeit.IntRange(0, 9)
 	matchToCreate := repository.Match{
 		StartsAt:     testutils.RandomFutureDate(s.T()),
 		HomeTeamID:   uint(teamSeeds[0].TeamID),
 		AwayTeamID:   uint(teamSeeds[1].TeamID),
 		ResultStatus: string(models.Received),
+		HomeScore:    &homeScore,
+		AwayScore:    &awayScore,
 	}
 	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
-
-	externalMatch := testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
-		m.MatchID = match.ID
-		m.Status = string(models.StatusMatchFinished)
-	}))
 
 	path := fmt.Sprintf("/matches/%d", match.ID)
 	subscription := testutils.CreateSubscription(s.T(), s.db, testutils.FakeRepositorySubscription(func(sub *repository.Subscription) {
@@ -272,7 +268,7 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriberReturn
 		sub.Status = string(models.PendingSub)
 	}))
 
-	expectedRequestBody := notifier.NotificationBody{Home: uint(externalMatch.HomeScore), Away: uint(externalMatch.AwayScore)}
+	expectedRequestBody := notifier.NotificationBody{Home: uint(homeScore), Away: uint(awayScore)}
 	payload, err := json.Marshal(expectedRequestBody)
 	s.Require().NoError(err)
 

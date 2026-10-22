@@ -15,6 +15,36 @@ type ProviderMatchRepository struct {
 	mock.Mock
 }
 
+// ListByMatchID provides a mock function with given fields: ctx, matchID
+func (_m *ProviderMatchRepository) ListByMatchID(ctx context.Context, matchID uint) ([]models.ProviderMatch, error) {
+	ret := _m.Called(ctx, matchID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByMatchID")
+	}
+
+	var r0 []models.ProviderMatch
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint) ([]models.ProviderMatch, error)); ok {
+		return rf(ctx, matchID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint) []models.ProviderMatch); ok {
+		r0 = rf(ctx, matchID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.ProviderMatch)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint) error); ok {
+		r1 = rf(ctx, matchID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Save provides a mock function with given fields: ctx, providerMatch
 func (_m *ProviderMatchRepository) Save(ctx context.Context, providerMatch models.ProviderMatch) (*models.ProviderMatch, error) {
 	ret := _m.Called(ctx, providerMatch)

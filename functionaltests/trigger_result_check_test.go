@@ -119,7 +119,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotScheduled() {
 	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 }
 
-func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalMatchRelationNotfound() {
+func (s *FunctionalTestSuite) TestTriggerResultCheck_NoProviderMatches() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	match := repository.Match{
@@ -155,7 +155,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalMatchRelationNotfou
 	var response handler.ErrorResponse
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
-	s.Equal("match relation external match doesn't exist", response.Error)
+	s.Equal("match has no provider matches", response.Error)
 	s.Equal(string(models.CodeInternalServerError), response.Code)
 }
 
@@ -169,9 +169,10 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsError() {
 		ResultStatus: string(models.Scheduled),
 	}
 	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
-	_ = testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
-		m.MatchID = match.ID
-		m.Status = string(models.StatusMatchNotStarted)
+	_ = testutils.CreateProviderMatch(s.T(), s.db, testutils.FakeRepositoryProviderMatch(func(pm *repository.ProviderMatch) {
+		pm.MatchID = match.ID
+		pm.StartsAt = match.StartsAt
+		pm.Status = string(models.StatusMatchNotStarted)
 	}))
 
 	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
@@ -234,9 +235,10 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsInvalidRe
 		ResultStatus: string(models.Scheduled),
 	}
 	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
-	_ = testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
-		m.MatchID = match.ID
-		m.Status = string(models.StatusMatchNotStarted)
+	_ = testutils.CreateProviderMatch(s.T(), s.db, testutils.FakeRepositoryProviderMatch(func(pm *repository.ProviderMatch) {
+		pm.MatchID = match.ID
+		pm.StartsAt = match.StartsAt
+		pm.Status = string(models.StatusMatchNotStarted)
 	}))
 
 	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
@@ -298,9 +300,10 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFoundInExternalAPI(
 		ResultStatus: string(models.Scheduled),
 	}
 	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
-	externalMatch := testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
-		m.MatchID = match.ID
-		m.Status = string(models.StatusMatchNotStarted)
+	providerMatch := testutils.CreateProviderMatch(s.T(), s.db, testutils.FakeRepositoryProviderMatch(func(pm *repository.ProviderMatch) {
+		pm.MatchID = match.ID
+		pm.StartsAt = match.StartsAt
+		pm.Status = string(models.StatusMatchNotStarted)
 	}))
 
 	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
@@ -342,29 +345,19 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFoundInExternalAPI(
 		},
 	}, matches)
 
-	externalMatches := testutils.ListExternalMatches(s.T(), s.db)
-	s.Equal([]repository.ExternalMatch{
-		{
-			ID:        externalMatch.ID,
-			MatchID:   match.ID,
-			HomeScore: externalMatch.HomeScore,
-			AwayScore: externalMatch.AwayScore,
-			Status:    string(models.StatusMatchUnknown),
-		},
-	}, externalMatches)
-
 	providerMatches := testutils.ListProviderMatches(s.T(), s.db)
 	s.Equal([]repository.ProviderMatch{
 		{
-			ID:              1,
+			ID:              providerMatch.ID,
 			MatchID:         match.ID,
 			Provider:        "fotmob",
-			ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
-			StartsAt:        match.StartsAt,
-			HomeScore:       externalMatch.HomeScore,
-			AwayScore:       externalMatch.AwayScore,
+			ProviderMatchID: providerMatch.ProviderMatchID,
+			StartsAt:        providerMatch.StartsAt,
+			HomeScore:       providerMatch.HomeScore,
+			AwayScore:       providerMatch.AwayScore,
 			Status:          string(models.StatusMatchUnknown),
-			CreatedAt:       providerMatches[0].CreatedAt,
+			ProviderStatus:  providerMatch.ProviderStatus,
+			CreatedAt:       providerMatch.CreatedAt,
 			UpdatedAt:       providerMatches[0].UpdatedAt,
 		},
 	}, providerMatches)
@@ -380,13 +373,16 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 		ResultStatus: string(models.Scheduled),
 	}
 	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
-	externalMatch := testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
-		m.MatchID = match.ID
-		m.Status = string(models.StatusMatchNotStarted)
+	providerMatchExternalID := uint(gofakeit.Uint32())
+	providerMatch := testutils.CreateProviderMatch(s.T(), s.db, testutils.FakeRepositoryProviderMatch(func(pm *repository.ProviderMatch) {
+		pm.MatchID = match.ID
+		pm.ProviderMatchID = fmt.Sprintf("%d", providerMatchExternalID)
+		pm.StartsAt = match.StartsAt
+		pm.Status = string(models.StatusMatchNotStarted)
 	}))
 
 	matchesResponse := testutils.FakeMatchesResponse()
-	matchesResponse.Leagues[0].Matches[0].ID = externalMatch.ID
+	matchesResponse.Leagues[0].Matches[0].ID = providerMatchExternalID
 	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ExternalTeamID)
 	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ExternalTeamID)
 	matchesResponse.Leagues[0].Matches[0].StatusID = 11111
@@ -433,31 +429,20 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 		},
 	}, matches)
 
-	externalMatches := testutils.ListExternalMatches(s.T(), s.db)
-	s.Equal([]repository.ExternalMatch{
-		{
-			ID:        externalMatch.ID,
-			MatchID:   match.ID,
-			HomeScore: matchesResponse.Leagues[0].Matches[0].Home.Score,
-			AwayScore: matchesResponse.Leagues[0].Matches[0].Away.Score,
-			Status:    string(models.StatusMatchUnknown),
-		},
-	}, externalMatches)
-
 	providerMatches := testutils.ListProviderMatches(s.T(), s.db)
 	providerStatus := "11111"
 	s.Equal([]repository.ProviderMatch{
 		{
-			ID:              1,
+			ID:              providerMatch.ID,
 			MatchID:         match.ID,
 			Provider:        "fotmob",
-			ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
+			ProviderMatchID: fmt.Sprintf("%d", providerMatchExternalID),
 			StartsAt:        match.StartsAt.Truncate(time.Second),
 			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,
 			AwayScore:       matchesResponse.Leagues[0].Matches[0].Away.Score,
 			Status:          string(models.StatusMatchUnknown),
 			ProviderStatus:  &providerStatus,
-			CreatedAt:       providerMatches[0].CreatedAt,
+			CreatedAt:       providerMatch.CreatedAt,
 			UpdatedAt:       providerMatches[0].UpdatedAt,
 		},
 	}, providerMatches)
@@ -474,9 +459,12 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 	}
 	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
 
-	externalMatch := testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
-		m.MatchID = match.ID
-		m.Status = string(models.StatusMatchNotStarted)
+	providerMatchExternalID := uint(gofakeit.Uint32())
+	providerMatch := testutils.CreateProviderMatch(s.T(), s.db, testutils.FakeRepositoryProviderMatch(func(pm *repository.ProviderMatch) {
+		pm.MatchID = match.ID
+		pm.ProviderMatchID = fmt.Sprintf("%d", providerMatchExternalID)
+		pm.StartsAt = match.StartsAt
+		pm.Status = string(models.StatusMatchNotStarted)
 	}))
 
 	_ = testutils.CreateSubscription(s.T(), s.db, testutils.FakeRepositorySubscription(func(sub *repository.Subscription) {
@@ -488,7 +476,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 	checkResultTask := testutils.CreateCheckResultTask(s.T(), s.db, repository.CheckResultTask{MatchID: match.ID, ExecuteAt: match.StartsAt.Add(115 * time.Minute)})
 
 	matchesResponse := testutils.FakeMatchesResponse()
-	matchesResponse.Leagues[0].Matches[0].ID = externalMatch.ID
+	matchesResponse.Leagues[0].Matches[0].ID = providerMatchExternalID
 	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ExternalTeamID)
 	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ExternalTeamID)
 	matchesResponse.Leagues[0].Matches[0].StatusID = 6
@@ -537,17 +525,6 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 		},
 	}, matches)
 
-	externalMatches := testutils.ListExternalMatches(s.T(), s.db)
-	s.Equal([]repository.ExternalMatch{
-		{
-			ID:        externalMatch.ID,
-			MatchID:   match.ID,
-			HomeScore: matchesResponse.Leagues[0].Matches[0].Home.Score,
-			AwayScore: matchesResponse.Leagues[0].Matches[0].Away.Score,
-			Status:    string(models.StatusMatchFinished),
-		},
-	}, externalMatches)
-
 	checkResultTasks := testutils.ListCheckResultTasks(s.T(), s.db)
 	s.Equal([]repository.CheckResultTask{
 		{
@@ -565,16 +542,16 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 	providerStatus := "6"
 	s.Equal([]repository.ProviderMatch{
 		{
-			ID:              1,
+			ID:              providerMatch.ID,
 			MatchID:         match.ID,
 			Provider:        "fotmob",
-			ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
+			ProviderMatchID: fmt.Sprintf("%d", providerMatchExternalID),
 			StartsAt:        match.StartsAt.Truncate(time.Second),
 			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,
 			AwayScore:       matchesResponse.Leagues[0].Matches[0].Away.Score,
 			Status:          string(models.StatusMatchFinished),
 			ProviderStatus:  &providerStatus,
-			CreatedAt:       providerMatches[0].CreatedAt,
+			CreatedAt:       providerMatch.CreatedAt,
 			UpdatedAt:       providerMatches[0].UpdatedAt,
 		},
 	}, providerMatches)
@@ -591,9 +568,12 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinished() {
 	}
 	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
 
-	externalMatch := testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
-		m.MatchID = match.ID
-		m.Status = string(models.StatusMatchNotStarted)
+	providerMatchExternalID := uint(gofakeit.Uint32())
+	providerMatch := testutils.CreateProviderMatch(s.T(), s.db, testutils.FakeRepositoryProviderMatch(func(pm *repository.ProviderMatch) {
+		pm.MatchID = match.ID
+		pm.ProviderMatchID = fmt.Sprintf("%d", providerMatchExternalID)
+		pm.StartsAt = match.StartsAt
+		pm.Status = string(models.StatusMatchNotStarted)
 	}))
 
 	_ = testutils.CreateSubscription(s.T(), s.db, testutils.FakeRepositorySubscription(func(sub *repository.Subscription) {
@@ -605,7 +585,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinished() {
 	checkResultTask := testutils.CreateCheckResultTask(s.T(), s.db, repository.CheckResultTask{MatchID: match.ID, ExecuteAt: match.StartsAt.Add(115 * time.Minute)})
 
 	matchesResponse := testutils.FakeMatchesResponse()
-	matchesResponse.Leagues[0].Matches[0].ID = externalMatch.ID
+	matchesResponse.Leagues[0].Matches[0].ID = providerMatchExternalID
 	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ExternalTeamID)
 	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ExternalTeamID)
 	matchesResponse.Leagues[0].Matches[0].StatusID = 3 // live 2nd half
@@ -652,17 +632,6 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinished() {
 		},
 	}, matches)
 
-	externalMatches := testutils.ListExternalMatches(s.T(), s.db)
-	s.Equal([]repository.ExternalMatch{
-		{
-			ID:        externalMatch.ID,
-			MatchID:   match.ID,
-			HomeScore: matchesResponse.Leagues[0].Matches[0].Home.Score,
-			AwayScore: matchesResponse.Leagues[0].Matches[0].Away.Score,
-			Status:    string(models.StatusMatchInProgress),
-		},
-	}, externalMatches)
-
 	checkResultTasks := testutils.ListCheckResultTasks(s.T(), s.db)
 	s.Equal([]repository.CheckResultTask{
 		{
@@ -680,16 +649,16 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinished() {
 	providerStatus := "3"
 	s.Equal([]repository.ProviderMatch{
 		{
-			ID:              1,
+			ID:              providerMatch.ID,
 			MatchID:         match.ID,
 			Provider:        "fotmob",
-			ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
+			ProviderMatchID: fmt.Sprintf("%d", providerMatchExternalID),
 			StartsAt:        match.StartsAt.Truncate(time.Second),
 			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,
 			AwayScore:       matchesResponse.Leagues[0].Matches[0].Away.Score,
 			Status:          string(models.StatusMatchInProgress),
 			ProviderStatus:  &providerStatus,
-			CreatedAt:       providerMatches[0].CreatedAt,
+			CreatedAt:       providerMatch.CreatedAt,
 			UpdatedAt:       providerMatches[0].UpdatedAt,
 		},
 	}, providerMatches)
@@ -706,9 +675,12 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinishedAndCheckRes
 	}
 	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
 
-	externalMatch := testutils.CreateExternalMatch(s.T(), s.db, testutils.FakeExternalMatchRepository(func(m *repository.ExternalMatch) {
-		m.MatchID = match.ID
-		m.Status = string(models.StatusMatchNotStarted)
+	providerMatchExternalID := uint(gofakeit.Uint32())
+	providerMatch := testutils.CreateProviderMatch(s.T(), s.db, testutils.FakeRepositoryProviderMatch(func(pm *repository.ProviderMatch) {
+		pm.MatchID = match.ID
+		pm.ProviderMatchID = fmt.Sprintf("%d", providerMatchExternalID)
+		pm.StartsAt = match.StartsAt
+		pm.Status = string(models.StatusMatchNotStarted)
 	}))
 
 	_ = testutils.CreateSubscription(s.T(), s.db, testutils.FakeRepositorySubscription(func(sub *repository.Subscription) {
@@ -718,7 +690,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinishedAndCheckRes
 	}))
 
 	matchesResponse := testutils.FakeMatchesResponse()
-	matchesResponse.Leagues[0].Matches[0].ID = externalMatch.ID
+	matchesResponse.Leagues[0].Matches[0].ID = providerMatchExternalID
 	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ExternalTeamID)
 	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ExternalTeamID)
 	matchesResponse.Leagues[0].Matches[0].StatusID = 3 // live 2nd half
@@ -774,31 +746,20 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinishedAndCheckRes
 		},
 	}, matches)
 
-	externalMatches := testutils.ListExternalMatches(s.T(), s.db)
-	s.Equal([]repository.ExternalMatch{
-		{
-			ID:        externalMatch.ID,
-			MatchID:   match.ID,
-			HomeScore: matchesResponse.Leagues[0].Matches[0].Home.Score,
-			AwayScore: matchesResponse.Leagues[0].Matches[0].Away.Score,
-			Status:    string(models.StatusMatchInProgress),
-		},
-	}, externalMatches)
-
 	providerMatches := testutils.ListProviderMatches(s.T(), s.db)
 	providerStatus := "3"
 	s.Equal([]repository.ProviderMatch{
 		{
-			ID:              1,
+			ID:              providerMatch.ID,
 			MatchID:         match.ID,
 			Provider:        "fotmob",
-			ProviderMatchID: fmt.Sprintf("%d", externalMatch.ID),
+			ProviderMatchID: fmt.Sprintf("%d", providerMatchExternalID),
 			StartsAt:        match.StartsAt.Truncate(time.Second),
 			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,
 			AwayScore:       matchesResponse.Leagues[0].Matches[0].Away.Score,
 			Status:          string(models.StatusMatchInProgress),
 			ProviderStatus:  &providerStatus,
-			CreatedAt:       providerMatches[0].CreatedAt,
+			CreatedAt:       providerMatch.CreatedAt,
 			UpdatedAt:       providerMatches[0].UpdatedAt,
 		},
 	}, providerMatches)

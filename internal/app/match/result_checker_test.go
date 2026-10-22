@@ -27,22 +27,27 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 	matchID := uint(gofakeit.Uint8())
 	startsAt := time.Now().Add(2 * time.Hour)
 
-	externalMatchID := uint(gofakeit.Uint32())
+	providerMatchExternalID := uint(gofakeit.Uint32())
+
 	scheduledMatch := testutils.FakeMatch(func(r *models.Match) {
 		r.ID = matchID
 		r.ResultStatus = models.Scheduled
 		r.StartsAt = startsAt
-		r.ExternalMatch = &models.ExternalMatch{
-			ID:      externalMatchID,
-			MatchID: matchID,
-		}
 		r.CheckResultTask = &models.CheckResultTask{
 			AttemptNumber: 1,
 		}
 	})
 
+	providerMatch := testutils.FakeProviderMatch(func(r *models.ProviderMatch) {
+		r.MatchID = matchID
+		r.Provider = "fotmob"
+		r.ProviderMatchID = fmt.Sprintf("%d", providerMatchExternalID)
+		r.StartsAt = startsAt
+	})
+	providerMatches := []models.ProviderMatch{providerMatch}
+
 	externalMatchClient := testutils.FakeExternalAPIMatch(func(r *models.ExternalAPIMatch) {
-		r.ID = externalMatchID
+		r.ID = providerMatchExternalID
 	})
 
 	externalMatchClientFinished := externalMatchClient
@@ -60,44 +65,19 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 	clientTask := testutils.FakeTask()
 	repositorySubscription := testutils.FakeSubscription()
 
-	expectedRepositoryMatch := models.ExternalMatch{
-		ID:        externalMatchID,
-		MatchID:   matchID,
-		HomeScore: externalMatchClient.HomeScore,
-		AwayScore: externalMatchClient.AwayScore,
-		Status:    models.StatusMatchFinished,
-	}
-
-	expectedRepositoryMatchFinished := expectedRepositoryMatch
-	expectedRepositoryMatchFinished.Status = models.StatusMatchFinished
-
-	expectedRepositoryMatchNotStarted := expectedRepositoryMatch
-	expectedRepositoryMatchNotStarted.Status = models.StatusMatchNotStarted
-
-	expectedRepositoryMatchCancelled := expectedRepositoryMatch
-	expectedRepositoryMatchCancelled.Status = models.StatusMatchCancelled
-
-	expectedRepositoryMatchInProgress := expectedRepositoryMatch
-	expectedRepositoryMatchInProgress.Status = models.StatusMatchInProgress
-
 	expectedProviderMatchFinished := externalMatchClientFinished.ToProviderMatch(matchID, "fotmob")
 	expectedProviderMatchNotStarted := externalMatchClientNotStarted.ToProviderMatch(matchID, "fotmob")
 	expectedProviderMatchCancelled := externalMatchClientCancelled.ToProviderMatch(matchID, "fotmob")
 	expectedProviderMatchInProgress := externalMatchClientInProgress.ToProviderMatch(matchID, "fotmob")
-	expectedProviderMatchNotFound := models.ProviderMatch{
-		MatchID:         matchID,
-		Provider:        "fotmob",
-		ProviderMatchID: fmt.Sprintf("%d", externalMatchID),
-		StartsAt:        startsAt,
-		Status:          models.StatusMatchUnknown,
-	}
+
+	expectedProviderMatchNotFound := providerMatch
+	expectedProviderMatchNotFound.Status = models.StatusMatchUnknown
 
 	tests := []struct {
 		name                      string
 		input                     uint
 		expectedErr               error
 		matchRepository           func(t *testing.T) *mocks.MatchRepository
-		externalMatchRepository   func(t *testing.T) *mocks.ExternalMatchRepository
 		providerMatchRepository   func(t *testing.T) *mocks.ProviderMatchRepository
 		checkResultTaskRepository func(t *testing.T) *mocks.CheckResultTaskRepository
 		subscriptionRepository    func(t *testing.T) *mocks.SubscriptionRepository
@@ -130,20 +110,38 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			},
 		},
 		{
-			name:  "it returns an error when match relation with external match does not exist",
+			name:  "it returns an error when provider matches listing fails",
 			input: matchID,
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
-				match := testutils.FakeMatch(func(r *models.Match) {
-					r.ID = matchID
-					r.ResultStatus = models.APIError
-					r.ExternalMatch = nil
-				})
-				m.On("One", ctx, models.Match{ID: matchID}).Return(&match, nil).Once()
+				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
 				return m
 			},
-			expectedErr: errors.New("match relation external match doesn't exist"),
+			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
+				t.Helper()
+				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to list provider matches: %w", unexpectedErr),
+		},
+		{
+			name:  "it returns an error when match has no provider matches",
+			input: matchID,
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
+				return m
+			},
+			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
+				t.Helper()
+				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return([]models.ProviderMatch{}, nil).Once()
+				return m
+			},
+			expectedErr: errors.New("match has no provider matches"),
 		},
 		{
 			name:  "it returns an error when matches retrieval from external api fails and match update fails",
@@ -153,6 +151,12 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
 				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.APIError}).Return(nil, unexpectedErr).Once()
+				return m
+			},
+			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
+				t.Helper()
+				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				return m
 			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
@@ -174,6 +178,12 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				updatedMatch.ResultStatus = models.APIError
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
 				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.APIError}).Return(&updatedMatch, nil).Once()
+				return m
+			},
+			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
+				t.Helper()
+				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				return m
 			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
@@ -206,50 +216,13 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				expectedExternalMatch := *scheduledMatch.ExternalMatch
-				expectedExternalMatch.Status = models.StatusMatchUnknown
-				m.On("Save", ctx, &scheduledMatch.ExternalMatch.ID, expectedExternalMatch).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchNotFound).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
-		},
-		{
-			name:  "it returns an error when external api match is not found and external match saving fails",
-			input: matchID,
-			matchRepository: func(t *testing.T) *mocks.MatchRepository {
-				t.Helper()
-				m := mocks.NewMatchRepository(t)
-				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
-				return m
-			},
-			resultProvider: func(t *testing.T) *mocks.ResultProvider {
-				t.Helper()
-				m := mocks.NewResultProvider(t)
-				m.On("Name").Return("fotmob").Once()
-				m.On("GetMatches", ctx, mock.Anything).Return([]models.ExternalAPIMatch{
-					testutils.FakeExternalAPIMatch(func(r *models.ExternalAPIMatch) {
-						r.ID = uint(gofakeit.Uint32()) // Different ID
-					}),
-				}, nil).Once()
-				return m
-			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				expectedExternalMatch := *scheduledMatch.ExternalMatch
-				expectedExternalMatch.Status = models.StatusMatchUnknown
-				m.On("Save", ctx, &scheduledMatch.ExternalMatch.ID, expectedExternalMatch).Return(nil, unexpectedErr).Once()
-				return m
-			},
-			expectedErr: fmt.Errorf("failed to update external match: %w", unexpectedErr),
 		},
 		{
 			name:  "it returns an error when external api match is not found and provider match saving fails",
@@ -271,21 +244,14 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				expectedExternalMatch := *scheduledMatch.ExternalMatch
-				expectedExternalMatch.Status = models.StatusMatchUnknown
-				m.On("Save", ctx, &scheduledMatch.ExternalMatch.ID, expectedExternalMatch).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchNotFound).Return(nil, unexpectedErr).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to save provider match: %w", unexpectedErr),
+			expectedErr: fmt.Errorf("failed to update provider match: %w", unexpectedErr),
 		},
 		{
 			name:  "it returns an error when external api match is not found and match update fails",
@@ -308,45 +274,14 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				expectedExternalMatch := *scheduledMatch.ExternalMatch
-				expectedExternalMatch.Status = models.StatusMatchUnknown
-				m.On("Save", ctx, &scheduledMatch.ExternalMatch.ID, expectedExternalMatch).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchNotFound).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
 			expectedErr: fmt.Errorf("failed to update match: %w", unexpectedErr),
-		},
-		{
-			name:  "it returns an error when external match saving fails",
-			input: matchID,
-			matchRepository: func(t *testing.T) *mocks.MatchRepository {
-				t.Helper()
-				m := mocks.NewMatchRepository(t)
-				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
-				return m
-			},
-			resultProvider: func(t *testing.T) *mocks.ResultProvider {
-				t.Helper()
-				m := mocks.NewResultProvider(t)
-				m.On("Name").Return("fotmob").Once()
-				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientFinished}, nil).Once()
-				return m
-			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(nil, unexpectedErr).Once()
-				return m
-			},
-			expectedErr: fmt.Errorf("failed to update external match: %w", unexpectedErr),
 		},
 		{
 			name:  "it returns an error when provider match saving fails",
@@ -364,19 +299,14 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientFinished}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchFinished).Return(nil, unexpectedErr).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to save provider match with id %d and match id %d: %w", externalMatchID, matchID, unexpectedErr),
+			expectedErr: fmt.Errorf("failed to save provider match with id %d and match id %d: %w", providerMatchExternalID, matchID, unexpectedErr),
 		},
 		{
 			name:  "it returns an error when external match status is cancelled and update fails",
@@ -395,15 +325,10 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientCancelled}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchCancelled).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchCancelled).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
@@ -428,15 +353,10 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientCancelled}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchCancelled).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchCancelled).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
@@ -460,15 +380,10 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientNotStarted}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchNotStarted).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchNotStarted).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
@@ -491,15 +406,10 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientInProgress}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchInProgress).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchInProgress).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
@@ -524,15 +434,10 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientInProgress}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchInProgress).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchInProgress).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
@@ -557,15 +462,10 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientInProgress}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchInProgress).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchInProgress).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
@@ -587,15 +487,10 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientInProgress}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchInProgress).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchInProgress).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
@@ -626,15 +521,10 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientInProgress}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchInProgress).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchInProgress).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
@@ -664,15 +554,10 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientInProgress}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchInProgress).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchInProgress).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
@@ -713,15 +598,10 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientInProgress}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchInProgress).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchInProgress).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
@@ -761,15 +641,10 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientFinished}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchFinished).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
@@ -788,7 +663,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Received, HomeScore: &expectedRepositoryMatchFinished.HomeScore, AwayScore: &expectedRepositoryMatchFinished.AwayScore}).Return(nil, unexpectedErr).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Received, HomeScore: &externalMatchClientFinished.HomeScore, AwayScore: &externalMatchClientFinished.AwayScore}).Return(nil, unexpectedErr).Once()
 				return m
 			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
@@ -798,15 +673,10 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientFinished}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(&expectedRepositoryMatchFinished, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchFinished).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
@@ -834,15 +704,10 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientFinished}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchFinished).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
@@ -877,15 +742,10 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientFinished}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(&models.ExternalMatch{}, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchFinished).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
@@ -911,7 +771,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
-				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Received, HomeScore: &expectedRepositoryMatchFinished.HomeScore, AwayScore: &expectedRepositoryMatchFinished.AwayScore}).Return(&models.Match{}, nil).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Received, HomeScore: &externalMatchClientFinished.HomeScore, AwayScore: &externalMatchClientFinished.AwayScore}).Return(&models.Match{}, nil).Once()
 				return m
 			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
@@ -921,15 +781,10 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return([]models.ExternalAPIMatch{externalMatchClientFinished}, nil).Once()
 				return m
 			},
-			externalMatchRepository: func(t *testing.T) *mocks.ExternalMatchRepository {
-				t.Helper()
-				m := mocks.NewExternalMatchRepository(t)
-				m.On("Save", ctx, &externalMatchID, expectedRepositoryMatchFinished).Return(&expectedRepositoryMatchFinished, nil).Once()
-				return m
-			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
+				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchFinished).Return(&models.ProviderMatch{}, nil).Once()
 				return m
 			},
@@ -960,11 +815,6 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			if tt.resultProvider != nil {
 				resultProvider = tt.resultProvider(t)
 				providers = []match.ResultProvider{resultProvider}
-			}
-
-			var externalMatchRepository *mocks.ExternalMatchRepository
-			if tt.externalMatchRepository != nil {
-				externalMatchRepository = tt.externalMatchRepository(t)
 			}
 
 			var providerMatchRepository *mocks.ProviderMatchRepository
@@ -998,7 +848,6 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			rcs := match.NewResultCheckerService(
 				cfg,
 				matchRepository,
-				externalMatchRepository,
 				providerMatchRepository,
 				subscriptionRepository,
 				checkResultTaskRepository,

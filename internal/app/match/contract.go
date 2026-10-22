@@ -28,6 +28,7 @@ type ProviderTeamRepository interface {
 
 type ProviderMatchRepository interface {
 	Save(ctx context.Context, providerMatch models.ProviderMatch) (*models.ProviderMatch, error)
+	ListByMatchID(ctx context.Context, matchID uint) ([]models.ProviderMatch, error)
 }
 
 type CheckResultTaskRepository interface {

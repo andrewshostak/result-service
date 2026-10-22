@@ -161,7 +161,7 @@ A string column like `provider = 'fotmob'` is self-documenting in the DB and req
 
 ## Phase 4 — Switch reads, stop writing to old tables
 
-### PR 9 — Switch all reads to `provider_matches`, remove `external_matches` writes
+### PR 9 — Switch all reads to `provider_matches`, remove `external_matches` writes ✓ merged
 
 **Migration:** none.
 
@@ -175,7 +175,7 @@ A string column like `provider = 'fotmob'` is self-documenting in the DB and req
 **Why safe:** dual-write has been running since PR 5, so `provider_matches` is fully up to date. Reads switch to the new table only after the data is guaranteed to be there.
 
 **Alternative approach — one task per provider per match.**
-Instead of a single `check_result_task` per match that fans out to all providers at check time, `MatchService.Create` could schedule a separate task for each provider that returned the match. `CheckResult` would then receive a provider-scoped task, query only that provider's API, and update only that provider's `provider_match` row. This avoids the `ListByMatchID` + fan-out loop in `CheckResult`, keeps each task independently retryable per provider, and makes it trivial to add or remove a provider without changing the check logic. The trade-off is that task scheduling becomes more complex in `Create` (one `ScheduleResultCheck` call per provider) and the `check_result_tasks` table needs a `provider_id` column to carry the provider context into the task handler.
+Instead of a single `check_result_task` per match that fans out to all providers at check time, `MatchService.Create` could schedule a separate task for each provider that returned the match. `CheckResult` would then receive a provider-scoped task, query only that provider's API, and update only that provider's `provider_match` row. This avoids the `ListByMatchID` + fan-out loop in `CheckResult`, keeps each task independently retryable per provider, and makes it trivial to add or remove a provider without changing the check logic. The trade-off is that task scheduling becomes more complex in `Create` (one `ScheduleResultCheck` call per provider) and the `check_result_tasks` table needs a `provider_id` column to carry the provider context into the task handler. Deferred for now — tracked in `todo.md`. Until it lands, `CheckResult` resolves disagreement between providers by picking the first provider match it finds a result for; with the current single provider (fotmob) this is deterministic.
 
 ---
 
@@ -224,7 +224,7 @@ Instead of a single `check_result_task` per match that fans out to all providers
 | PR 7 — `provider` string column, drop `providers` ✓ | DB + code         | PR 5, PR 6   |
 | PR 8 — switch alias reads to `provider_teams` ✓     | Code only         | PR 4, PR 7   |
 | PR 8.5 — switch backfill to use `provider_teams` ✓  | Code only         | PR 4, PR 8   |
-| PR 9 — switch result reads to `provider_matches`    | Code only         | PR 5, PR 7   |
+| PR 9 — switch result reads to `provider_matches` ✓  | Code only         | PR 5, PR 7   |
 | PR 10 — drop old tables                             | DB + code cleanup | PR 8.5, PR 9 |
 | PR 11 — rename `external_match_status` enum         | DB only           | PR 10        |
 

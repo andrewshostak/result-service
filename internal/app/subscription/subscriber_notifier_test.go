@@ -30,18 +30,18 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 		s.Status = "pending"
 	})
 
-	externalMatch := testutils.FakeExternalMatch(func(m *models.ExternalMatch) {
-		m.MatchID = matchID
-	})
+	homeScore := gofakeit.IntRange(0, 9)
+	awayScore := gofakeit.IntRange(0, 9)
 
 	match := testutils.FakeMatch(func(m *models.Match) {
 		m.ID = matchID
-		m.ExternalMatch = &externalMatch
+		m.HomeScore = &homeScore
+		m.AwayScore = &awayScore
 	})
 
 	notification := testutils.FakeSubscriberNotification(func(n *models.SubscriberNotification) {
-		n.Home = uint(match.ExternalMatch.HomeScore)
-		n.Away = uint(match.ExternalMatch.AwayScore)
+		n.Home = uint(homeScore)
+		n.Away = uint(awayScore)
 		n.Url = subscription.Url
 		n.Key = subscription.Key
 	})
@@ -125,7 +125,7 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to get match: %w", unexpectedErr),
 		},
 		{
-			name:  "it returns an error when match relation external match doesn't exist",
+			name:  "it returns an error when match score is not set",
 			input: subscriptionID,
 			subscriptionRepository: func(t *testing.T) *mocks.SubscriptionRepository {
 				t.Helper()
@@ -143,7 +143,7 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 				m.On("One", ctx, models.Match{ID: matchID}).Return(&models.Match{ID: matchID}, nil).Once()
 				return m
 			},
-			expectedErr: errors.New("match relation external match doesn't exist"),
+			expectedErr: errors.New("match score is not set"),
 		},
 		{
 			name:  "it returns an error when notifier fails and subscription update fails",

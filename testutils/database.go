@@ -78,6 +78,18 @@ func CreateExternalMatch(t *testing.T, db *sqlx.DB, externalMatch repository.Ext
 	return created
 }
 
+func CreateProviderMatch(t *testing.T, db *sqlx.DB, providerMatch repository.ProviderMatch) repository.ProviderMatch {
+	t.Helper()
+
+	var created repository.ProviderMatch
+	query := "INSERT INTO provider_matches (match_id, provider, provider_match_id, starts_at, status, home_score, away_score) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *"
+
+	err := db.Get(&created, query, providerMatch.MatchID, providerMatch.Provider, providerMatch.ProviderMatchID, providerMatch.StartsAt, providerMatch.Status, providerMatch.HomeScore, providerMatch.AwayScore)
+	require.NoError(t, err)
+
+	return created
+}
+
 func CreateCheckResultTask(t *testing.T, db *sqlx.DB, task repository.CheckResultTask) repository.CheckResultTask {
 	t.Helper()
 
@@ -94,9 +106,9 @@ func CreateMatch(t *testing.T, db *sqlx.DB, match repository.Match) repository.M
 	t.Helper()
 
 	var created repository.Match
-	query := "INSERT INTO matches (home_team_id, away_team_id, starts_at, result_status) VALUES ($1, $2, $3, $4) RETURNING *"
+	query := "INSERT INTO matches (home_team_id, away_team_id, starts_at, result_status, home_score, away_score) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *"
 
-	err := db.Get(&created, query, match.HomeTeamID, match.AwayTeamID, match.StartsAt, match.ResultStatus)
+	err := db.Get(&created, query, match.HomeTeamID, match.AwayTeamID, match.StartsAt, match.ResultStatus, match.HomeScore, match.AwayScore)
 	require.NoError(t, err)
 
 	return created
