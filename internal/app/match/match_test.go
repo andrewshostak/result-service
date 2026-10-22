@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -32,6 +33,20 @@ func TestMatchService_Create(t *testing.T) {
 		r.Alias = aliasAwayName
 	})
 
+	providerTeamHomeID := strconv.Itoa(int(gofakeit.Uint32()))
+	providerTeamAwayID := strconv.Itoa(int(gofakeit.Uint32()))
+
+	providerTeamHome := models.ProviderTeam{
+		TeamID:         aliasHome.TeamID,
+		Provider:       "fotmob",
+		ProviderTeamID: providerTeamHomeID,
+	}
+	providerTeamAway := models.ProviderTeam{
+		TeamID:         aliasAway.TeamID,
+		Provider:       "fotmob",
+		ProviderTeamID: providerTeamAwayID,
+	}
+
 	startsAt := time.Date(time.Now().Year()+1, 12, 11, 16, 30, 0, 0, time.UTC)
 	createMatchRequest := models.CreateMatchRequest{
 		StartsAt:  startsAt,
@@ -53,9 +68,9 @@ func TestMatchService_Create(t *testing.T) {
 	externalMatch := testutils.FakeExternalAPIMatch(func(r *models.ExternalAPIMatch) {
 		r.ID = externalMatchID
 		r.Time = startsAt.UTC()
-		r.HomeID = aliasHome.ExternalTeam.ID
+		r.HomeID = providerTeamHomeID
 		r.HomeScore = 0
-		r.AwayID = aliasAway.ExternalTeam.ID
+		r.AwayID = providerTeamAwayID
 		r.AwayScore = 0
 		r.Status = models.StatusMatchNotStarted
 	})
@@ -81,6 +96,7 @@ func TestMatchService_Create(t *testing.T) {
 		input                     models.CreateMatchRequest
 		aliasRepository           func(t *testing.T) *mocks.AliasRepository
 		matchRepository           func(t *testing.T) *mocks.MatchRepository
+		providerTeamRepository    func(t *testing.T) *mocks.ProviderTeamRepository
 		resultProvider            func(t *testing.T) *mocks.ResultProvider
 		externalMatchRepository   func(t *testing.T) *mocks.ExternalMatchRepository
 		providerMatchRepository   func(t *testing.T) *mocks.ProviderMatchRepository
@@ -111,17 +127,6 @@ func TestMatchService_Create(t *testing.T) {
 				return m
 			},
 			expectedErr: fmt.Errorf("failed to find away team alias: %w", fmt.Errorf("failed to find team alias: %w", errUnexpected)),
-		},
-		{
-			name:  "it returns an error when alias relation with external team does not exist",
-			input: createMatchRequest,
-			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
-				t.Helper()
-				m := mocks.NewAliasRepository(t)
-				m.On("Find", ctx, aliasHomeName).Return(&models.Alias{TeamID: 1, Alias: aliasHomeName}, nil).Once()
-				return m
-			},
-			expectedErr: fmt.Errorf("failed to find home team alias: %w", errors.New(fmt.Sprintf("alias %s doesn't have external team relation", aliasHomeName))),
 		},
 		{
 			name:  "it returns an error when match retrieval returns unexpected error",
@@ -190,6 +195,63 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("match already exists with result status: %s", matchResultReceived.ResultStatus),
 		},
 		{
+			name:  "it returns an error when home provider team is not found",
+			input: createMatchRequest,
+			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
+				t.Helper()
+				m := mocks.NewAliasRepository(t)
+				m.On("Find", ctx, aliasHomeName).Return(&aliasHome, nil).Once()
+				m.On("Find", ctx, aliasAwayName).Return(&aliasAway, nil).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, models.Match{
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
+				}).Return(nil, models.NewResourceNotFoundError(errors.New("not found"))).Once()
+				return m
+			},
+			providerTeamRepository: func(t *testing.T) *mocks.ProviderTeamRepository {
+				t.Helper()
+				m := mocks.NewProviderTeamRepository(t)
+				m.On("FindByTeamAndProvider", ctx, aliasHome.TeamID, "fotmob").Return(nil, models.NewResourceNotFoundError(errors.New("not found"))).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("provider team for home team id %d not found", aliasHome.TeamID),
+		},
+		{
+			name:  "it returns an error when away provider team is not found",
+			input: createMatchRequest,
+			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
+				t.Helper()
+				m := mocks.NewAliasRepository(t)
+				m.On("Find", ctx, aliasHomeName).Return(&aliasHome, nil).Once()
+				m.On("Find", ctx, aliasAwayName).Return(&aliasAway, nil).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, models.Match{
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   startsAt.UTC(),
+				}).Return(nil, models.NewResourceNotFoundError(errors.New("not found"))).Once()
+				return m
+			},
+			providerTeamRepository: func(t *testing.T) *mocks.ProviderTeamRepository {
+				t.Helper()
+				m := mocks.NewProviderTeamRepository(t)
+				m.On("FindByTeamAndProvider", ctx, aliasHome.TeamID, "fotmob").Return(&providerTeamHome, nil).Once()
+				m.On("FindByTeamAndProvider", ctx, aliasAway.TeamID, "fotmob").Return(nil, models.NewResourceNotFoundError(errors.New("not found"))).Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("provider team for away team id %d not found", aliasAway.TeamID),
+		},
+		{
 			name:  "it returns an error when matches retrieval from external api fails",
 			input: createMatchRequest,
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
@@ -207,6 +269,13 @@ func TestMatchService_Create(t *testing.T) {
 					AwayTeamID: aliasAway.TeamID,
 					StartsAt:   startsAt.UTC(),
 				}).Return(nil, models.NewResourceNotFoundError(errors.New("not found"))).Once()
+				return m
+			},
+			providerTeamRepository: func(t *testing.T) *mocks.ProviderTeamRepository {
+				t.Helper()
+				m := mocks.NewProviderTeamRepository(t)
+				m.On("FindByTeamAndProvider", ctx, aliasHome.TeamID, "fotmob").Return(&providerTeamHome, nil).Once()
+				m.On("FindByTeamAndProvider", ctx, aliasAway.TeamID, "fotmob").Return(&providerTeamAway, nil).Once()
 				return m
 			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
@@ -238,18 +307,25 @@ func TestMatchService_Create(t *testing.T) {
 				}).Return(nil, fmt.Errorf("match not found: %w", models.NewResourceNotFoundError(errors.New("not found")))).Once()
 				return m
 			},
+			providerTeamRepository: func(t *testing.T) *mocks.ProviderTeamRepository {
+				t.Helper()
+				m := mocks.NewProviderTeamRepository(t)
+				m.On("FindByTeamAndProvider", ctx, aliasHome.TeamID, "fotmob").Return(&providerTeamHome, nil).Once()
+				m.On("FindByTeamAndProvider", ctx, aliasAway.TeamID, "fotmob").Return(&providerTeamAway, nil).Once()
+				return m
+			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
 				t.Helper()
 				m := mocks.NewResultProvider(t)
 				m.On("GetMatches", ctx, startsAt.UTC()).Return(
 					[]models.ExternalAPIMatch{testutils.FakeExternalAPIMatch(func(r *models.ExternalAPIMatch) {
-						r.HomeID = 123123123
+						r.HomeID = "123123123"
 					}),
 					}, nil).Once()
 				m.On("Name").Return("fotmob").Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("external match with home team id %d and away team id %d is not found: %w", aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, errors.New("match not found")),
+			expectedErr: fmt.Errorf("external match with home provider team id %s and away provider team id %s is not found: %w", providerTeamHomeID, providerTeamAwayID, errors.New("match not found")),
 		},
 		{
 			name:  "it returns an error when external api match has unexpected status",
@@ -271,6 +347,13 @@ func TestMatchService_Create(t *testing.T) {
 				}).Return(nil, fmt.Errorf("match not found: %w", models.NewResourceNotFoundError(errors.New("not found")))).Once()
 				return m
 			},
+			providerTeamRepository: func(t *testing.T) *mocks.ProviderTeamRepository {
+				t.Helper()
+				m := mocks.NewProviderTeamRepository(t)
+				m.On("FindByTeamAndProvider", ctx, aliasHome.TeamID, "fotmob").Return(&providerTeamHome, nil).Once()
+				m.On("FindByTeamAndProvider", ctx, aliasAway.TeamID, "fotmob").Return(&providerTeamAway, nil).Once()
+				return m
+			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
 				t.Helper()
 				m := mocks.NewResultProvider(t)
@@ -279,8 +362,8 @@ func TestMatchService_Create(t *testing.T) {
 						testutils.FakeExternalAPIMatch(func(r *models.ExternalAPIMatch) {
 							r.ID = externalMatchID
 							r.Time = startsAt.UTC()
-							r.HomeID = aliasHome.ExternalTeam.ID
-							r.AwayID = aliasAway.ExternalTeam.ID
+							r.HomeID = providerTeamHomeID
+							r.AwayID = providerTeamAwayID
 							r.HomeScore = 0
 							r.AwayScore = 0
 							r.Status = models.StatusMatchUnknown
@@ -315,6 +398,13 @@ func TestMatchService_Create(t *testing.T) {
 					StartsAt:     startsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(nil, errUnexpected).Once()
+				return m
+			},
+			providerTeamRepository: func(t *testing.T) *mocks.ProviderTeamRepository {
+				t.Helper()
+				m := mocks.NewProviderTeamRepository(t)
+				m.On("FindByTeamAndProvider", ctx, aliasHome.TeamID, "fotmob").Return(&providerTeamHome, nil).Once()
+				m.On("FindByTeamAndProvider", ctx, aliasAway.TeamID, "fotmob").Return(&providerTeamAway, nil).Once()
 				return m
 			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
@@ -357,6 +447,13 @@ func TestMatchService_Create(t *testing.T) {
 					StartsAt:     startsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(&savedMatch, nil).Once()
+				return m
+			},
+			providerTeamRepository: func(t *testing.T) *mocks.ProviderTeamRepository {
+				t.Helper()
+				m := mocks.NewProviderTeamRepository(t)
+				m.On("FindByTeamAndProvider", ctx, aliasHome.TeamID, "fotmob").Return(&providerTeamHome, nil).Once()
+				m.On("FindByTeamAndProvider", ctx, aliasAway.TeamID, "fotmob").Return(&providerTeamAway, nil).Once()
 				return m
 			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
@@ -411,6 +508,13 @@ func TestMatchService_Create(t *testing.T) {
 					StartsAt:     startsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(&savedMatch, nil).Once()
+				return m
+			},
+			providerTeamRepository: func(t *testing.T) *mocks.ProviderTeamRepository {
+				t.Helper()
+				m := mocks.NewProviderTeamRepository(t)
+				m.On("FindByTeamAndProvider", ctx, aliasHome.TeamID, "fotmob").Return(&providerTeamHome, nil).Once()
+				m.On("FindByTeamAndProvider", ctx, aliasAway.TeamID, "fotmob").Return(&providerTeamAway, nil).Once()
 				return m
 			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
@@ -471,6 +575,13 @@ func TestMatchService_Create(t *testing.T) {
 					StartsAt:     startsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(&savedMatch, nil).Once()
+				return m
+			},
+			providerTeamRepository: func(t *testing.T) *mocks.ProviderTeamRepository {
+				t.Helper()
+				m := mocks.NewProviderTeamRepository(t)
+				m.On("FindByTeamAndProvider", ctx, aliasHome.TeamID, "fotmob").Return(&providerTeamHome, nil).Once()
+				m.On("FindByTeamAndProvider", ctx, aliasAway.TeamID, "fotmob").Return(&providerTeamAway, nil).Once()
 				return m
 			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
@@ -539,6 +650,13 @@ func TestMatchService_Create(t *testing.T) {
 				}).Return(&savedMatch, nil).Once()
 				return m
 			},
+			providerTeamRepository: func(t *testing.T) *mocks.ProviderTeamRepository {
+				t.Helper()
+				m := mocks.NewProviderTeamRepository(t)
+				m.On("FindByTeamAndProvider", ctx, aliasHome.TeamID, "fotmob").Return(&providerTeamHome, nil).Once()
+				m.On("FindByTeamAndProvider", ctx, aliasAway.TeamID, "fotmob").Return(&providerTeamAway, nil).Once()
+				return m
+			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
 				t.Helper()
 				m := mocks.NewResultProvider(t)
@@ -604,6 +722,13 @@ func TestMatchService_Create(t *testing.T) {
 					StartsAt:     startsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(&savedMatch, nil).Once()
+				return m
+			},
+			providerTeamRepository: func(t *testing.T) *mocks.ProviderTeamRepository {
+				t.Helper()
+				m := mocks.NewProviderTeamRepository(t)
+				m.On("FindByTeamAndProvider", ctx, aliasHome.TeamID, "fotmob").Return(&providerTeamHome, nil).Once()
+				m.On("FindByTeamAndProvider", ctx, aliasAway.TeamID, "fotmob").Return(&providerTeamAway, nil).Once()
 				return m
 			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
@@ -676,6 +801,13 @@ func TestMatchService_Create(t *testing.T) {
 					ResultStatus: models.NotScheduled,
 				}).Return(&savedMatch, nil).Once()
 				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Scheduled}).Return(nil, errUnexpected).Once()
+				return m
+			},
+			providerTeamRepository: func(t *testing.T) *mocks.ProviderTeamRepository {
+				t.Helper()
+				m := mocks.NewProviderTeamRepository(t)
+				m.On("FindByTeamAndProvider", ctx, aliasHome.TeamID, "fotmob").Return(&providerTeamHome, nil).Once()
+				m.On("FindByTeamAndProvider", ctx, aliasAway.TeamID, "fotmob").Return(&providerTeamAway, nil).Once()
 				return m
 			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
@@ -752,6 +884,13 @@ func TestMatchService_Create(t *testing.T) {
 				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Scheduled}).Return(&updatedMatch, nil).Once()
 				return m
 			},
+			providerTeamRepository: func(t *testing.T) *mocks.ProviderTeamRepository {
+				t.Helper()
+				m := mocks.NewProviderTeamRepository(t)
+				m.On("FindByTeamAndProvider", ctx, aliasHome.TeamID, "fotmob").Return(&providerTeamHome, nil).Once()
+				m.On("FindByTeamAndProvider", ctx, aliasAway.TeamID, "fotmob").Return(&providerTeamAway, nil).Once()
+				return m
+			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
 				t.Helper()
 				m := mocks.NewResultProvider(t)
@@ -826,6 +965,13 @@ func TestMatchService_Create(t *testing.T) {
 				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Scheduled}).Return(&updatedMatch, nil).Once()
 				return m
 			},
+			providerTeamRepository: func(t *testing.T) *mocks.ProviderTeamRepository {
+				t.Helper()
+				m := mocks.NewProviderTeamRepository(t)
+				m.On("FindByTeamAndProvider", ctx, aliasHome.TeamID, "fotmob").Return(&providerTeamHome, nil).Once()
+				m.On("FindByTeamAndProvider", ctx, aliasAway.TeamID, "fotmob").Return(&providerTeamAway, nil).Once()
+				return m
+			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
 				t.Helper()
 				m := mocks.NewResultProvider(t)
@@ -879,6 +1025,11 @@ func TestMatchService_Create(t *testing.T) {
 				matchRepository = tt.matchRepository(t)
 			}
 
+			var providerTeamRepository *mocks.ProviderTeamRepository
+			if tt.providerTeamRepository != nil {
+				providerTeamRepository = tt.providerTeamRepository(t)
+			}
+
 			var resultProvider *mocks.ResultProvider
 			var providers []match.ResultProvider
 			if tt.resultProvider != nil {
@@ -917,6 +1068,7 @@ func TestMatchService_Create(t *testing.T) {
 				aliasRepository,
 				matchRepository,
 				externalMatchRepository,
+				providerTeamRepository,
 				providerMatchRepository,
 				checkResultTaskRepository,
 				providers,

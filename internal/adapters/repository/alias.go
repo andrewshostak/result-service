@@ -19,7 +19,7 @@ func NewAliasRepository(db *gorm.DB) *AliasRepository {
 func (r *AliasRepository) Find(ctx context.Context, alias string) (*models.Alias, error) {
 	var a Alias
 
-	result := r.db.WithContext(ctx).Joins("ExternalTeam").Where("alias ILIKE ?", alias).First(&a)
+	result := r.db.WithContext(ctx).Where("alias ILIKE ?", alias).First(&a)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, models.NewResourceNotFoundError(fmt.Errorf("alias %s not found: %w", alias, result.Error))

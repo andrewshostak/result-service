@@ -81,8 +81,6 @@ type Match struct {
 type Alias struct {
 	Alias  string
 	TeamID uint
-
-	ExternalTeam *ExternalTeam
 }
 
 type SubscriptionStatus string
@@ -139,7 +137,7 @@ type League struct {
 }
 
 type ExternalAPITeam struct {
-	ID          uint
+	ID          int
 	Name        string
 	LeagueNames []string
 	CountryCode string
@@ -147,8 +145,8 @@ type ExternalAPITeam struct {
 
 type ExternalAPIMatch struct {
 	ID             uint
-	HomeID         uint
-	AwayID         uint
+	HomeID         string
+	AwayID         string
 	HomeScore      int
 	AwayScore      int
 	Time           time.Time

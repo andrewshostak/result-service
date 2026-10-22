@@ -15,6 +15,7 @@ type MatchService struct {
 	aliasRepository           AliasRepository
 	matchRepository           MatchRepository
 	externalMatchRepository   ExternalMatchRepository
+	providerTeamRepository    ProviderTeamRepository
 	providerMatchRepository   ProviderMatchRepository
 	checkResultTaskRepository CheckResultTaskRepository
 	providers                 []ResultProvider
@@ -27,6 +28,7 @@ func NewMatchService(
 	aliasRepository AliasRepository,
 	matchRepository MatchRepository,
 	externalMatchRepository ExternalMatchRepository,
+	providerTeamRepository ProviderTeamRepository,
 	providerMatchRepository ProviderMatchRepository,
 	checkResultTaskRepository CheckResultTaskRepository,
 	providers []ResultProvider,
@@ -38,6 +40,7 @@ func NewMatchService(
 		aliasRepository:           aliasRepository,
 		matchRepository:           matchRepository,
 		externalMatchRepository:   externalMatchRepository,
+		providerTeamRepository:    providerTeamRepository,
 		providerMatchRepository:   providerMatchRepository,
 		checkResultTaskRepository: checkResultTaskRepository,
 		providers:                 providers,
@@ -76,14 +79,24 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 		}
 	}
 
+	providerTeamHome, err := s.providerTeamRepository.FindByTeamAndProvider(ctx, aliasHome.TeamID, fotmobProvider)
+	if err != nil {
+		return 0, fmt.Errorf("provider team for home team id %d not found: %w", aliasHome.TeamID, err)
+	}
+
+	providerTeamAway, err := s.providerTeamRepository.FindByTeamAndProvider(ctx, aliasAway.TeamID, fotmobProvider)
+	if err != nil {
+		return 0, fmt.Errorf("provider team for away team id %d not found: %w", aliasAway.TeamID, err)
+	}
+
 	providersMatches, err := s.getMatchesFromProviders(ctx, request.StartsAt)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get matches from external api: %w", err)
 	}
 
-	externalMatch, providerName, err := s.findExternalMatch(aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, providersMatches)
+	externalMatch, providerName, err := s.findExternalMatch(providerTeamHome.ProviderTeamID, providerTeamAway.ProviderTeamID, providersMatches)
 	if err != nil {
-		return 0, models.NewUnprocessableContentError(errors.New(fmt.Sprintf("external match with home team id %d and away team id %d is not found: %s", aliasHome.ExternalTeam.ID, aliasAway.ExternalTeam.ID, err.Error())))
+		return 0, models.NewUnprocessableContentError(errors.New(fmt.Sprintf("external match with home provider team id %s and away provider team id %s is not found: %s", providerTeamHome.ProviderTeamID, providerTeamAway.ProviderTeamID, err.Error())))
 	}
 
 	if !s.isResultCheckSchedulingAllowed(*externalMatch) {
@@ -155,17 +168,13 @@ func (s *MatchService) findAlias(ctx context.Context, alias string) (*models.Ali
 		return nil, fmt.Errorf("failed to find team alias: %w", err)
 	}
 
-	if foundAlias.ExternalTeam == nil {
-		return nil, errors.New(fmt.Sprintf("alias %s doesn't have external team relation", alias))
-	}
-
 	return foundAlias, nil
 }
 
-func (s *MatchService) findExternalMatch(externalHomeTeamID, externalAwayTeamID uint, providersMatches map[string][]models.ExternalAPIMatch) (*models.ExternalAPIMatch, *string, error) {
+func (s *MatchService) findExternalMatch(homeProviderTeamID, awayProviderTeamID string, providersMatches map[string][]models.ExternalAPIMatch) (*models.ExternalAPIMatch, *string, error) {
 	for provider, matches := range providersMatches {
 		for _, match := range matches {
-			if match.HomeID == externalHomeTeamID && match.AwayID == externalAwayTeamID {
+			if match.HomeID == homeProviderTeamID && match.AwayID == awayProviderTeamID {
 				return &match, &provider, nil
 			}
 		}

@@ -148,7 +148,7 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.E
 		if err == nil {
 			s.logger.Debug().
 				Str("alias", teams[i].Name).
-				Uint("external_id", teams[i].ID).
+				Int("external_id", teams[i].ID).
 				Msg("alias already exists")
 			numberOfExisted++
 			continue
@@ -158,7 +158,7 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.E
 		if errExtTeam != nil && !errors.As(errExtTeam, &models.ResourceNotFoundError{}) {
 			s.logger.Error().
 				Str("alias", teams[i].Name).
-				Uint("external_id", teams[i].ID).
+				Int("external_id", teams[i].ID).
 				Err(errExtTeam).
 				Msg("failed to find external team")
 			continue
@@ -168,7 +168,7 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.E
 			if errSaveForTeam := s.aliasRepository.SaveForTeam(ctx, teams[i].Name, externalTeam.TeamID); errSaveForTeam != nil {
 				s.logger.Error().
 					Str("alias", teams[i].Name).
-					Uint("external_id", teams[i].ID).
+					Int("external_id", teams[i].ID).
 					Err(errSaveForTeam).
 					Msg("failed to save alias for existing team")
 				continue
@@ -184,7 +184,7 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.E
 		if errTrx != nil {
 			s.logger.Error().
 				Str("alias", teams[i].Name).
-				Uint("external_id", teams[i].ID).
+				Int("external_id", teams[i].ID).
 				Err(errTrx).
 				Msg("failed to save alias")
 			continue
@@ -203,7 +203,7 @@ func deduplicateByTeamID(teams []models.ExternalAPITeam) []models.ExternalAPITea
 		return teams
 	}
 
-	uniqueByID := make(map[uint]models.ExternalAPITeam, len(teams))
+	uniqueByID := make(map[int]models.ExternalAPITeam, len(teams))
 	for _, team := range teams {
 		uniqueByID[team.ID] = team
 	}

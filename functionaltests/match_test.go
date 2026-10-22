@@ -24,8 +24,8 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 	s.Require().NoError(err)
 
 	matchesResponse := testutils.FakeMatchesResponse()
-	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
-	matchesResponse.Leagues[0].Matches[0].Away.ID = teamSeeds[1].ExternalTeamID
+	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ExternalTeamID)
+	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ExternalTeamID)
 	matchesResponse.Leagues[0].Matches[0].StatusID = 1
 	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = startsAt.UTC().Format(time.RFC3339)
 	jsonResponse, err := json.Marshal(matchesResponse)
@@ -449,8 +449,8 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIStatusDoesntAllowSchedu
 	s.Require().NoError(err)
 
 	matchesResponse := testutils.FakeMatchesResponse()
-	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
-	matchesResponse.Leagues[0].Matches[0].Away.ID = teamSeeds[1].ExternalTeamID
+	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ExternalTeamID)
+	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ExternalTeamID)
 	matchesResponse.Leagues[0].Matches[0].StatusID = 6
 	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = startsAt.UTC().Format(time.RFC3339)
 	jsonResponse, err := json.Marshal(matchesResponse)

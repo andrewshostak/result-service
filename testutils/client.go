@@ -48,7 +48,7 @@ func FakeClientMatch(options ...Option[fotmob.Match]) fotmob.Match {
 
 func FakeClientTeam(options ...Option[fotmob.Team]) fotmob.Team {
 	team := fotmob.Team{
-		ID:       uint(gofakeit.Uint32()),
+		ID:       int(gofakeit.Int32()),
 		Score:    gofakeit.IntRange(0, 9),
 		Name:     gofakeit.Name(),
 		LongName: gofakeit.Name(),

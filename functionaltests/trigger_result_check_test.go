@@ -174,7 +174,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsError() {
 		m.Status = string(models.StatusMatchNotStarted)
 	}))
 
-	queryParams := map[string][]string{"date": {matchToCreate.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithStatusCode(http.StatusInternalServerError),
 		testutils.WithQueryParams(queryParams),
@@ -239,7 +239,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_ExternalAPIReturnsInvalidRe
 		m.Status = string(models.StatusMatchNotStarted)
 	}))
 
-	queryParams := map[string][]string{"date": {matchToCreate.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
@@ -303,7 +303,7 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFoundInExternalAPI(
 		m.Status = string(models.StatusMatchNotStarted)
 	}))
 
-	queryParams := map[string][]string{"date": {matchToCreate.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
@@ -387,8 +387,8 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFoundWithUnexpectedSta
 
 	matchesResponse := testutils.FakeMatchesResponse()
 	matchesResponse.Leagues[0].Matches[0].ID = externalMatch.ID
-	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
-	matchesResponse.Leagues[0].Matches[0].Away.ID = teamSeeds[1].ExternalTeamID
+	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ExternalTeamID)
+	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ExternalTeamID)
 	matchesResponse.Leagues[0].Matches[0].StatusID = 11111
 	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = match.StartsAt.UTC().Format(time.RFC3339)
 	jsonResponse, err := json.Marshal(matchesResponse)
@@ -489,8 +489,8 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchFinished() {
 
 	matchesResponse := testutils.FakeMatchesResponse()
 	matchesResponse.Leagues[0].Matches[0].ID = externalMatch.ID
-	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
-	matchesResponse.Leagues[0].Matches[0].Away.ID = teamSeeds[1].ExternalTeamID
+	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ExternalTeamID)
+	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ExternalTeamID)
 	matchesResponse.Leagues[0].Matches[0].StatusID = 6
 	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = match.StartsAt.UTC().Format(time.RFC3339)
 	jsonResponse, err := json.Marshal(matchesResponse)
@@ -606,8 +606,8 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinished() {
 
 	matchesResponse := testutils.FakeMatchesResponse()
 	matchesResponse.Leagues[0].Matches[0].ID = externalMatch.ID
-	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
-	matchesResponse.Leagues[0].Matches[0].Away.ID = teamSeeds[1].ExternalTeamID
+	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ExternalTeamID)
+	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ExternalTeamID)
 	matchesResponse.Leagues[0].Matches[0].StatusID = 3 // live 2nd half
 	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = match.StartsAt.UTC().Format(time.RFC3339)
 	jsonResponse, err := json.Marshal(matchesResponse)
@@ -719,8 +719,8 @@ func (s *FunctionalTestSuite) TestTriggerResultCheck_MatchNotFinishedAndCheckRes
 
 	matchesResponse := testutils.FakeMatchesResponse()
 	matchesResponse.Leagues[0].Matches[0].ID = externalMatch.ID
-	matchesResponse.Leagues[0].Matches[0].Home.ID = teamSeeds[0].ExternalTeamID
-	matchesResponse.Leagues[0].Matches[0].Away.ID = teamSeeds[1].ExternalTeamID
+	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ExternalTeamID)
+	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ExternalTeamID)
 	matchesResponse.Leagues[0].Matches[0].StatusID = 3 // live 2nd half
 	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = match.StartsAt.UTC().Format(time.RFC3339)
 	jsonResponse, err := json.Marshal(matchesResponse)
