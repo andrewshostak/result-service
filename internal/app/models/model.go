@@ -74,7 +74,6 @@ type Match struct {
 	HomeScore    *int
 	AwayScore    *int
 
-	ExternalMatch   *ExternalMatch
 	CheckResultTask *CheckResultTask
 }
 
@@ -114,14 +113,6 @@ const (
 	StatusMatchFinished   ExternalMatchStatus = "finished"
 	StatusMatchUnknown    ExternalMatchStatus = "unknown"
 )
-
-type ExternalMatch struct {
-	ID        uint
-	MatchID   uint
-	HomeScore int
-	AwayScore int
-	Status    ExternalMatchStatus
-}
 
 type CheckResultTask struct {
 	ID            uint
@@ -164,16 +155,6 @@ type SubscriberNotification struct {
 	Key  string
 	Home uint
 	Away uint
-}
-
-func (m *ExternalAPIMatch) ToExternalMatch(matchID uint) ExternalMatch {
-	return ExternalMatch{
-		ID:        m.ID,
-		MatchID:   matchID,
-		HomeScore: m.HomeScore,
-		AwayScore: m.AwayScore,
-		Status:    m.Status,
-	}
 }
 
 func (m *ExternalAPIMatch) ToProviderMatch(matchID uint, provider string) ProviderMatch {

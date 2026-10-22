@@ -177,6 +177,8 @@ A string column like `provider = 'fotmob'` is self-documenting in the DB and req
 **Alternative approach — one task per provider per match.**
 Instead of a single `check_result_task` per match that fans out to all providers at check time, `MatchService.Create` could schedule a separate task for each provider that returned the match. `CheckResult` would then receive a provider-scoped task, query only that provider's API, and update only that provider's `provider_match` row. This avoids the `ListByMatchID` + fan-out loop in `CheckResult`, keeps each task independently retryable per provider, and makes it trivial to add or remove a provider without changing the check logic. The trade-off is that task scheduling becomes more complex in `Create` (one `ScheduleResultCheck` call per provider) and the `check_result_tasks` table needs a `provider_id` column to carry the provider context into the task handler. Deferred for now — tracked in `todo.md`. Until it lands, `CheckResult` resolves disagreement between providers by picking the first provider match it finds a result for; with the current single provider (fotmob) this is deterministic.
 
+**Addendum — `ExternalMatchRepository` removal pulled forward from PR 10.** Once PR 9 confirmed nothing reads `external_matches` anymore (not even the gorm `Match.ExternalMatch` relation, since its `Preload` was removed), the last standing write — `MatchService.Create`'s dual-write via `ExternalMatchRepository` — was also removed in this same branch, along with the now-dead `ExternalMatchRepository` interface/impl/mock and the `ExternalMatch` domain/gorm types and mappers. This was safe to do ahead of schedule because dropping a write doesn't require the table to be gone yet — only the opposite ordering (stop writing before dropping) matters. PR 10's **Code:** section below is narrowed accordingly; only the DB migration and the `external_teams`/`ExternalTeam` side remain.
+
 ---
 
 ## Phase 5 — Cleanup
@@ -188,8 +190,9 @@ Instead of a single `check_result_task` per match that fans out to all providers
 - Drop `external_teams`
 
 **Code:**
-- Remove `ExternalMatchRepository` and `ExternalTeam` gorm model entirely
+- Remove `ExternalTeam` gorm model entirely
 - Remove any remaining references
+- (`ExternalMatchRepository` and the `ExternalMatch` domain/gorm types were already removed in PR 9's branch — see the addendum above)
 
 **Why safe:** no code references either table after PRs 8 and 9. Run migration after code is deployed and verified stable.
 

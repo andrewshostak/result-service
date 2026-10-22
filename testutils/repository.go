@@ -43,20 +43,6 @@ func FakeRepositoryAlias(options ...Option[repository.Alias]) repository.Alias {
 	return alias
 }
 
-func FakeExternalMatchRepository(options ...Option[repository.ExternalMatch]) repository.ExternalMatch {
-	externalMatch := repository.ExternalMatch{
-		ID:        uint(gofakeit.Uint8()),
-		MatchID:   uint(gofakeit.Uint8()),
-		HomeScore: gofakeit.IntRange(0, 9),
-		AwayScore: gofakeit.IntRange(0, 9),
-		Status:    gofakeit.RandomString([]string{"not_started", "cancelled", "in_progress", "finished", "unknown"}),
-	}
-
-	applyOptions(&externalMatch, options...)
-
-	return externalMatch
-}
-
 func FakeRepositoryProviderMatch(options ...Option[repository.ProviderMatch]) repository.ProviderMatch {
 	providerMatch := repository.ProviderMatch{
 		ID:              uint(gofakeit.Uint8()),

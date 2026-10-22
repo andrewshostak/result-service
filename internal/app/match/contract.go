@@ -18,10 +18,6 @@ type MatchRepository interface {
 	Update(ctx context.Context, id uint, match models.Match) (*models.Match, error)
 }
 
-type ExternalMatchRepository interface {
-	Save(ctx context.Context, id *uint, externalMatch models.ExternalMatch) (*models.ExternalMatch, error)
-}
-
 type ProviderTeamRepository interface {
 	FindByTeamAndProvider(ctx context.Context, teamID uint, provider string) (*models.ProviderTeam, error)
 }

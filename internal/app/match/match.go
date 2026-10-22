@@ -14,7 +14,6 @@ type MatchService struct {
 	config                    config.ResultCheck
 	aliasRepository           AliasRepository
 	matchRepository           MatchRepository
-	externalMatchRepository   ExternalMatchRepository
 	providerTeamRepository    ProviderTeamRepository
 	providerMatchRepository   ProviderMatchRepository
 	checkResultTaskRepository CheckResultTaskRepository
@@ -27,7 +26,6 @@ func NewMatchService(
 	config config.ResultCheck,
 	aliasRepository AliasRepository,
 	matchRepository MatchRepository,
-	externalMatchRepository ExternalMatchRepository,
 	providerTeamRepository ProviderTeamRepository,
 	providerMatchRepository ProviderMatchRepository,
 	checkResultTaskRepository CheckResultTaskRepository,
@@ -39,7 +37,6 @@ func NewMatchService(
 		config:                    config,
 		aliasRepository:           aliasRepository,
 		matchRepository:           matchRepository,
-		externalMatchRepository:   externalMatchRepository,
 		providerTeamRepository:    providerTeamRepository,
 		providerMatchRepository:   providerMatchRepository,
 		checkResultTaskRepository: checkResultTaskRepository,
@@ -118,15 +115,9 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 		return 0, fmt.Errorf("failed to save match with team ids %d and %d starting at %s: %w", aliasHome.TeamID, aliasAway.TeamID, externalMatch.Time, err)
 	}
 
-	externalMatchID := externalMatch.ID
-	_, err = s.externalMatchRepository.Save(ctx, &externalMatchID, externalMatch.ToExternalMatch(match.ID))
-	if err != nil {
-		return 0, fmt.Errorf("failed to save external match with id %d and match id %d: %w", externalMatchID, match.ID, err)
-	}
-
 	_, err = s.providerMatchRepository.Save(ctx, externalMatch.ToProviderMatch(match.ID, *providerName))
 	if err != nil {
-		return 0, fmt.Errorf("failed to save provider match with id %d and match id %d: %w", externalMatchID, match.ID, err)
+		return 0, fmt.Errorf("failed to save provider match with id %d and match id %d: %w", externalMatch.ID, match.ID, err)
 	}
 
 	task, err := s.taskClient.ScheduleResultCheck(ctx, match.ID, 1, match.StartsAt.Add(s.config.FirstAttemptDelay))
