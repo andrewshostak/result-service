@@ -177,7 +177,7 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.E
 			continue
 		}
 
-		errTrx := s.aliasRepository.SaveInTrx(ctx, teams[i].Name, uint(teams[i].ID), models.ProviderTeam{
+		errTrx := s.aliasRepository.SaveInTrx(ctx, teams[i].Name, models.ProviderTeam{
 			Provider:       fotmobProvider,
 			ProviderTeamID: fmt.Sprintf("%d", teams[i].ID),
 		})

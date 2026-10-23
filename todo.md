@@ -30,6 +30,7 @@
     - [ ] verify gcloud was reached
     - [ ] add cases for error response from gcloud tasks
     - [ ] fix shaky tests
+    - [ ] Add match_id to subscription notified log
   - [ ] auth middleware
   - [ ] google middleware
 - [ ] migrate from gorm to sqlc
