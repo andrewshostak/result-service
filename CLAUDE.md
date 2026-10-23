@@ -1,9 +1,7 @@
 # Project context
 
 - Go service with hexagonal architecture.
-- See README.md for the domain model for the state before migration.
-- An active migration plan is in progress: migration-plan.md
-- DB schema evolution history: db-changes.md
+- See README.md for the domain model.
 
 # Working conventions
 
