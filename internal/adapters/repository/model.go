@@ -134,7 +134,7 @@ func toDomainProviderMatch(p ProviderMatch) models.ProviderMatch {
 		StartsAt:        p.StartsAt,
 		HomeScore:       p.HomeScore,
 		AwayScore:       p.AwayScore,
-		Status:          models.ExternalMatchStatus(p.Status),
+		Status:          models.ProviderMatchStatus(p.Status),
 		ProviderStatus:  p.ProviderStatus,
 	}
 }

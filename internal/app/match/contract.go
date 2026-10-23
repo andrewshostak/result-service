@@ -37,7 +37,7 @@ type SubscriptionRepository interface {
 }
 
 type ResultProvider interface {
-	GetMatches(ctx context.Context, date time.Time) ([]models.ExternalAPIMatch, error)
+	GetMatches(ctx context.Context, date time.Time) ([]models.ProviderAPIMatch, error)
 	Name() string
 }
 

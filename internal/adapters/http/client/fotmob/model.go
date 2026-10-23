@@ -66,19 +66,19 @@ const (
 	afterPenalties       fotmobMatchStatus = 13
 )
 
-func toDomainExternalAPITeams(response MatchesResponse) []models.ExternalAPITeam {
-	teams := make([]models.ExternalAPITeam, 0, len(response.Leagues)*2) // each league has at least one match with two teams
+func toDomainProviderAPITeams(response MatchesResponse) []models.ProviderAPITeam {
+	teams := make([]models.ProviderAPITeam, 0, len(response.Leagues)*2) // each league has at least one match with two teams
 	for _, league := range response.Leagues {
-		leagueTeams := make([]models.ExternalAPITeam, 0, len(league.Matches)*2)
+		leagueTeams := make([]models.ProviderAPITeam, 0, len(league.Matches)*2)
 		for _, match := range league.Matches {
-			homeTeam := models.ExternalAPITeam{
+			homeTeam := models.ProviderAPITeam{
 				ID:          match.Home.ID,
 				Name:        match.Home.Name,
 				LeagueNames: []string{league.Name, league.ParentLeagueName},
 				CountryCode: league.Ccode,
 			}
 
-			awayTeam := models.ExternalAPITeam{
+			awayTeam := models.ProviderAPITeam{
 				ID:          match.Away.ID,
 				Name:        match.Away.Name,
 				LeagueNames: []string{league.Name, league.ParentLeagueName},
@@ -94,10 +94,10 @@ func toDomainExternalAPITeams(response MatchesResponse) []models.ExternalAPITeam
 	return teams
 }
 
-func toDomainExternalAPIMatches(response MatchesResponse) ([]models.ExternalAPIMatch, error) {
-	matches := make([]models.ExternalAPIMatch, 0, len(response.Leagues)) // each league has at least one match
+func toDomainProviderAPIMatches(response MatchesResponse) ([]models.ProviderAPIMatch, error) {
+	matches := make([]models.ProviderAPIMatch, 0, len(response.Leagues)) // each league has at least one match
 	for _, league := range response.Leagues {
-		leagueMatches := make([]models.ExternalAPIMatch, 0, len(league.Matches))
+		leagueMatches := make([]models.ProviderAPIMatch, 0, len(league.Matches))
 		for _, match := range league.Matches {
 			startsAt, err := time.Parse(time.RFC3339, match.Status.UTCTime)
 			if err != nil {
@@ -105,14 +105,14 @@ func toDomainExternalAPIMatches(response MatchesResponse) ([]models.ExternalAPIM
 			}
 
 			rawStatus := fmt.Sprintf("%d", match.StatusID)
-			leagueMatches = append(leagueMatches, models.ExternalAPIMatch{
+			leagueMatches = append(leagueMatches, models.ProviderAPIMatch{
 				ID:             match.ID,
 				HomeID:         strconv.Itoa(match.Home.ID),
 				AwayID:         strconv.Itoa(match.Away.ID),
 				HomeScore:      match.Home.Score,
 				AwayScore:      match.Away.Score,
 				Time:           startsAt,
-				Status:         ToDomainExternalAPIMatchStatus(match.ID, match.StatusID),
+				Status:         ToDomainProviderMatchStatus(match.ID, match.StatusID),
 				ProviderStatus: &rawStatus,
 			})
 
@@ -134,7 +134,7 @@ func toDomainExternalAPIMatches(response MatchesResponse) ([]models.ExternalAPIM
 	return matches, nil
 }
 
-func ToDomainExternalAPIMatchStatus(matchID uint, statusID fotmobMatchStatus) models.ExternalMatchStatus {
+func ToDomainProviderMatchStatus(matchID uint, statusID fotmobMatchStatus) models.ProviderMatchStatus {
 	switch statusID {
 	case notStarted:
 		return models.StatusMatchNotStarted

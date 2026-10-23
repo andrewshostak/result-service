@@ -19,8 +19,8 @@ type ProviderTeamRepository interface {
 	FindByProviderAndProviderTeamID(ctx context.Context, provider, providerTeamID string) (*models.ProviderTeam, error)
 }
 
-type ExternalAPIClient interface {
-	GetTeams(ctx context.Context, date time.Time) ([]models.ExternalAPITeam, error)
+type ProviderClient interface {
+	GetTeams(ctx context.Context, date time.Time) ([]models.ProviderAPITeam, error)
 }
 
 type Logger interface {

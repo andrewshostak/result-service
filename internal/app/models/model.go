@@ -45,7 +45,7 @@ type ProviderMatch struct {
 	StartsAt        time.Time
 	HomeScore       int
 	AwayScore       int
-	Status          ExternalMatchStatus
+	Status          ProviderMatchStatus
 	ProviderStatus  *string
 }
 
@@ -99,14 +99,14 @@ type Subscription struct {
 	Match *Match
 }
 
-type ExternalMatchStatus string
+type ProviderMatchStatus string
 
 const (
-	StatusMatchNotStarted ExternalMatchStatus = "not_started"
-	StatusMatchCancelled  ExternalMatchStatus = "cancelled"
-	StatusMatchInProgress ExternalMatchStatus = "in_progress"
-	StatusMatchFinished   ExternalMatchStatus = "finished"
-	StatusMatchUnknown    ExternalMatchStatus = "unknown"
+	StatusMatchNotStarted ProviderMatchStatus = "not_started"
+	StatusMatchCancelled  ProviderMatchStatus = "cancelled"
+	StatusMatchInProgress ProviderMatchStatus = "in_progress"
+	StatusMatchFinished   ProviderMatchStatus = "finished"
+	StatusMatchUnknown    ProviderMatchStatus = "unknown"
 )
 
 type CheckResultTask struct {
@@ -122,21 +122,21 @@ type League struct {
 	Name        string
 }
 
-type ExternalAPITeam struct {
+type ProviderAPITeam struct {
 	ID          int
 	Name        string
 	LeagueNames []string
 	CountryCode string
 }
 
-type ExternalAPIMatch struct {
+type ProviderAPIMatch struct {
 	ID             uint
 	HomeID         string
 	AwayID         string
 	HomeScore      int
 	AwayScore      int
 	Time           time.Time
-	Status         ExternalMatchStatus
+	Status         ProviderMatchStatus
 	ProviderStatus *string
 }
 
@@ -152,7 +152,7 @@ type SubscriberNotification struct {
 	Away uint
 }
 
-func (m *ExternalAPIMatch) ToProviderMatch(matchID uint, provider string) ProviderMatch {
+func (m *ProviderAPIMatch) ToProviderMatch(matchID uint, provider string) ProviderMatch {
 	return ProviderMatch{
 		MatchID:         matchID,
 		Provider:        provider,

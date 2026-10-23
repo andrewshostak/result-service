@@ -2,7 +2,7 @@ update-mocks:
 	# alias
 	mockery --name=AliasRepository --dir internal/app/alias --output internal/app/alias/mocks --case snake
 	mockery --name=ProviderTeamRepository --dir internal/app/alias --output internal/app/alias/mocks --case snake
-	mockery --name=ExternalAPIClient --dir internal/app/alias --output internal/app/alias/mocks --case snake
+	mockery --name=ProviderClient --dir internal/app/alias --output internal/app/alias/mocks --case snake
 	mockery --name=Logger --dir internal/app/alias --output internal/app/alias/mocks --case snake
     # match
 	mockery --name=AliasRepository --dir internal/app/match --output internal/app/match/mocks --case snake

@@ -22,10 +22,10 @@ const (
 type FotmobClient struct {
 	httpClient HTTPManager
 	logger     Logger
-	config     config.ExternalAPI
+	config     config.Fotmob
 }
 
-func NewFotmobClient(httpClient HTTPManager, logger Logger, config config.ExternalAPI) *FotmobClient {
+func NewFotmobClient(httpClient HTTPManager, logger Logger, config config.Fotmob) *FotmobClient {
 	return &FotmobClient{httpClient: httpClient, logger: logger, config: config}
 }
 
@@ -33,22 +33,22 @@ func (c *FotmobClient) Name() string {
 	return "fotmob"
 }
 
-func (c *FotmobClient) GetTeams(ctx context.Context, date time.Time) ([]models.ExternalAPITeam, error) {
+func (c *FotmobClient) GetTeams(ctx context.Context, date time.Time) ([]models.ProviderAPITeam, error) {
 	response, err := c.fetchMatchesByDate(ctx, date)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch matches by date: %w", err)
 	}
 
-	return toDomainExternalAPITeams(*response), nil
+	return toDomainProviderAPITeams(*response), nil
 }
 
-func (c *FotmobClient) GetMatches(ctx context.Context, date time.Time) ([]models.ExternalAPIMatch, error) {
+func (c *FotmobClient) GetMatches(ctx context.Context, date time.Time) ([]models.ProviderAPIMatch, error) {
 	response, err := c.fetchMatchesByDate(ctx, date)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch matches by date: %w", err)
 	}
 
-	matches, err := toDomainExternalAPIMatches(*response)
+	matches, err := toDomainProviderAPIMatches(*response)
 	if err != nil {
 		return nil, fmt.Errorf("failed to map fotmob response to matches: %w", err)
 	}
@@ -57,7 +57,7 @@ func (c *FotmobClient) GetMatches(ctx context.Context, date time.Time) ([]models
 }
 
 func (c *FotmobClient) fetchMatchesByDate(ctx context.Context, date time.Time) (*MatchesResponse, error) {
-	url := c.config.FotmobAPIBaseURL + matchesPath
+	url := c.config.APIBaseURL + matchesPath
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

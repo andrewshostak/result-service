@@ -16,12 +16,12 @@ func SetupTeamsWithRelations(t *testing.T, db *sqlx.DB) []TeamSeed {
 
 	teamSeeds := make([]TeamSeed, 0, len(aliases))
 	for i := range aliases {
-		externalTeamID := i + 1
-		teamID := SetupTeamWithRelations(t, db, aliases[i], externalTeamID)
+		providerTeamID := i + 1
+		teamID := SetupTeamWithRelations(t, db, aliases[i], providerTeamID)
 
 		teamSeeds = append(teamSeeds, TeamSeed{
 			TeamID:         teamID,
-			ExternalTeamID: uint(externalTeamID),
+			ProviderTeamID: uint(providerTeamID),
 			Alias:          aliases[i],
 		})
 	}
@@ -29,12 +29,12 @@ func SetupTeamsWithRelations(t *testing.T, db *sqlx.DB) []TeamSeed {
 	return teamSeeds
 }
 
-func SetupTeamWithRelations(t *testing.T, db *sqlx.DB, alias string, externalTeamID int) uint {
+func SetupTeamWithRelations(t *testing.T, db *sqlx.DB, alias string, providerTeamID int) uint {
 	t.Helper()
 
 	teamID := CreateTeam(t, db)
 	CreateAlias(t, db, alias, teamID)
-	CreateProviderTeam(t, db, teamID, strconv.Itoa(externalTeamID))
+	CreateProviderTeam(t, db, teamID, strconv.Itoa(providerTeamID))
 	return teamID
 }
 
@@ -160,6 +160,6 @@ func ListSubscriptionsByMatch(t *testing.T, db *sqlx.DB, matchID uint) []reposit
 
 type TeamSeed struct {
 	TeamID         uint
-	ExternalTeamID uint
+	ProviderTeamID uint
 	Alias          string
 }
