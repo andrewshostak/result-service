@@ -206,11 +206,56 @@ Instead of a single `check_result_task` per match that fans out to all providers
 **Code:** none — GORM uses string values, not the enum type name.
 
 **Docs:**
-- Update `README.md` erDiagram to reflect the final schema (`ProviderTeam`, `ProviderMatch` instead of `ExternalTeam`, `ExternalMatch`; scores on `Match`; timestamps everywhere)
+- Update `README.md` erDiagram to reflect the final schema (`ProviderTeam`, `ProviderMatch` instead of `ExternalTeam`, `ExternalMatch`; scores on `Match`; timestamps everywhere) — verify every entity/field/relationship against the actual migration files in `database/migrations/`, not just against this plan's description, since the plan can drift from what actually shipped
 - Update the backfill description in `README.md` to mention `provider_team`
 - Remove `db-changes.md` — its content is fully covered by the migration plan and the updated README
 
 **Why safe:** after PR 9, `external_matches` is gone and `external_match_status` is only referenced by `provider_matches.status`. Renaming an enum type in PostgreSQL requires no table rewrite and no downtime.
+
+---
+
+### PR 12 — Rename remaining `External*` Go identifiers to `Provider*`
+
+**Migration:** none — Go code only, no DB impact.
+
+**Code:**
+The "external" vocabulary has been phased out everywhere it referred to the now-dropped tables/repositories (`ExternalTeamRepository`, `ExternalMatchRepository`, `ExternalTeam`, `ExternalMatch`), but a few `External*`-named identifiers remain for the *provider API* boundary itself and should follow the same renaming so the codebase doesn't mix "external" and "provider" vocabulary for the same concept:
+- `internal/app/alias/contract.go`: rename the `ExternalAPIClient` interface (and its `externalAPIClient` field/param in `BackfillAliasesService`, `internal/app/alias/backfill_aliases.go`) to something like `ProviderClient` — mirrors `match.ResultProvider`, which PR 6 already renamed from the same `ExternalAPIClient` name in the `match` package
+- `internal/app/models/model.go`: rename `ExternalAPIMatch` → `ProviderAPIMatch`, `ExternalAPITeam` → `ProviderAPITeam`, `ExternalMatchStatus` → `ProviderMatchStatus` (matches the DB enum already renamed in PR 11)
+- Cascading renames at every call site: `fotmob` client mapping functions (`toDomainExternalAPIMatches`, `toDomainExternalAPITeams`, `ToDomainExternalAPIMatchStatus`, `findExternalAPIMatch`, …), `testutils` fixtures (`FakeExternalAPIMatch`, …), and the generated mock for `ExternalAPIClient`/`ProviderClient`
+- Regenerate affected mocks via `make update-mocks` (update the `Makefile` target's `--name` to match)
+
+**Why safe:** pure rename, no behavior change, no DB touched. Do this once PRs 10-11 have landed so there's no "external" terminology left anywhere to confuse with the rename, and so `README.md`'s terminology (updated in PR 11) can be double-checked against the final Go type names too.
+
+---
+
+## Phase 6 — Wrap up
+
+### PR 13 — Update `CLAUDE.md` now that the migration is complete
+
+**Migration:** none.
+
+**Code:** none.
+
+**Docs:**
+- Remove the "state before migration" framing from the `README.md` reference — once PR 11/12 land, `README.md` describes the *current* domain model, not a pre-migration snapshot
+- Remove the `migration-plan.md` "active migration plan" line (the plan will be removed entirely in PR 14 — do this first so nothing references a file about to disappear)
+- Remove the `db-changes.md` reference (the file itself was already removed in PR 11)
+
+**Why safe:** `CLAUDE.md` is project-instructions documentation only; it has no runtime effect on the service.
+
+---
+
+### PR 14 — Remove `migration-plan.md`
+
+**Migration:** none.
+
+**Code:** none.
+
+**Docs:**
+- Delete `migration-plan.md` itself — once every PR above has landed, it's a historical planning artifact, not living documentation. (If any of the design rationale in it is worth preserving long-term — e.g. the "general pattern for replacing a table" principle, or the deferred "one task per provider per match" alternative already tracked in `todo.md` — pull it into `README.md` or `todo.md` before deleting.)
+
+**Why safe:** must land last, after PR 13 removes the only remaining reference to this file from `CLAUDE.md`.
 
 ---
 
@@ -229,6 +274,9 @@ Instead of a single `check_result_task` per match that fans out to all providers
 | PR 8.5 — switch backfill to use `provider_teams` ✓  | Code only         | PR 4, PR 8   |
 | PR 9 — switch result reads to `provider_matches` ✓  | Code only         | PR 5, PR 7   |
 | PR 10 — drop old tables                             | DB + code cleanup | PR 8.5, PR 9 |
-| PR 11 — rename `external_match_status` enum         | DB only           | PR 10        |
+| PR 11 — rename `external_match_status` enum + docs  | DB + docs         | PR 10        |
+| PR 12 — rename remaining `External*` identifiers    | Code only         | PR 11        |
+| PR 13 — update `CLAUDE.md`                          | Docs only         | PR 12        |
+| PR 14 — remove `migration-plan.md`                  | Docs only         | PR 13        |
 
 *PR 5 needs `provider.Name()` to write the provider identifier when dual-writing, so PR 6 should land first.

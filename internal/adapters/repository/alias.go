@@ -33,7 +33,7 @@ func (r *AliasRepository) Find(ctx context.Context, alias string) (*models.Alias
 	return &domain, nil
 }
 
-func (r *AliasRepository) SaveInTrx(ctx context.Context, alias string, externalTeamID uint, providerTeam models.ProviderTeam) error {
+func (r *AliasRepository) SaveInTrx(ctx context.Context, alias string, providerTeam models.ProviderTeam) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		team := Team{}
 		if err := tx.Create(&team).Error; err != nil {
@@ -43,10 +43,6 @@ func (r *AliasRepository) SaveInTrx(ctx context.Context, alias string, externalT
 		a := Alias{TeamID: team.ID, Alias: alias}
 		if err := tx.Create(&a).Error; err != nil {
 			return fmt.Errorf("failed to create alias: %w", err)
-		}
-
-		if err := tx.Create(&ExternalTeam{ID: externalTeamID, TeamID: team.ID}).Error; err != nil {
-			return fmt.Errorf("failed to create external team: %w", err)
 		}
 
 		if err := tx.Create(&ProviderTeam{TeamID: team.ID, Provider: providerTeam.Provider, ProviderTeamID: providerTeam.ProviderTeamID}).Error; err != nil {

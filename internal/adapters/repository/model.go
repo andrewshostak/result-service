@@ -27,11 +27,6 @@ type Provider struct {
 	Name string `gorm:"column:name"`
 }
 
-type ExternalTeam struct {
-	ID     uint `gorm:"column:id;primaryKey" db:"id"`
-	TeamID uint `gorm:"column:team_id" db:"team_id"`
-}
-
 type ProviderTeam struct {
 	ID             uint      `gorm:"column:id;primaryKey"`
 	TeamID         uint      `gorm:"column:team_id"`

@@ -16,11 +16,12 @@ func SetupTeamsWithRelations(t *testing.T, db *sqlx.DB) []TeamSeed {
 
 	teamSeeds := make([]TeamSeed, 0, len(aliases))
 	for i := range aliases {
-		teamID, externalTeam := SetupTeamWithRelations(t, db, aliases[i], i+1)
+		externalTeamID := i + 1
+		teamID := SetupTeamWithRelations(t, db, aliases[i], externalTeamID)
 
 		teamSeeds = append(teamSeeds, TeamSeed{
 			TeamID:         teamID,
-			ExternalTeamID: externalTeam.ID,
+			ExternalTeamID: uint(externalTeamID),
 			Alias:          aliases[i],
 		})
 	}
@@ -28,14 +29,13 @@ func SetupTeamsWithRelations(t *testing.T, db *sqlx.DB) []TeamSeed {
 	return teamSeeds
 }
 
-func SetupTeamWithRelations(t *testing.T, db *sqlx.DB, alias string, externalTeamID int) (uint, repository.ExternalTeam) {
+func SetupTeamWithRelations(t *testing.T, db *sqlx.DB, alias string, externalTeamID int) uint {
 	t.Helper()
 
 	teamID := CreateTeam(t, db)
 	CreateAlias(t, db, alias, teamID)
-	externalTeam := CreateExternalTeam(t, db, teamID, externalTeamID)
 	CreateProviderTeam(t, db, teamID, strconv.Itoa(externalTeamID))
-	return teamID, externalTeam
+	return teamID
 }
 
 func CreateProviderTeam(t *testing.T, db *sqlx.DB, teamID uint, providerTeamID string) {
@@ -52,18 +52,6 @@ func CreateAlias(t *testing.T, db *sqlx.DB, alias string, teamID uint) {
 
 	_, err := db.Exec(aliasCreationQuery, teamID, alias)
 	require.NoError(t, err)
-}
-
-func CreateExternalTeam(t *testing.T, db *sqlx.DB, teamID uint, externalTeamID int) repository.ExternalTeam {
-	t.Helper()
-
-	var created repository.ExternalTeam
-	externalTeamCreationQuery := "INSERT INTO external_teams (id, team_id) VALUES ($1, $2) RETURNING *"
-
-	err := db.Get(&created, externalTeamCreationQuery, externalTeamID, teamID)
-	require.NoError(t, err)
-
-	return created
 }
 
 func CreateProviderMatch(t *testing.T, db *sqlx.DB, providerMatch repository.ProviderMatch) repository.ProviderMatch {

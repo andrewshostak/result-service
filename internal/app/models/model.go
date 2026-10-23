@@ -49,11 +49,6 @@ type ProviderMatch struct {
 	ProviderStatus  *string
 }
 
-type ExternalTeam struct {
-	ID     uint
-	TeamID uint
-}
-
 type ResultStatus string
 
 const (
