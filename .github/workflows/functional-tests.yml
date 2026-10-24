@@ -1,0 +1,24 @@
+name: Functional tests
+
+on:
+  push:
+    branches-ignore: [main]
+
+concurrency:
+  group: functional-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  functional-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.0"
+          cache: true
+
+      - name: Run functional tests
+        run: make functional-tests
