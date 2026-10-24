@@ -26,12 +26,16 @@ Feel free to use this service for your needs.
 erDiagram
     Team {
         Int id PK
+        Date created_at
+        Date updated_at
     }
     
     Alias {
         Int id PK
         Int team_id FK
         String alias UK 
+        Date created_at
+        Date updated_at
     }
     
     Match {
@@ -40,14 +44,24 @@ erDiagram
         Int away_team_id FK
         Date starts_at
         String result_status
-    }
-    
-    ExternalMatch {
-        Int id PK
-        Int match_id FK
         Int home_score
         Int away_score
+        Date created_at
+        Date updated_at
+    }
+    
+    ProviderMatch {
+        Int id PK
+        Int match_id FK
+        String provider
+        String provider_match_id
+        Date starts_at
+        Int home_score
+        Int away_score
+        String provider_status
         String status
+        Date created_at
+        Date updated_at
     }
     
     Subscription {
@@ -59,11 +73,16 @@ erDiagram
         String subscriber_error
         Date notified_at
         Date created_at
+        Date updated_at
     }
     
-    ExternalTeam {
+    ProviderTeam {
         Int id PK
         Int team_id FK
+        String provider
+        String provider_team_id
+        Date created_at
+        Date updated_at
     }
     
     CheckResultTask {
@@ -73,17 +92,18 @@ erDiagram
         Int attempt_number
         Date execute_at
         Date created_at
+        Date updated_at
     }
     
     Team ||--o{ Alias : has 
     Team ||--o{ Match : has
-    Match ||--|| ExternalMatch : has
+    Match ||--o{ ProviderMatch : has
     Match ||--o{ Subscription : has
-    Team ||--|| ExternalTeam : has
+    Team ||--o{ ProviderTeam : has
     Match ||--|| CheckResultTask : has
 ```
 
-Table names are pluralized. The tables `teams`, `aliases`, `external-teams` are pre-filled with the data of `fotmob-api`.
+Table names are pluralized. The tables `teams`, `aliases`, `provider-teams` are pre-filled with the data of `fotmob-api`.
 
 #### Description of possible match `result_status` values:
 
@@ -143,7 +163,7 @@ end
 ResultService->>+Fotmob: Sends a request with date
 Fotmob-->>-ResultService: Returns all matches for the date
 ResultService->>ResultService: Finds a match in the response by aliases and starting time
-ResultService->>ResultService: Saves match with status not_scheduled and external match to the DB
+ResultService->>ResultService: Saves match with status not_scheduled and provider match to the DB
 ResultService->>CloudTasks: Creates a task to check result with schedule-time (starting time + 115 minutes)
 Activate CloudTasks
 CloudTasks-->>ResultService: Returns task id
@@ -182,7 +202,7 @@ sequenceDiagram
     ResultService->>+Fotmob: Sends a request with date
     Fotmob-->>-ResultService: Returns all matches for the date
     ResultService->>ResultService: Finds a match in the response by id
-    ResultService->>ResultService: Updates external match data
+    ResultService->>ResultService: Updates provider match data
     alt match is not yet ended
         ResultService->>CloudTasks: Creates a new task to check result with backoff
         ResultService-->>CloudTasks: Returns success
@@ -253,13 +273,13 @@ To back-fill aliases data a separate command is created. The command description
 - Extracts team names from the matches list
 - For each team the command does the next actions in database 
   - checks if `alias` already exists
-  - if not, creates a `team`, `alias`, `external_team` in transaction
+  - if not, creates a `team`, `alias`, `provider_team` in transaction
 
 ## Commands
 
 Run a particular functional test:
 ```
-go test -v -count=1 -tags functional ./functionaltests/... -testify.m TestCreateMatch_ExternalAPIReturnsError
+go test -v -count=1 -tags functional ./functionaltests/... -testify.m TestCreateMatch_ProviderAPIReturnsError
 ```
 
 Run in detached mode:

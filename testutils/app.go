@@ -50,8 +50,8 @@ func FakeMatch(options ...Option[models.Match]) models.Match {
 	return m
 }
 
-func FakeExternalAPIMatch(options ...Option[models.ExternalAPIMatch]) models.ExternalAPIMatch {
-	statuses := []models.ExternalMatchStatus{
+func FakeProviderAPIMatch(options ...Option[models.ProviderAPIMatch]) models.ProviderAPIMatch {
+	statuses := []models.ProviderMatchStatus{
 		models.StatusMatchNotStarted,
 		models.StatusMatchCancelled,
 		models.StatusMatchInProgress,
@@ -59,7 +59,7 @@ func FakeExternalAPIMatch(options ...Option[models.ExternalAPIMatch]) models.Ext
 		models.StatusMatchUnknown,
 	}
 
-	externalMatch := models.ExternalAPIMatch{
+	providerAPIMatch := models.ProviderAPIMatch{
 		ID:        uint(gofakeit.Uint8()),
 		HomeID:    strconv.Itoa(int(gofakeit.Uint32())),
 		AwayID:    strconv.Itoa(int(gofakeit.Uint32())),
@@ -69,13 +69,13 @@ func FakeExternalAPIMatch(options ...Option[models.ExternalAPIMatch]) models.Ext
 		Status:    statuses[gofakeit.IntRange(0, len(statuses)-1)],
 	}
 
-	applyOptions(&externalMatch, options...)
+	applyOptions(&providerAPIMatch, options...)
 
-	return externalMatch
+	return providerAPIMatch
 }
 
 func FakeProviderMatch(options ...Option[models.ProviderMatch]) models.ProviderMatch {
-	statuses := []models.ExternalMatchStatus{
+	statuses := []models.ProviderMatchStatus{
 		models.StatusMatchNotStarted,
 		models.StatusMatchCancelled,
 		models.StatusMatchInProgress,

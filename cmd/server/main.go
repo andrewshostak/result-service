@@ -52,7 +52,7 @@ func startServer(_ *cobra.Command, _ []string) {
 
 	defer cloudTasksClient.Close()
 
-	fotmobClient := fotmob.NewFotmobClient(&httpClient, logger, cfg.ExternalAPI)
+	fotmobClient := fotmob.NewFotmobClient(&httpClient, logger, cfg.Fotmob)
 	notifierClient := notifier.NewNotifierClient(&httpClient, logger)
 	taskClient := task.NewClient(cfg.GoogleCloud, cfg.App.TriggersTimeout+(2*time.Second), cloudTasksClient)
 

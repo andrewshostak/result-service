@@ -24,8 +24,8 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 	s.Require().NoError(err)
 
 	matchesResponse := testutils.FakeMatchesResponse()
-	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ExternalTeamID)
-	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ExternalTeamID)
+	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ProviderTeamID)
+	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ProviderTeamID)
 	matchesResponse.Leagues[0].Matches[0].StatusID = 1
 	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = startsAt.UTC().Format(time.RFC3339)
 	jsonResponse, err := json.Marshal(matchesResponse)
@@ -289,7 +289,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_AlreadyExistsNonScheduled() {
 	s.Equal(1, len(matches))
 }
 
-func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIReturnsError() {
+func (s *FunctionalTestSuite) TestCreateMatch_ProviderAPIReturnsError() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	startsAt, err := time.Parse(time.RFC3339, "2026-01-02T20:00:00Z")
@@ -332,11 +332,11 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIReturnsError() {
 	var response handler.ErrorResponse
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
-	s.Equal("failed to get matches from external api: failed to get matches across providers: failed to get matches from provider fotmob: failed to fetch matches by date: failed to get matches by date, status code 500", response.Error)
+	s.Equal("failed to get matches from provider api: failed to get matches across providers: failed to get matches from provider fotmob: failed to fetch matches by date: failed to get matches by date, status code 500", response.Error)
 	s.Equal(string(models.CodeInternalServerError), response.Code)
 }
 
-func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIReturnsInvalidResponseBody() {
+func (s *FunctionalTestSuite) TestCreateMatch_ProviderAPIReturnsInvalidResponseBody() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	startsAt, err := time.Parse(time.RFC3339, "2026-01-03T20:00:00Z")
@@ -378,11 +378,11 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIReturnsInvalidResponseB
 	var response handler.ErrorResponse
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
-	s.Equal("failed to get matches from external api: failed to get matches across providers: failed to get matches from provider fotmob: failed to fetch matches by date: failed to decode get matches by date response body: invalid character '!' looking for beginning of value", response.Error)
+	s.Equal("failed to get matches from provider api: failed to get matches across providers: failed to get matches from provider fotmob: failed to fetch matches by date: failed to decode get matches by date response body: invalid character '!' looking for beginning of value", response.Error)
 	s.Equal(string(models.CodeInternalServerError), response.Code)
 }
 
-func (s *FunctionalTestSuite) TestCreateMatch_MatchNotFoundInExternalAPI() {
+func (s *FunctionalTestSuite) TestCreateMatch_MatchNotFoundInProviderAPI() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	startsAt, err := time.Parse(time.RFC3339, "2026-01-04T20:00:00Z")
@@ -431,15 +431,15 @@ func (s *FunctionalTestSuite) TestCreateMatch_MatchNotFoundInExternalAPI() {
 	s.Equal(0, len(matches))
 }
 
-func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIStatusDoesntAllowScheduling() {
+func (s *FunctionalTestSuite) TestCreateMatch_ProviderAPIStatusDoesntAllowScheduling() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
 	startsAt, err := time.Parse(time.RFC3339, "2026-01-05T20:00:00Z")
 	s.Require().NoError(err)
 
 	matchesResponse := testutils.FakeMatchesResponse()
-	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ExternalTeamID)
-	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ExternalTeamID)
+	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ProviderTeamID)
+	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ProviderTeamID)
 	matchesResponse.Leagues[0].Matches[0].StatusID = 6
 	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = startsAt.UTC().Format(time.RFC3339)
 	jsonResponse, err := json.Marshal(matchesResponse)
@@ -481,7 +481,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_ExternalAPIStatusDoesntAllowSchedu
 	var response handler.ErrorResponse
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
-	s.Contains(response.Error, "result check scheduling is not allowed for this match, external match status is finished")
+	s.Contains(response.Error, "result check scheduling is not allowed for this match, provider match status is finished")
 	s.Equal(string(models.CodeUnprocessableContent), response.Code)
 
 	matches := testutils.ListMatches(s.T(), s.db)

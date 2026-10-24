@@ -8,15 +8,15 @@ import (
 
 type Server struct {
 	App         App
-	ExternalAPI ExternalAPI
+	Fotmob      Fotmob
 	Result      ResultCheck
 	PG          PG
 	GoogleCloud GoogleCloud
 }
 
 type BackfillAliases struct {
-	PG          PG
-	ExternalAPI ExternalAPI
+	PG     PG
+	Fotmob Fotmob
 }
 
 type Migrate struct {
@@ -31,8 +31,8 @@ type App struct {
 	TriggersTimeout time.Duration `env:"TRIGGERS_TIMEOUT" envDefault:"20s"`
 }
 
-type ExternalAPI struct {
-	FotmobAPIBaseURL string `env:"FOTMOB_API_BASE_URL" envDefault:"https://www.fotmob.com"`
+type Fotmob struct {
+	APIBaseURL string `env:"FOTMOB_API_BASE_URL" envDefault:"https://www.fotmob.com"`
 }
 
 type ResultCheck struct {

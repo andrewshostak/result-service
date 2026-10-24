@@ -88,16 +88,16 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 
 	providersMatches, err := s.getMatchesFromProviders(ctx, request.StartsAt)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get matches from external api: %w", err)
+		return 0, fmt.Errorf("failed to get matches from provider api: %w", err)
 	}
 
-	externalMatch, providerName, err := s.findExternalMatch(providerTeamHome.ProviderTeamID, providerTeamAway.ProviderTeamID, providersMatches)
+	providerAPIMatch, providerName, err := s.findProviderAPIMatch(providerTeamHome.ProviderTeamID, providerTeamAway.ProviderTeamID, providersMatches)
 	if err != nil {
-		return 0, models.NewUnprocessableContentError(errors.New(fmt.Sprintf("external match with home provider team id %s and away provider team id %s is not found: %s", providerTeamHome.ProviderTeamID, providerTeamAway.ProviderTeamID, err.Error())))
+		return 0, models.NewUnprocessableContentError(errors.New(fmt.Sprintf("provider match with home provider team id %s and away provider team id %s is not found: %s", providerTeamHome.ProviderTeamID, providerTeamAway.ProviderTeamID, err.Error())))
 	}
 
-	if !s.isResultCheckSchedulingAllowed(*externalMatch) {
-		return 0, models.NewUnprocessableContentError(errors.New(fmt.Sprintf("result check scheduling is not allowed for this match, external match status is %s", externalMatch.Status)))
+	if !s.isResultCheckSchedulingAllowed(*providerAPIMatch) {
+		return 0, models.NewUnprocessableContentError(errors.New(fmt.Sprintf("result check scheduling is not allowed for this match, provider match status is %s", providerAPIMatch.Status)))
 	}
 
 	var matchID *uint
@@ -108,16 +108,16 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 	match, err = s.matchRepository.Save(ctx, matchID, models.Match{
 		HomeTeamID:   aliasHome.TeamID,
 		AwayTeamID:   aliasAway.TeamID,
-		StartsAt:     externalMatch.Time,
+		StartsAt:     providerAPIMatch.Time,
 		ResultStatus: models.NotScheduled,
 	})
 	if err != nil {
-		return 0, fmt.Errorf("failed to save match with team ids %d and %d starting at %s: %w", aliasHome.TeamID, aliasAway.TeamID, externalMatch.Time, err)
+		return 0, fmt.Errorf("failed to save match with team ids %d and %d starting at %s: %w", aliasHome.TeamID, aliasAway.TeamID, providerAPIMatch.Time, err)
 	}
 
-	_, err = s.providerMatchRepository.Save(ctx, externalMatch.ToProviderMatch(match.ID, *providerName))
+	_, err = s.providerMatchRepository.Save(ctx, providerAPIMatch.ToProviderMatch(match.ID, *providerName))
 	if err != nil {
-		return 0, fmt.Errorf("failed to save provider match with id %d and match id %d: %w", externalMatch.ID, match.ID, err)
+		return 0, fmt.Errorf("failed to save provider match with id %d and match id %d: %w", providerAPIMatch.ID, match.ID, err)
 	}
 
 	task, err := s.taskClient.ScheduleResultCheck(ctx, match.ID, 1, match.StartsAt.Add(s.config.FirstAttemptDelay))
@@ -162,7 +162,7 @@ func (s *MatchService) findAlias(ctx context.Context, alias string) (*models.Ali
 	return foundAlias, nil
 }
 
-func (s *MatchService) findExternalMatch(homeProviderTeamID, awayProviderTeamID string, providersMatches map[string][]models.ExternalAPIMatch) (*models.ExternalAPIMatch, *string, error) {
+func (s *MatchService) findProviderAPIMatch(homeProviderTeamID, awayProviderTeamID string, providersMatches map[string][]models.ProviderAPIMatch) (*models.ProviderAPIMatch, *string, error) {
 	for provider, matches := range providersMatches {
 		for _, match := range matches {
 			if match.HomeID == homeProviderTeamID && match.AwayID == awayProviderTeamID {
@@ -174,9 +174,9 @@ func (s *MatchService) findExternalMatch(homeProviderTeamID, awayProviderTeamID 
 	return nil, nil, errors.New("match not found")
 }
 
-func (s *MatchService) getMatchesFromProviders(ctx context.Context, startsAt time.Time) (map[string][]models.ExternalAPIMatch, error) {
+func (s *MatchService) getMatchesFromProviders(ctx context.Context, startsAt time.Time) (map[string][]models.ProviderAPIMatch, error) {
 	var matchesErrors []error
-	matches := make(map[string][]models.ExternalAPIMatch)
+	matches := make(map[string][]models.ProviderAPIMatch)
 	for _, provider := range s.providers {
 		// parallelize in case of multiple providers
 		providerMatches, err := provider.GetMatches(ctx, startsAt)
@@ -195,8 +195,8 @@ func (s *MatchService) getMatchesFromProviders(ctx context.Context, startsAt tim
 	return nil, fmt.Errorf("failed to get matches across providers: %w", errors.Join(matchesErrors...))
 }
 
-func (s *MatchService) isResultCheckSchedulingAllowed(externalMatch models.ExternalAPIMatch) bool {
-	return externalMatch.Status == models.StatusMatchNotStarted || externalMatch.Status == models.StatusMatchInProgress
+func (s *MatchService) isResultCheckSchedulingAllowed(providerAPIMatch models.ProviderAPIMatch) bool {
+	return providerAPIMatch.Status == models.StatusMatchNotStarted || providerAPIMatch.Status == models.StatusMatchInProgress
 }
 
 func (s *MatchService) isResultCheckScheduled(match models.Match) bool {

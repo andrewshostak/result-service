@@ -14,20 +14,20 @@ import (
 type BackfillAliasesService struct {
 	aliasRepository        AliasRepository
 	providerTeamRepository ProviderTeamRepository
-	externalAPIClient      ExternalAPIClient
+	providerClient         ProviderClient
 	logger                 Logger
 }
 
 func NewBackfillAliasesService(
 	aliasRepository AliasRepository,
 	providerTeamRepository ProviderTeamRepository,
-	externalAPIClient ExternalAPIClient,
+	providerClient ProviderClient,
 	logger Logger,
 ) *BackfillAliasesService {
 	return &BackfillAliasesService{
 		aliasRepository:        aliasRepository,
 		providerTeamRepository: providerTeamRepository,
-		externalAPIClient:      externalAPIClient,
+		providerClient:         providerClient,
 		logger:                 logger,
 	}
 }
@@ -37,7 +37,7 @@ func (s *BackfillAliasesService) Backfill(ctx context.Context, dates []time.Time
 
 	teams, err := s.getTeams(ctx, dates)
 	if err != nil {
-		return fmt.Errorf("failed to get external matches: %w", err)
+		return fmt.Errorf("failed to get teams: %w", err)
 	}
 
 	teams = deduplicateByTeamID(teams)
@@ -47,13 +47,13 @@ func (s *BackfillAliasesService) Backfill(ctx context.Context, dates []time.Time
 	return nil
 }
 
-func (s *BackfillAliasesService) getTeams(ctx context.Context, dates []time.Time) ([]models.ExternalAPITeam, error) {
+func (s *BackfillAliasesService) getTeams(ctx context.Context, dates []time.Time) ([]models.ProviderAPITeam, error) {
 	const numberOfWorkers = 3
 	jobs := make(chan struct{}, numberOfWorkers)
 	wg := sync.WaitGroup{}
 	var mutex = &sync.Mutex{}
 
-	teams := []models.ExternalAPITeam{}
+	teams := []models.ProviderAPITeam{}
 
 	for i, date := range dates {
 		wg.Add(1)
@@ -63,7 +63,7 @@ func (s *BackfillAliasesService) getTeams(ctx context.Context, dates []time.Time
 		s.logger.Debug().Int("iteration", i).Str("date", dateOnly).Msg("iterating through dates")
 
 		go func(ctx context.Context, date time.Time) {
-			allTeams, err := s.externalAPIClient.GetTeams(ctx, date)
+			allTeams, err := s.providerClient.GetTeams(ctx, date)
 			<-jobs
 
 			if err != nil {
@@ -141,14 +141,14 @@ func (s *BackfillAliasesService) getIncludedLeagues() []models.League {
 	}
 }
 
-func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.ExternalAPITeam, fotmobProvider string) {
+func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.ProviderAPITeam, fotmobProvider string) {
 	numberOfSaved, numberOfExisted := 0, 0
 	for i := range teams {
 		_, err := s.aliasRepository.Find(ctx, teams[i].Name)
 		if err == nil {
 			s.logger.Debug().
 				Str("alias", teams[i].Name).
-				Int("external_id", teams[i].ID).
+				Int("provider_team_id", teams[i].ID).
 				Msg("alias already exists")
 			numberOfExisted++
 			continue
@@ -158,7 +158,7 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.E
 		if errProviderTeam != nil && !errors.As(errProviderTeam, &models.ResourceNotFoundError{}) {
 			s.logger.Error().
 				Str("alias", teams[i].Name).
-				Int("external_id", teams[i].ID).
+				Int("provider_team_id", teams[i].ID).
 				Err(errProviderTeam).
 				Msg("failed to find provider team")
 			continue
@@ -168,7 +168,7 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.E
 			if errSaveForTeam := s.aliasRepository.SaveForTeam(ctx, teams[i].Name, providerTeam.TeamID); errSaveForTeam != nil {
 				s.logger.Error().
 					Str("alias", teams[i].Name).
-					Int("external_id", teams[i].ID).
+					Int("provider_team_id", teams[i].ID).
 					Err(errSaveForTeam).
 					Msg("failed to save alias for existing team")
 				continue
@@ -184,7 +184,7 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.E
 		if errTrx != nil {
 			s.logger.Error().
 				Str("alias", teams[i].Name).
-				Int("external_id", teams[i].ID).
+				Int("provider_team_id", teams[i].ID).
 				Err(errTrx).
 				Msg("failed to save alias")
 			continue
@@ -198,17 +198,17 @@ func (s *BackfillAliasesService) saveTeams(ctx context.Context, teams []models.E
 		Msg("teams saving finished")
 }
 
-func deduplicateByTeamID(teams []models.ExternalAPITeam) []models.ExternalAPITeam {
+func deduplicateByTeamID(teams []models.ProviderAPITeam) []models.ProviderAPITeam {
 	if len(teams) == 0 {
 		return teams
 	}
 
-	uniqueByID := make(map[int]models.ExternalAPITeam, len(teams))
+	uniqueByID := make(map[int]models.ProviderAPITeam, len(teams))
 	for _, team := range teams {
 		uniqueByID[team.ID] = team
 	}
 
-	result := make([]models.ExternalAPITeam, 0, len(uniqueByID))
+	result := make([]models.ProviderAPITeam, 0, len(uniqueByID))
 	for _, team := range uniqueByID {
 		result = append(result, team)
 	}
@@ -216,8 +216,8 @@ func deduplicateByTeamID(teams []models.ExternalAPITeam) []models.ExternalAPITea
 	return result
 }
 
-func filterTeamsByIncludedLeagues(allTeams []models.ExternalAPITeam, includedLeagues []models.League) []models.ExternalAPITeam {
-	filtered := make([]models.ExternalAPITeam, 0, len(allTeams))
+func filterTeamsByIncludedLeagues(allTeams []models.ProviderAPITeam, includedLeagues []models.League) []models.ProviderAPITeam {
+	filtered := make([]models.ProviderAPITeam, 0, len(allTeams))
 	for i := range allTeams {
 		if teamBelongsToIncludedLeague(allTeams[i], includedLeagues) {
 			filtered = append(filtered, allTeams[i])
@@ -226,7 +226,7 @@ func filterTeamsByIncludedLeagues(allTeams []models.ExternalAPITeam, includedLea
 	return filtered
 }
 
-func teamBelongsToIncludedLeague(team models.ExternalAPITeam, includedLeagues []models.League) bool {
+func teamBelongsToIncludedLeague(team models.ProviderAPITeam, includedLeagues []models.League) bool {
 	for i := range includedLeagues {
 		if isLeagueTeam(includedLeagues[i], team) {
 			return true
@@ -235,6 +235,6 @@ func teamBelongsToIncludedLeague(team models.ExternalAPITeam, includedLeagues []
 	return false
 }
 
-func isLeagueTeam(league models.League, team models.ExternalAPITeam) bool {
+func isLeagueTeam(league models.League, team models.ProviderAPITeam) bool {
 	return team.CountryCode == league.CountryCode && slices.Contains(team.LeagueNames, league.Name)
 }

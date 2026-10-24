@@ -28,13 +28,13 @@ import (
 func TestFotmobClient_GetMatches(t *testing.T) {
 	ctx := context.Background()
 
-	cfg := config.ExternalAPI{
-		FotmobAPIBaseURL: gofakeit.URL(),
+	cfg := config.Fotmob{
+		APIBaseURL: gofakeit.URL(),
 	}
 
 	date := gofakeit.Date()
 
-	reqUrl := cfg.FotmobAPIBaseURL + fmt.Sprintf("/api/data/matches?date=%s&timezone=%s", date.Format(fotmob.DateFormat), url.QueryEscape(fotmob.Timezone))
+	reqUrl := cfg.APIBaseURL + fmt.Sprintf("/api/data/matches?date=%s&timezone=%s", date.Format(fotmob.DateFormat), url.QueryEscape(fotmob.Timezone))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqUrl, nil)
 	require.NoError(t, err)
 	req.Header.Set("User-Agent", "golang-app")
@@ -70,7 +70,7 @@ func TestFotmobClient_GetMatches(t *testing.T) {
 	tests := []struct {
 		name        string
 		httpManager func(t *testing.T) fotmob.HTTPManager
-		result      []models.ExternalAPIMatch
+		result      []models.ProviderAPIMatch
 		expectedErr error
 	}{
 		{
@@ -86,9 +86,9 @@ func TestFotmobClient_GetMatches(t *testing.T) {
 					Once()
 				return httpManager
 			},
-			result: []models.ExternalAPIMatch{
-				expectedExternalAPIMatch(t, response.Leagues[0].Matches[0]),
-				expectedExternalAPIMatch(t, response.Leagues[0].Matches[1]),
+			result: []models.ProviderAPIMatch{
+				expectedProviderAPIMatch(t, response.Leagues[0].Matches[0]),
+				expectedProviderAPIMatch(t, response.Leagues[0].Matches[1]),
 			},
 		},
 		{
@@ -159,13 +159,13 @@ func TestFotmobClient_GetMatches(t *testing.T) {
 func TestFotmobClient_GetTeams(t *testing.T) {
 	ctx := context.Background()
 
-	cfg := config.ExternalAPI{
-		FotmobAPIBaseURL: gofakeit.URL(),
+	cfg := config.Fotmob{
+		APIBaseURL: gofakeit.URL(),
 	}
 
 	date := gofakeit.Date()
 
-	reqUrl := cfg.FotmobAPIBaseURL + fmt.Sprintf("/api/data/matches?date=%s&timezone=%s", date.Format(fotmob.DateFormat), url.QueryEscape(fotmob.Timezone))
+	reqUrl := cfg.APIBaseURL + fmt.Sprintf("/api/data/matches?date=%s&timezone=%s", date.Format(fotmob.DateFormat), url.QueryEscape(fotmob.Timezone))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqUrl, nil)
 	require.NoError(t, err)
 	req.Header.Set("User-Agent", "golang-app")
@@ -186,7 +186,7 @@ func TestFotmobClient_GetTeams(t *testing.T) {
 	tests := []struct {
 		name        string
 		httpManager func(t *testing.T) fotmob.HTTPManager
-		result      []models.ExternalAPITeam
+		result      []models.ProviderAPITeam
 		expectedErr error
 	}{
 		{
@@ -202,7 +202,7 @@ func TestFotmobClient_GetTeams(t *testing.T) {
 					Once()
 				return httpManager
 			},
-			result: expectedExternalAPITeams(response),
+			result: expectedProviderAPITeams(response),
 		},
 		{
 			name: "it returns an error when fails to make a request",
@@ -254,15 +254,15 @@ func TestFotmobClient_GetTeams(t *testing.T) {
 	}
 }
 
-func expectedExternalAPITeams(response fotmob.MatchesResponse) []models.ExternalAPITeam {
-	var teams []models.ExternalAPITeam
+func expectedProviderAPITeams(response fotmob.MatchesResponse) []models.ProviderAPITeam {
+	var teams []models.ProviderAPITeam
 	seen := make(map[int]bool)
 
 	for _, league := range response.Leagues {
 		for _, m := range league.Matches {
 			if !seen[m.Home.ID] {
 				seen[m.Home.ID] = true
-				teams = append(teams, models.ExternalAPITeam{
+				teams = append(teams, models.ProviderAPITeam{
 					ID:          m.Home.ID,
 					Name:        m.Home.Name,
 					LeagueNames: []string{league.Name, league.ParentLeagueName},
@@ -271,7 +271,7 @@ func expectedExternalAPITeams(response fotmob.MatchesResponse) []models.External
 			}
 			if !seen[m.Away.ID] {
 				seen[m.Away.ID] = true
-				teams = append(teams, models.ExternalAPITeam{
+				teams = append(teams, models.ProviderAPITeam{
 					ID:          m.Away.ID,
 					Name:        m.Away.Name,
 					LeagueNames: []string{league.Name, league.ParentLeagueName},
@@ -284,21 +284,21 @@ func expectedExternalAPITeams(response fotmob.MatchesResponse) []models.External
 	return teams
 }
 
-func expectedExternalAPIMatch(t *testing.T, match fotmob.Match) models.ExternalAPIMatch {
+func expectedProviderAPIMatch(t *testing.T, match fotmob.Match) models.ProviderAPIMatch {
 	t.Helper()
 
 	expectedTime, err := time.Parse(time.RFC3339, match.Status.UTCTime)
 	require.NoError(t, err, "failed to parse match starting time")
 
 	status := fmt.Sprintf("%d", match.StatusID)
-	return models.ExternalAPIMatch{
+	return models.ProviderAPIMatch{
 		ID:             match.ID,
 		HomeID:         strconv.Itoa(match.Home.ID),
 		AwayID:         strconv.Itoa(match.Away.ID),
 		HomeScore:      match.Home.Score,
 		AwayScore:      match.Away.Score,
 		Time:           expectedTime,
-		Status:         fotmob.ToDomainExternalAPIMatchStatus(match.ID, match.StatusID),
+		Status:         fotmob.ToDomainProviderMatchStatus(match.ID, match.StatusID),
 		ProviderStatus: &status,
 	}
 }

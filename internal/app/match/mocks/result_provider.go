@@ -18,23 +18,23 @@ type ResultProvider struct {
 }
 
 // GetMatches provides a mock function with given fields: ctx, date
-func (_m *ResultProvider) GetMatches(ctx context.Context, date time.Time) ([]models.ExternalAPIMatch, error) {
+func (_m *ResultProvider) GetMatches(ctx context.Context, date time.Time) ([]models.ProviderAPIMatch, error) {
 	ret := _m.Called(ctx, date)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMatches")
 	}
 
-	var r0 []models.ExternalAPIMatch
+	var r0 []models.ProviderAPIMatch
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, time.Time) ([]models.ExternalAPIMatch, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, time.Time) ([]models.ProviderAPIMatch, error)); ok {
 		return rf(ctx, date)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, time.Time) []models.ExternalAPIMatch); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, time.Time) []models.ProviderAPIMatch); ok {
 		r0 = rf(ctx, date)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.ExternalAPIMatch)
+			r0 = ret.Get(0).([]models.ProviderAPIMatch)
 		}
 	}
 
