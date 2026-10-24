@@ -77,13 +77,13 @@ func (s *FunctionalTestSuite) SetupSuite() {
 	s.T().Log("starting cloud-tasks-emulator container...")
 
 	reqEmulator := testcontainers.ContainerRequest{
-		Image:    "ghcr.io/aertje/cloud-tasks-emulator:latest",
+		Image:    "ghcr.io/aertje/cloud-tasks-emulator:2.0.1",
 		Networks: []string{nw.Name},
 		NetworkAliases: map[string][]string{
 			nw.Name: {"cloud-tasks-emulator"},
 		},
 		ExposedPorts: []string{"8123/tcp"},
-		Cmd:          []string{"-host", "0.0.0.0", "-port", "8123", "-queue", "projects/test-project/locations/europe-west3/queues/check-result", "-queue", "projects/test-project/locations/europe-west3/queues/notify-subscriber"},
+		Cmd:          []string{"-host", "0.0.0.0", "-port", "8123", "-initial-queue", "projects/test-project/locations/europe-west3/queues/check-result", "-initial-queue", "projects/test-project/locations/europe-west3/queues/notify-subscriber"},
 		WaitingFor:   wait.ForListeningPort("8123/tcp"),
 	}
 
