@@ -286,5 +286,3 @@ Run in detached mode:
 ```
 TESTCONTAINERS_RYUK_DISABLED=true go test -v -count=1 -tags functional ./functionaltests/... -testify.m
 ```
-
-## test
