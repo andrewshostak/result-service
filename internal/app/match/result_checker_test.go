@@ -497,7 +497,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			taskClient: func(t *testing.T) *mocks.TaskClient {
 				t.Helper()
 				m := mocks.NewTaskClient(t)
-				m.On("ScheduleResultCheck", ctx, matchID, scheduledMatch.CheckResultTask.AttemptNumber+1, scheduledMatch.StartsAt.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
+				m.On("ScheduleResultCheck", ctx, matchID, scheduledMatch.CheckResultTask.AttemptNumber+1, providerAPIMatchInProgress.Time.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
 					Return(nil, unexpectedErr).
 					Once()
 				return m
@@ -531,7 +531,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			taskClient: func(t *testing.T) *mocks.TaskClient {
 				t.Helper()
 				m := mocks.NewTaskClient(t)
-				m.On("ScheduleResultCheck", ctx, matchID, scheduledMatch.CheckResultTask.AttemptNumber+1, scheduledMatch.StartsAt.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
+				m.On("ScheduleResultCheck", ctx, matchID, scheduledMatch.CheckResultTask.AttemptNumber+1, providerAPIMatchInProgress.Time.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
 					Return(nil, unexpectedErr).
 					Once()
 				return m
@@ -564,7 +564,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			taskClient: func(t *testing.T) *mocks.TaskClient {
 				t.Helper()
 				m := mocks.NewTaskClient(t)
-				m.On("ScheduleResultCheck", ctx, matchID, scheduledMatch.CheckResultTask.AttemptNumber+1, scheduledMatch.StartsAt.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
+				m.On("ScheduleResultCheck", ctx, matchID, scheduledMatch.CheckResultTask.AttemptNumber+1, providerAPIMatchInProgress.Time.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
 					Return(&clientTask, nil).
 					Once()
 				return m
@@ -608,7 +608,7 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 			taskClient: func(t *testing.T) *mocks.TaskClient {
 				t.Helper()
 				m := mocks.NewTaskClient(t)
-				m.On("ScheduleResultCheck", ctx, matchID, scheduledMatch.CheckResultTask.AttemptNumber+1, scheduledMatch.StartsAt.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
+				m.On("ScheduleResultCheck", ctx, matchID, scheduledMatch.CheckResultTask.AttemptNumber+1, providerAPIMatchInProgress.Time.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
 					Return(&clientTask, nil).
 					Once()
 				return m
