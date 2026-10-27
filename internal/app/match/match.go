@@ -120,7 +120,8 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 		return 0, fmt.Errorf("failed to save provider match with id %d and match id %d: %w", providerAPIMatch.ID, match.ID, err)
 	}
 
-	task, err := s.taskClient.ScheduleResultCheck(ctx, match.ID, 1, match.StartsAt.Add(s.config.FirstAttemptDelay))
+	firstCheckBaseTime := earliestOf(request.StartsAt, match.StartsAt)
+	task, err := s.taskClient.ScheduleResultCheck(ctx, match.ID, 1, firstCheckBaseTime.Add(s.config.FirstAttemptDelay))
 	if err != nil && !errors.As(err, &models.ResourceAlreadyExistsError{}) {
 		return 0, fmt.Errorf("failed to schedule result check task: %w", err)
 	}
@@ -205,4 +206,15 @@ func (s *MatchService) isResultCheckScheduled(match models.Match) bool {
 
 func (s *MatchService) isResultCheckNotScheduled(match models.Match) bool {
 	return match.ResultStatus == models.NotScheduled
+}
+
+// earliestOf returns the earlier of two timestamps. The first result-check is scheduled off
+// the earlier of the admin-submitted and provider-reported kickoff time: a too-early check is
+// harmless (handleInPlayMatch already retries matches that haven't finished), but a too-late
+// first check is not self-correcting.
+func earliestOf(a, b time.Time) time.Time {
+	if a.Before(b) {
+		return a
+	}
+	return b
 }

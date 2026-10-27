@@ -54,6 +54,10 @@ func TestMatchService_Create(t *testing.T) {
 		AliasAway: aliasAwayName,
 	}
 
+	// earlier than startsAt (the provider-resolved time), used to verify the first result-check
+	// is scheduled off the earlier of the admin-submitted and provider-reported kickoff time.
+	adminStartsAt := startsAt.Add(-45 * time.Minute)
+
 	matchID := uint(gofakeit.Uint8())
 	matchResultScheduled := testutils.FakeMatch(func(r *models.Match) {
 		r.ID = matchID
@@ -731,8 +735,12 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to update match status to %s: %w", models.Scheduled, errUnexpected),
 		},
 		{
-			name:  "success - it creates match and schedules result check",
-			input: createMatchRequest,
+			name: "success - it creates match and schedules result check off the earlier of admin and provider time",
+			input: models.CreateMatchRequest{
+				StartsAt:  adminStartsAt,
+				AliasHome: aliasHomeName,
+				AliasAway: aliasAwayName,
+			},
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
 				m := mocks.NewAliasRepository(t)
@@ -755,7 +763,7 @@ func TestMatchService_Create(t *testing.T) {
 				m.On("One", ctx, models.Match{
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
-					StartsAt:   startsAt.UTC(),
+					StartsAt:   adminStartsAt.UTC(),
 				}).Return(nil, fmt.Errorf("match not found: %w", models.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
 					HomeTeamID:   aliasHome.TeamID,
@@ -776,7 +784,7 @@ func TestMatchService_Create(t *testing.T) {
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
 				t.Helper()
 				m := mocks.NewResultProvider(t)
-				m.On("GetMatches", ctx, startsAt.UTC()).Return([]models.ProviderAPIMatch{providerAPIMatch, testutils.FakeProviderAPIMatch()}, nil).Once()
+				m.On("GetMatches", ctx, adminStartsAt.UTC()).Return([]models.ProviderAPIMatch{providerAPIMatch, testutils.FakeProviderAPIMatch()}, nil).Once()
 				m.On("Name").Return("fotmob").Once()
 				return m
 			},
@@ -789,7 +797,9 @@ func TestMatchService_Create(t *testing.T) {
 			taskClient: func(t *testing.T) *mocks.TaskClient {
 				t.Helper()
 				m := mocks.NewTaskClient(t)
-				m.On("ScheduleResultCheck", ctx, matchID, uint(1), startsAt.Add(pollingFirstAttemptDelay)).Return(&clientTask, nil).Once()
+				// providerAPIMatch.Time is startsAt (later); adminStartsAt is earlier, so the
+				// scheduling call must use adminStartsAt, proving earliestOf picked it.
+				m.On("ScheduleResultCheck", ctx, matchID, uint(1), adminStartsAt.Add(pollingFirstAttemptDelay)).Return(&clientTask, nil).Once()
 				return m
 			},
 			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
@@ -799,7 +809,7 @@ func TestMatchService_Create(t *testing.T) {
 					MatchID:       matchID,
 					Name:          createdTaskName,
 					AttemptNumber: 1,
-					ExecuteAt:     startsAt.Add(pollingFirstAttemptDelay),
+					ExecuteAt:     clientTask.ExecuteAt,
 				}).Return(&models.CheckResultTask{}, nil).Once()
 				return m
 			},
