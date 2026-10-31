@@ -12,6 +12,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  tidy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run go mod tidy
+        run: go mod tidy
+
+      - name: Fail if go mod tidy changed anything
+        run: git diff --exit-code -- go.mod go.sum
+
   unit-tests:
     runs-on: ubuntu-latest
     steps:
