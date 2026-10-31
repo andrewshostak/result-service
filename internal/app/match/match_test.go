@@ -54,6 +54,15 @@ func TestMatchService_Create(t *testing.T) {
 		AliasAway: aliasAwayName,
 	}
 
+	// later than startsAt (the provider-resolved time). Deliberately later, not earlier: matches.starts_at
+	// is now saved from this value too, so comparing earliestOf's result against the provider's time (not
+	// the saved match) only actually proves anything when the provider is the earlier of the two.
+	requestStartsAt := startsAt.Add(45 * time.Minute)
+
+	// earlier than startsAt (the provider-resolved time) - the complementary direction: the request
+	// carries the real, earlier kickoff time while the provider is still reporting a later one.
+	requestStartsAtEarlier := startsAt.Add(-45 * time.Minute)
+
 	matchID := uint(gofakeit.Uint8())
 	matchResultScheduled := testutils.FakeMatch(func(r *models.Match) {
 		r.ID = matchID
@@ -731,8 +740,12 @@ func TestMatchService_Create(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to update match status to %s: %w", models.Scheduled, errUnexpected),
 		},
 		{
-			name:  "success - it creates match and schedules result check",
-			input: createMatchRequest,
+			name: "success - it creates match and schedules result check off the earlier of request and provider time",
+			input: models.CreateMatchRequest{
+				StartsAt:  requestStartsAt,
+				AliasHome: aliasHomeName,
+				AliasAway: aliasAwayName,
+			},
 			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
 				t.Helper()
 				m := mocks.NewAliasRepository(t)
@@ -747,7 +760,7 @@ func TestMatchService_Create(t *testing.T) {
 					r.ID = matchID
 					r.HomeTeamID = aliasHome.TeamID
 					r.AwayTeamID = aliasAway.TeamID
-					r.StartsAt = startsAt.UTC()
+					r.StartsAt = requestStartsAt.UTC()
 					r.ResultStatus = models.NotScheduled
 				})
 				updatedMatch := savedMatch
@@ -755,12 +768,12 @@ func TestMatchService_Create(t *testing.T) {
 				m.On("One", ctx, models.Match{
 					HomeTeamID: aliasHome.TeamID,
 					AwayTeamID: aliasAway.TeamID,
-					StartsAt:   startsAt.UTC(),
+					StartsAt:   requestStartsAt.UTC(),
 				}).Return(nil, fmt.Errorf("match not found: %w", models.NewResourceNotFoundError(errors.New("not found")))).Once()
 				m.On("Save", ctx, (*uint)(nil), models.Match{
 					HomeTeamID:   aliasHome.TeamID,
 					AwayTeamID:   aliasAway.TeamID,
-					StartsAt:     startsAt.UTC(),
+					StartsAt:     requestStartsAt.UTC(),
 					ResultStatus: models.NotScheduled,
 				}).Return(&savedMatch, nil).Once()
 				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Scheduled}).Return(&updatedMatch, nil).Once()
@@ -776,7 +789,7 @@ func TestMatchService_Create(t *testing.T) {
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
 				t.Helper()
 				m := mocks.NewResultProvider(t)
-				m.On("GetMatches", ctx, startsAt.UTC()).Return([]models.ProviderAPIMatch{providerAPIMatch, testutils.FakeProviderAPIMatch()}, nil).Once()
+				m.On("GetMatches", ctx, requestStartsAt.UTC()).Return([]models.ProviderAPIMatch{providerAPIMatch, testutils.FakeProviderAPIMatch()}, nil).Once()
 				m.On("Name").Return("fotmob").Once()
 				return m
 			},
@@ -799,7 +812,86 @@ func TestMatchService_Create(t *testing.T) {
 					MatchID:       matchID,
 					Name:          createdTaskName,
 					AttemptNumber: 1,
-					ExecuteAt:     startsAt.Add(pollingFirstAttemptDelay),
+					ExecuteAt:     clientTask.ExecuteAt,
+				}).Return(&models.CheckResultTask{}, nil).Once()
+				return m
+			},
+			result: matchID,
+		},
+		{
+			name: "success - it creates match and schedules result check off the earlier of request and provider time when request is earlier",
+			input: models.CreateMatchRequest{
+				StartsAt:  requestStartsAtEarlier,
+				AliasHome: aliasHomeName,
+				AliasAway: aliasAwayName,
+			},
+			aliasRepository: func(t *testing.T) *mocks.AliasRepository {
+				t.Helper()
+				m := mocks.NewAliasRepository(t)
+				m.On("Find", ctx, aliasHomeName).Return(&aliasHome, nil).Once()
+				m.On("Find", ctx, aliasAwayName).Return(&aliasAway, nil).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				savedMatch := testutils.FakeMatch(func(r *models.Match) {
+					r.ID = matchID
+					r.HomeTeamID = aliasHome.TeamID
+					r.AwayTeamID = aliasAway.TeamID
+					r.StartsAt = requestStartsAtEarlier.UTC()
+					r.ResultStatus = models.NotScheduled
+				})
+				updatedMatch := savedMatch
+				updatedMatch.ResultStatus = models.Scheduled
+				m.On("One", ctx, models.Match{
+					HomeTeamID: aliasHome.TeamID,
+					AwayTeamID: aliasAway.TeamID,
+					StartsAt:   requestStartsAtEarlier.UTC(),
+				}).Return(nil, fmt.Errorf("match not found: %w", models.NewResourceNotFoundError(errors.New("not found")))).Once()
+				m.On("Save", ctx, (*uint)(nil), models.Match{
+					HomeTeamID:   aliasHome.TeamID,
+					AwayTeamID:   aliasAway.TeamID,
+					StartsAt:     requestStartsAtEarlier.UTC(),
+					ResultStatus: models.NotScheduled,
+				}).Return(&savedMatch, nil).Once()
+				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Scheduled}).Return(&updatedMatch, nil).Once()
+				return m
+			},
+			providerTeamRepository: func(t *testing.T) *mocks.ProviderTeamRepository {
+				t.Helper()
+				m := mocks.NewProviderTeamRepository(t)
+				m.On("FindByTeamAndProvider", ctx, aliasHome.TeamID, "fotmob").Return(&providerTeamHome, nil).Once()
+				m.On("FindByTeamAndProvider", ctx, aliasAway.TeamID, "fotmob").Return(&providerTeamAway, nil).Once()
+				return m
+			},
+			resultProvider: func(t *testing.T) *mocks.ResultProvider {
+				t.Helper()
+				m := mocks.NewResultProvider(t)
+				m.On("GetMatches", ctx, requestStartsAtEarlier.UTC()).Return([]models.ProviderAPIMatch{providerAPIMatch, testutils.FakeProviderAPIMatch()}, nil).Once()
+				m.On("Name").Return("fotmob").Once()
+				return m
+			},
+			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
+				t.Helper()
+				m := mocks.NewProviderMatchRepository(t)
+				m.On("Save", ctx, providerMatchSaved).Return(&models.ProviderMatch{}, nil).Once()
+				return m
+			},
+			taskClient: func(t *testing.T) *mocks.TaskClient {
+				t.Helper()
+				m := mocks.NewTaskClient(t)
+				m.On("ScheduleResultCheck", ctx, matchID, uint(1), requestStartsAtEarlier.Add(pollingFirstAttemptDelay)).Return(&clientTask, nil).Once()
+				return m
+			},
+			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
+				t.Helper()
+				m := mocks.NewCheckResultTaskRepository(t)
+				m.On("Save", ctx, models.CheckResultTask{
+					MatchID:       matchID,
+					Name:          createdTaskName,
+					AttemptNumber: 1,
+					ExecuteAt:     clientTask.ExecuteAt,
 				}).Return(&models.CheckResultTask{}, nil).Once()
 				return m
 			},

@@ -66,7 +66,10 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 		return errors.New("match has no provider matches")
 	}
 
-	matches, err := s.getMatchesFromProviders(ctx, match.StartsAt)
+	// providerMatches[0] stands in for "the provider's own time" while only one provider is
+	// supported; once check-result is refactored to operate per provider_match, each would
+	// resolve its own day independently instead of picking index 0.
+	matches, err := s.getMatchesFromProviders(ctx, providerMatches[0].StartsAt)
 	if err != nil {
 		s.logger.Error().Uint("match_id", matchID).Err(err)
 		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.APIError}); errUpdate != nil {
@@ -109,7 +112,7 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	switch found.Status {
 	// TODO: add a case when match was paused after some time and its status is 'not_started'
 	case models.StatusMatchInProgress:
-		return s.handleInPlayMatch(ctx, *match)
+		return s.handleInPlayMatch(ctx, *match, found.Time)
 	case models.StatusMatchFinished:
 		return s.handleFinishedMatch(ctx, match.ID, found.HomeScore, found.AwayScore)
 	// if we receive here any other status - that is not expected, we should cancel the result check.
@@ -139,14 +142,14 @@ func (s *ResultCheckerService) handleMatchWithUnexpectedStatus(ctx context.Conte
 	return nil
 }
 
-func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match models.Match) error {
+func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match models.Match, providerStartsAt time.Time) error {
 	s.logger.Debug().Uint("match_id", match.ID).Msg("match is in play, re-scheduling result check task")
 
 	if match.CheckResultTask == nil {
 		return errors.New("match relation result check task doesn't exist")
 	}
 
-	scheduleAt := match.StartsAt.Add(s.config.FirstAttemptDelay)
+	scheduleAt := providerStartsAt.Add(s.config.FirstAttemptDelay)
 	for i := uint(0); i < match.CheckResultTask.AttemptNumber; i++ {
 		scheduleAt = scheduleAt.Add(s.config.Interval)
 	}

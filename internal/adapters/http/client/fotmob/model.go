@@ -138,16 +138,17 @@ func ToDomainProviderMatchStatus(matchID uint, statusID fotmobMatchStatus) model
 	switch statusID {
 	case notStarted:
 		return models.StatusMatchNotStarted
-	// 106 - [NOT CLEAR]
+	// 106 - Probably: match canceled and likely won't be played ever
 	case postponed, abandoned, 106:
 		return models.StatusMatchCancelled
 	// 4 - [NOT CLEAR] received from a match 4935228 which has penalties without extra time
 	// 20 - [NOT CLEAR] received from a match 4935225 which has penalties without extra time
+	// 12 - (interruptedShort) Probably: postponed for tomorrow. case - id 5909197
 	case live1stHalf, live2ndHalf, 4, liveExtraTime1stHalf, liveExtraTime2ndHalf, halfTime, interruptedShort, waitingForExtraTime, 20, pauseExtraTime:
 		return models.StatusMatchInProgress
 	case fullTime, afterExtraTime, afterPenalties:
 		return models.StatusMatchFinished
-	// 93 - [NOT CLEAR] Will be continued after interruption ?
+	// 93 - Probably: Will be continued after interruption. case: match was postponed to the next day and is not yet started has 93 (id 5909197)
 	// 7, 9, 15, 16 - [NOT CLEAR]
 	default:
 		fmt.Printf("match with id %d has unknown status: %d\n", matchID, statusID)
