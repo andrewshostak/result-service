@@ -46,6 +46,11 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 	})
 	providerMatches := []models.ProviderMatch{providerMatch}
 
+	// deliberately different from scheduledMatch.StartsAt, to verify CheckResult queries the
+	// provider using the provider match's own time, not the frozen matches.starts_at.
+	providerMatchDifferentStartsAt := providerMatch
+	providerMatchDifferentStartsAt.StartsAt = startsAt.Add(-30 * time.Minute)
+
 	providerAPIMatch := testutils.FakeProviderAPIMatch(func(r *models.ProviderAPIMatch) {
 		r.ID = providerAPIMatchID
 	})
@@ -296,13 +301,13 @@ func TestResultCheckerService_CheckResult(t *testing.T) {
 				t.Helper()
 				m := mocks.NewResultProvider(t)
 				m.On("Name").Return("fotmob").Once()
-				m.On("GetMatches", ctx, startsAt).Return([]models.ProviderAPIMatch{providerAPIMatchFinished}, nil).Once()
+				m.On("GetMatches", ctx, providerMatchDifferentStartsAt.StartsAt).Return([]models.ProviderAPIMatch{providerAPIMatchFinished}, nil).Once()
 				return m
 			},
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
 				t.Helper()
 				m := mocks.NewProviderMatchRepository(t)
-				m.On("ListByMatchID", ctx, matchID).Return(providerMatches, nil).Once()
+				m.On("ListByMatchID", ctx, matchID).Return([]models.ProviderMatch{providerMatchDifferentStartsAt}, nil).Once()
 				m.On("Save", ctx, expectedProviderMatchFinished).Return(nil, unexpectedErr).Once()
 				return m
 			},

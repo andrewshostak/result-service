@@ -47,3 +47,7 @@
 - [ ] implement graceful shutdown
 - [ ] investigate possible replacement zerolog with slog (if not - make gin and zerolog friends)
 - [ ] find a proper way of handling secrets (remove secrets from `service.yaml`)
+- [ ] check the context cancellation proper usage (defer cancel must be present)
+- [ ] add github job to verify dependencies
+- [ ] handle half-time status during the result check specially - next check more than +5 minutes
+- [ ] add recover middleware

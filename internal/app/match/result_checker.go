@@ -66,7 +66,10 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 		return errors.New("match has no provider matches")
 	}
 
-	matches, err := s.getMatchesFromProviders(ctx, match.StartsAt)
+	// providerMatches[0] stands in for "the provider's own time" while only one provider is
+	// supported; once check-result is refactored to operate per provider_match, each would
+	// resolve its own day independently instead of picking index 0.
+	matches, err := s.getMatchesFromProviders(ctx, providerMatches[0].StartsAt)
 	if err != nil {
 		s.logger.Error().Uint("match_id", matchID).Err(err)
 		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.APIError}); errUpdate != nil {

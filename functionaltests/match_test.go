@@ -20,18 +20,23 @@ import (
 func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
-	startsAt, err := time.Parse(time.RFC3339, "2026-01-01T20:00:00Z")
+	providerStartsAt, err := time.Parse(time.RFC3339, "2026-01-01T20:00:00Z")
 	s.Require().NoError(err)
+
+	// Deliberately earlier than providerStartsAt, same calendar day: proves matches.starts_at is
+	// persisted from the request's time (not the provider's), and that the first check is scheduled
+	// off the earlier of the two - the request, in this case.
+	requestStartsAt := providerStartsAt.Add(-45 * time.Minute)
 
 	matchesResponse := testutils.FakeMatchesResponse()
 	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ProviderTeamID)
 	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ProviderTeamID)
 	matchesResponse.Leagues[0].Matches[0].StatusID = 1
-	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = startsAt.UTC().Format(time.RFC3339)
+	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = providerStartsAt.UTC().Format(time.RFC3339)
 	jsonResponse, err := json.Marshal(matchesResponse)
 	s.Require().NoError(err)
 
-	queryParams := map[string][]string{"date": {startsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
+	queryParams := map[string][]string{"date": {requestStartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
 	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
 		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
 		testutils.WithQueryParams(queryParams),
@@ -39,7 +44,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 	)
 
 	requestPayload := handler.CreateMatchRequest{
-		StartsAt:  startsAt,
+		StartsAt:  requestStartsAt,
 		AliasHome: teamSeeds[0].Alias,
 		AliasAway: teamSeeds[1].Alias,
 	}
@@ -77,7 +82,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 			ID:           1,
 			HomeTeamID:   teamSeeds[0].TeamID,
 			AwayTeamID:   teamSeeds[1].TeamID,
-			StartsAt:     startsAt,
+			StartsAt:     requestStartsAt,
 			ResultStatus: string(models.Scheduled),
 			CreatedAt:    matches[0].CreatedAt,
 			UpdatedAt:    matches[0].UpdatedAt,
@@ -91,7 +96,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 			MatchID:       response.MatchID,
 			Name:          fmt.Sprintf("projects/test-project/locations/europe-west3/queues/%s/tasks/match-%d-attempt-%d", "check-result", response.MatchID, 1),
 			AttemptNumber: 1,
-			ExecuteAt:     startsAt.Add(115 * time.Minute),
+			ExecuteAt:     requestStartsAt.Add(115 * time.Minute),
 			CreatedAt:     checkResultTasks[0].CreatedAt,
 			UpdatedAt:     checkResultTasks[0].UpdatedAt,
 		},
@@ -105,7 +110,7 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 			MatchID:         response.MatchID,
 			Provider:        "fotmob",
 			ProviderMatchID: fmt.Sprintf("%d", matchesResponse.Leagues[0].Matches[0].ID),
-			StartsAt:        startsAt,
+			StartsAt:        providerStartsAt,
 			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,
 			AwayScore:       matchesResponse.Leagues[0].Matches[0].Away.Score,
 			Status:          string(models.StatusMatchNotStarted),
