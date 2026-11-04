@@ -51,22 +51,22 @@ type fotmobMatchStatus int
 
 const (
 	notStarted fotmobMatchStatus = 1
-	// match is delayed (hasn't started). it is not yet clear whether it will be played today or not. known status change path delayed => postponed
+	// Match is delayed (hasn't started). It is not yet clear whether it will be played today. Known status change path: delayed => postponed.
 	delayed fotmobMatchStatus = 25
-	// it won't be played today, but not yet clear when it will be played
+	// It won't be played today, but it's not yet clear when it will be played.
 	postponed fotmobMatchStatus = 5
-	// a real case: match was interrupted, scheduled to the next day, and haven't started the next day because of another unexpected reason, and new date is not clear yet
+	// A real case: match was interrupted, rescheduled to the next day, but didn't start the next day because of another unexpected reason, and the new date is not yet clear.
 	abandoned fotmobMatchStatus = 17
-	// canceled forever
+	// Canceled forever.
 	cancelled fotmobMatchStatus = 106
-	// planned to continue after the interruption. a real case: match played and interrupted yesterday had this status the next day until it was resumed
-	resumptionPlanned    fotmobMatchStatus = 93 // TODO: use in switch
+	// Planned to continue after the interruption. A real case: a match played and interrupted yesterday had this status the next day until it was resumed.
+	resumptionPlanned    fotmobMatchStatus = 93
 	live1stHalf          fotmobMatchStatus = 2
 	live2ndHalf          fotmobMatchStatus = 3
 	liveExtraTime1stHalf fotmobMatchStatus = 8
 	liveExtraTime2ndHalf fotmobMatchStatus = 9
 	halfTime             fotmobMatchStatus = 10
-	// match already started, but was interrupted. it is not clear when the match will resume. (could be postponed to tomorrow)
+	// Match has already started but was interrupted. It is not clear when the match will resume (it could be postponed to tomorrow).
 	interruptedShort    fotmobMatchStatus = 12
 	waitingForExtraTime fotmobMatchStatus = 14
 	pauseExtraTime      fotmobMatchStatus = 231
@@ -126,7 +126,7 @@ func toDomainProviderAPIMatches(response MatchesResponse) ([]models.ProviderAPIM
 			})
 
 			if isUnknownStatus(match.StatusID) && match.Status.Reason != nil {
-				// do not need two logs, here, and in ToDomainProviderMatchStatus default
+				// TODO: No need for two logs: here, and in ToDomainProviderMatchStatus default.
 				fmt.Printf(
 					"match with id %d has status %d. reason - short %s, short key %s, long %s, long key %s \n",
 					match.ID,
@@ -146,7 +146,7 @@ func toDomainProviderAPIMatches(response MatchesResponse) ([]models.ProviderAPIM
 
 func ToDomainProviderMatchStatus(matchID uint, statusID fotmobMatchStatus) models.ProviderMatchStatus {
 	switch statusID {
-	case notStarted, delayed, postponed:
+	case notStarted, delayed, postponed, resumptionPlanned:
 		return models.StatusMatchNotStarted
 	case abandoned, cancelled:
 		return models.StatusMatchCancelled
