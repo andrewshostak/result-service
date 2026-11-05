@@ -102,6 +102,8 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	}
 
 	if found == nil {
+		s.logger.Error().Uint("match_id", match.ID).Msg("result check cancelled: no provider returned a match for any tracked provider match")
+
 		if _, err := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.Cancelled}); err != nil {
 			return fmt.Errorf("failed to update match: %w", err)
 		}
@@ -110,14 +112,14 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	}
 
 	switch found.Status {
-	// TODO: add a case when match was paused after some time and its status is 'not_started'
+	// TODO: add a case for handling not-started matches
 	case models.StatusMatchInProgress:
 		return s.handleInPlayMatch(ctx, *match, found.Time)
 	case models.StatusMatchFinished:
 		return s.handleFinishedMatch(ctx, match.ID, found.HomeScore, found.AwayScore)
 	// if we receive here any other status - that is not expected, we should cancel the result check.
 	default:
-		return s.handleMatchWithUnexpectedStatus(ctx, matchID, found.Status)
+		return s.handleMatchWithUnexpectedStatus(ctx, matchID, found.Status, found.ProviderStatus, found.ProviderStatusDetails)
 	}
 }
 
@@ -132,8 +134,15 @@ func (s *ResultCheckerService) findProviderAPIMatch(providerMatch models.Provide
 }
 
 // TODO: update provider match as well
-func (s *ResultCheckerService) handleMatchWithUnexpectedStatus(ctx context.Context, matchID uint, providerMatchStatus models.ProviderMatchStatus) error {
-	s.logger.Error().Uint("match_id", matchID).Msgf("result check cancelled: provider match status is %s", providerMatchStatus)
+func (s *ResultCheckerService) handleMatchWithUnexpectedStatus(ctx context.Context, matchID uint, providerMatchStatus models.ProviderMatchStatus, providerStatus, providerStatusDetails *string) error {
+	event := s.logger.Error().Uint("match_id", matchID)
+	if providerStatus != nil {
+		event = event.Str("provider_status", *providerStatus)
+	}
+	if providerStatusDetails != nil {
+		event = event.Str("provider_status_details", *providerStatusDetails)
+	}
+	event.Msgf("result check cancelled: provider match status is %s", providerMatchStatus)
 
 	if _, err := s.matchRepository.Update(ctx, matchID, models.Match{ResultStatus: models.Cancelled}); err != nil {
 		return fmt.Errorf("failed to update result status of match: %w", err)

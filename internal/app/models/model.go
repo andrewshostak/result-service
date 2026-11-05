@@ -130,14 +130,15 @@ type ProviderAPITeam struct {
 }
 
 type ProviderAPIMatch struct {
-	ID             uint
-	HomeID         string
-	AwayID         string
-	HomeScore      int
-	AwayScore      int
-	Time           time.Time
-	Status         ProviderMatchStatus
-	ProviderStatus *string
+	ID                    uint
+	HomeID                string
+	AwayID                string
+	HomeScore             int
+	AwayScore             int
+	Time                  time.Time
+	Status                ProviderMatchStatus
+	ProviderStatus        *string
+	ProviderStatusDetails *string
 }
 
 type Task struct {

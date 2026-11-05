@@ -2,7 +2,6 @@ package fotmob
 
 import (
 	"fmt"
-	"slices"
 	"strconv"
 	"time"
 
@@ -29,8 +28,12 @@ type Match struct {
 }
 
 type Status struct {
-	UTCTime string  `json:"utcTime"`
-	Reason  *Reason `json:"reason"`
+	UTCTime   string  `json:"utcTime"`
+	Started   bool    `json:"started"`
+	Finished  bool    `json:"finished"`
+	Cancelled bool    `json:"cancelled"`
+	Awarded   bool    `json:"awarded"`
+	Reason    *Reason `json:"reason"`
 }
 
 type Reason struct {
@@ -114,28 +117,22 @@ func toDomainProviderAPIMatches(response MatchesResponse) ([]models.ProviderAPIM
 			}
 
 			rawStatus := fmt.Sprintf("%d", match.StatusID)
-			leagueMatches = append(leagueMatches, models.ProviderAPIMatch{
-				ID:             match.ID,
-				HomeID:         strconv.Itoa(match.Home.ID),
-				AwayID:         strconv.Itoa(match.Away.ID),
-				HomeScore:      match.Home.Score,
-				AwayScore:      match.Away.Score,
-				Time:           startsAt,
-				Status:         ToDomainProviderMatchStatus(match.ID, match.StatusID),
-				ProviderStatus: &rawStatus,
-			})
-
-			if isUnknownStatus(match.StatusID) && match.Status.Reason != nil {
-				// TODO: No need for two logs: here, and in ToDomainProviderMatchStatus default.
-				fmt.Printf(
-					"match with id %d has status %d. reason - short %s, short key %s, long %s, long key %s \n",
-					match.ID,
-					match.StatusID,
-					match.Status.Reason.Short,
-					match.Status.Reason.ShortKey,
-					match.Status.Reason.Long,
-					match.Status.Reason.LongKey)
+			statusDetails := fmt.Sprintf("started=%t finished=%t cancelled=%t awarded=%t", match.Status.Started, match.Status.Finished, match.Status.Cancelled, match.Status.Awarded)
+			if match.Status.Reason != nil {
+				statusDetails += fmt.Sprintf(" reason_short=%s reason_short_key=%s reason_long=%s reason_long_key=%s", match.Status.Reason.Short, match.Status.Reason.ShortKey, match.Status.Reason.Long, match.Status.Reason.LongKey)
 			}
+
+			leagueMatches = append(leagueMatches, models.ProviderAPIMatch{
+				ID:                    match.ID,
+				HomeID:                strconv.Itoa(match.Home.ID),
+				AwayID:                strconv.Itoa(match.Away.ID),
+				HomeScore:             match.Home.Score,
+				AwayScore:             match.Away.Score,
+				Time:                  startsAt,
+				Status:                ToDomainProviderMatchStatus(match.StatusID),
+				ProviderStatus:        &rawStatus,
+				ProviderStatusDetails: &statusDetails,
+			})
 		}
 
 		matches = append(matches, leagueMatches...)
@@ -144,7 +141,7 @@ func toDomainProviderAPIMatches(response MatchesResponse) ([]models.ProviderAPIM
 	return matches, nil
 }
 
-func ToDomainProviderMatchStatus(matchID uint, statusID fotmobMatchStatus) models.ProviderMatchStatus {
+func ToDomainProviderMatchStatus(statusID fotmobMatchStatus) models.ProviderMatchStatus {
 	switch statusID {
 	case notStarted, delayed, postponed, resumptionPlanned:
 		return models.StatusMatchNotStarted
@@ -158,27 +155,6 @@ func ToDomainProviderMatchStatus(matchID uint, statusID fotmobMatchStatus) model
 		return models.StatusMatchFinished
 	// 7, 9, 15, 16, 234 - [NOT CLEAR]
 	default:
-		fmt.Printf("match with id %d has unknown status: %d\n", matchID, statusID)
 		return models.StatusMatchUnknown
 	}
-}
-
-func isUnknownStatus(statusID fotmobMatchStatus) bool {
-	return !slices.Contains([]fotmobMatchStatus{
-		notStarted,
-		postponed,
-		abandoned,
-		cancelled,
-		live1stHalf,
-		live2ndHalf,
-		liveExtraTime1stHalf,
-		liveExtraTime2ndHalf,
-		halfTime,
-		interruptedShort,
-		waitingForExtraTime,
-		pauseExtraTime,
-		fullTime,
-		afterExtraTime,
-		afterPenalties,
-	}, statusID)
 }
