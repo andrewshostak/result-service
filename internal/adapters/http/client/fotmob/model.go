@@ -2,7 +2,6 @@ package fotmob
 
 import (
 	"fmt"
-	"slices"
 	"strconv"
 	"time"
 
@@ -29,8 +28,21 @@ type Match struct {
 }
 
 type Status struct {
-	UTCTime string  `json:"utcTime"`
-	Reason  *Reason `json:"reason"`
+	UTCTime   string  `json:"utcTime"`
+	Started   bool    `json:"started"`
+	Finished  bool    `json:"finished"`
+	Cancelled bool    `json:"cancelled"`
+	Awarded   bool    `json:"awarded"`
+	Reason    *Reason `json:"reason"`
+}
+
+func (s Status) Details() string {
+	details := fmt.Sprintf("started=%t finished=%t cancelled=%t awarded=%t", s.Started, s.Finished, s.Cancelled, s.Awarded)
+	if s.Reason != nil {
+		details += fmt.Sprintf(" reason_short=%s reason_short_key=%s reason_long=%s reason_long_key=%s", s.Reason.Short, s.Reason.ShortKey, s.Reason.Long, s.Reason.LongKey)
+	}
+
+	return details
 }
 
 type Reason struct {
@@ -50,20 +62,29 @@ type Team struct {
 type fotmobMatchStatus int
 
 const (
-	notStarted           fotmobMatchStatus = 1
-	postponed            fotmobMatchStatus = 5
-	abandoned            fotmobMatchStatus = 17
+	notStarted fotmobMatchStatus = 1
+	// Match is delayed (hasn't started). It is not yet clear whether it will be played today. Known status change path: delayed => postponed.
+	delayed fotmobMatchStatus = 25
+	// It won't be played today, but it's not yet clear when it will be played.
+	postponed fotmobMatchStatus = 5
+	// A real case: match was interrupted, rescheduled to the next day, but didn't start the next day because of another unexpected reason, and the new date is not yet clear.
+	abandoned fotmobMatchStatus = 17
+	// Canceled forever.
+	cancelled fotmobMatchStatus = 106
+	// Planned to continue after the interruption. A real case: a match played and interrupted yesterday had this status the next day until it was resumed.
+	resumptionPlanned    fotmobMatchStatus = 93
 	live1stHalf          fotmobMatchStatus = 2
 	live2ndHalf          fotmobMatchStatus = 3
 	liveExtraTime1stHalf fotmobMatchStatus = 8
 	liveExtraTime2ndHalf fotmobMatchStatus = 9
 	halfTime             fotmobMatchStatus = 10
-	interruptedShort     fotmobMatchStatus = 12
-	waitingForExtraTime  fotmobMatchStatus = 14
-	pauseExtraTime       fotmobMatchStatus = 231
-	fullTime             fotmobMatchStatus = 6
-	afterExtraTime       fotmobMatchStatus = 11
-	afterPenalties       fotmobMatchStatus = 13
+	// Match has already started but was interrupted. It is not clear when the match will resume (it could be postponed to tomorrow).
+	interruptedShort    fotmobMatchStatus = 12
+	waitingForExtraTime fotmobMatchStatus = 14
+	pauseExtraTime      fotmobMatchStatus = 231
+	fullTime            fotmobMatchStatus = 6
+	afterExtraTime      fotmobMatchStatus = 11
+	afterPenalties      fotmobMatchStatus = 13
 )
 
 func toDomainProviderAPITeams(response MatchesResponse) []models.ProviderAPITeam {
@@ -105,27 +126,19 @@ func toDomainProviderAPIMatches(response MatchesResponse) ([]models.ProviderAPIM
 			}
 
 			rawStatus := fmt.Sprintf("%d", match.StatusID)
-			leagueMatches = append(leagueMatches, models.ProviderAPIMatch{
-				ID:             match.ID,
-				HomeID:         strconv.Itoa(match.Home.ID),
-				AwayID:         strconv.Itoa(match.Away.ID),
-				HomeScore:      match.Home.Score,
-				AwayScore:      match.Away.Score,
-				Time:           startsAt,
-				Status:         ToDomainProviderMatchStatus(match.ID, match.StatusID),
-				ProviderStatus: &rawStatus,
-			})
+			statusDetails := match.Status.Details()
 
-			if isUnknownStatus(match.StatusID) && match.Status.Reason != nil {
-				fmt.Printf(
-					"match with id %d has status %d. reason - short %s, short key %s, long %s, long key %s \n",
-					match.ID,
-					match.StatusID,
-					match.Status.Reason.Short,
-					match.Status.Reason.ShortKey,
-					match.Status.Reason.Long,
-					match.Status.Reason.LongKey)
-			}
+			leagueMatches = append(leagueMatches, models.ProviderAPIMatch{
+				ID:                    match.ID,
+				HomeID:                strconv.Itoa(match.Home.ID),
+				AwayID:                strconv.Itoa(match.Away.ID),
+				HomeScore:             match.Home.Score,
+				AwayScore:             match.Away.Score,
+				Time:                  startsAt,
+				Status:                ToDomainProviderMatchStatus(match.StatusID),
+				ProviderStatus:        &rawStatus,
+				ProviderStatusDetails: &statusDetails,
+			})
 		}
 
 		matches = append(matches, leagueMatches...)
@@ -134,43 +147,20 @@ func toDomainProviderAPIMatches(response MatchesResponse) ([]models.ProviderAPIM
 	return matches, nil
 }
 
-func ToDomainProviderMatchStatus(matchID uint, statusID fotmobMatchStatus) models.ProviderMatchStatus {
+func ToDomainProviderMatchStatus(statusID fotmobMatchStatus) models.ProviderMatchStatus {
 	switch statusID {
-	case notStarted:
+	case notStarted, delayed, postponed, resumptionPlanned:
 		return models.StatusMatchNotStarted
-	// 106 - Probably: match canceled and likely won't be played ever
-	case postponed, abandoned, 106:
+	case abandoned, cancelled:
 		return models.StatusMatchCancelled
 	// 4 - [NOT CLEAR] received from a match 4935228 which has penalties without extra time
 	// 20 - [NOT CLEAR] received from a match 4935225 which has penalties without extra time
-	// 12 - (interruptedShort) Probably: postponed for tomorrow. case - id 5909197
 	case live1stHalf, live2ndHalf, 4, liveExtraTime1stHalf, liveExtraTime2ndHalf, halfTime, interruptedShort, waitingForExtraTime, 20, pauseExtraTime:
 		return models.StatusMatchInProgress
 	case fullTime, afterExtraTime, afterPenalties:
 		return models.StatusMatchFinished
-	// 93 - Probably: Will be continued after interruption. case: match was postponed to the next day and is not yet started has 93 (id 5909197)
-	// 7, 9, 15, 16 - [NOT CLEAR]
+	// 7, 15, 16, 234 - [NOT CLEAR]
 	default:
-		fmt.Printf("match with id %d has unknown status: %d\n", matchID, statusID)
 		return models.StatusMatchUnknown
 	}
-}
-
-func isUnknownStatus(statusID fotmobMatchStatus) bool {
-	return !slices.Contains([]fotmobMatchStatus{
-		notStarted,
-		postponed,
-		abandoned,
-		live1stHalf,
-		live2ndHalf,
-		liveExtraTime1stHalf,
-		liveExtraTime2ndHalf,
-		halfTime,
-		interruptedShort,
-		waitingForExtraTime,
-		pauseExtraTime,
-		fullTime,
-		afterExtraTime,
-		afterPenalties,
-	}, statusID)
 }

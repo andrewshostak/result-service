@@ -291,14 +291,17 @@ func expectedProviderAPIMatch(t *testing.T, match fotmob.Match) models.ProviderA
 	require.NoError(t, err, "failed to parse match starting time")
 
 	status := fmt.Sprintf("%d", match.StatusID)
+	statusDetails := match.Status.Details()
+
 	return models.ProviderAPIMatch{
-		ID:             match.ID,
-		HomeID:         strconv.Itoa(match.Home.ID),
-		AwayID:         strconv.Itoa(match.Away.ID),
-		HomeScore:      match.Home.Score,
-		AwayScore:      match.Away.Score,
-		Time:           expectedTime,
-		Status:         fotmob.ToDomainProviderMatchStatus(match.ID, match.StatusID),
-		ProviderStatus: &status,
+		ID:                    match.ID,
+		HomeID:                strconv.Itoa(match.Home.ID),
+		AwayID:                strconv.Itoa(match.Away.ID),
+		HomeScore:             match.Home.Score,
+		AwayScore:             match.Away.Score,
+		Time:                  expectedTime,
+		Status:                fotmob.ToDomainProviderMatchStatus(match.StatusID),
+		ProviderStatus:        &status,
+		ProviderStatusDetails: &statusDetails,
 	}
 }
