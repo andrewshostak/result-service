@@ -36,6 +36,15 @@ type Status struct {
 	Reason    *Reason `json:"reason"`
 }
 
+func (s Status) Details() string {
+	details := fmt.Sprintf("started=%t finished=%t cancelled=%t awarded=%t", s.Started, s.Finished, s.Cancelled, s.Awarded)
+	if s.Reason != nil {
+		details += fmt.Sprintf(" reason_short=%s reason_short_key=%s reason_long=%s reason_long_key=%s", s.Reason.Short, s.Reason.ShortKey, s.Reason.Long, s.Reason.LongKey)
+	}
+
+	return details
+}
+
 type Reason struct {
 	Short    string `json:"short"`
 	ShortKey string `json:"shortKey"`
@@ -117,10 +126,7 @@ func toDomainProviderAPIMatches(response MatchesResponse) ([]models.ProviderAPIM
 			}
 
 			rawStatus := fmt.Sprintf("%d", match.StatusID)
-			statusDetails := fmt.Sprintf("started=%t finished=%t cancelled=%t awarded=%t", match.Status.Started, match.Status.Finished, match.Status.Cancelled, match.Status.Awarded)
-			if match.Status.Reason != nil {
-				statusDetails += fmt.Sprintf(" reason_short=%s reason_short_key=%s reason_long=%s reason_long_key=%s", match.Status.Reason.Short, match.Status.Reason.ShortKey, match.Status.Reason.Long, match.Status.Reason.LongKey)
-			}
+			statusDetails := match.Status.Details()
 
 			leagueMatches = append(leagueMatches, models.ProviderAPIMatch{
 				ID:                    match.ID,
@@ -153,7 +159,7 @@ func ToDomainProviderMatchStatus(statusID fotmobMatchStatus) models.ProviderMatc
 		return models.StatusMatchInProgress
 	case fullTime, afterExtraTime, afterPenalties:
 		return models.StatusMatchFinished
-	// 7, 9, 15, 16, 234 - [NOT CLEAR]
+	// 7, 15, 16, 234 - [NOT CLEAR]
 	default:
 		return models.StatusMatchUnknown
 	}

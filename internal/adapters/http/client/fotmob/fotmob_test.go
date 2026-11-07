@@ -291,10 +291,7 @@ func expectedProviderAPIMatch(t *testing.T, match fotmob.Match) models.ProviderA
 	require.NoError(t, err, "failed to parse match starting time")
 
 	status := fmt.Sprintf("%d", match.StatusID)
-	statusDetails := fmt.Sprintf("started=%t finished=%t cancelled=%t awarded=%t", match.Status.Started, match.Status.Finished, match.Status.Cancelled, match.Status.Awarded)
-	if match.Status.Reason != nil {
-		statusDetails += fmt.Sprintf(" reason_short=%s reason_short_key=%s reason_long=%s reason_long_key=%s", match.Status.Reason.Short, match.Status.Reason.ShortKey, match.Status.Reason.Long, match.Status.Reason.LongKey)
-	}
+	statusDetails := match.Status.Details()
 
 	return models.ProviderAPIMatch{
 		ID:                    match.ID,
