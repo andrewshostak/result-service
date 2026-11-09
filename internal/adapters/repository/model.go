@@ -81,13 +81,14 @@ type Subscription struct {
 }
 
 type CheckResultTask struct {
-	ID            uint      `gorm:"column:id;primaryKey" db:"id"`
-	MatchID       uint      `gorm:"column:match_id;unique" db:"match_id"`
-	Name          string    `gorm:"column:name;unique" db:"name"`
-	AttemptNumber uint      `gorm:"column:attempt_number;default:1" db:"attempt_number"`
-	ExecuteAt     time.Time `gorm:"column:execute_at" db:"execute_at"`
-	CreatedAt     time.Time `gorm:"column:created_at" db:"created_at"`
-	UpdatedAt     time.Time `gorm:"column:updated_at" db:"updated_at"`
+	ID              uint      `gorm:"column:id;primaryKey" db:"id"`
+	MatchID         uint      `gorm:"column:match_id;unique" db:"match_id"`
+	ProviderMatchID *uint     `gorm:"column:provider_match_id" db:"provider_match_id"`
+	Name            string    `gorm:"column:name;unique" db:"name"`
+	AttemptNumber   uint      `gorm:"column:attempt_number;default:1" db:"attempt_number"`
+	ExecuteAt       time.Time `gorm:"column:execute_at" db:"execute_at"`
+	CreatedAt       time.Time `gorm:"column:created_at" db:"created_at"`
+	UpdatedAt       time.Time `gorm:"column:updated_at" db:"updated_at"`
 
 	Match *Match `gorm:"foreignKey:MatchID"`
 }
