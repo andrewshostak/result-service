@@ -19,13 +19,21 @@ func NewCheckResultTaskRepository(db *gorm.DB) *CheckResultTaskRepository {
 
 func (r *CheckResultTaskRepository) Save(ctx context.Context, checkResultTask models.CheckResultTask) (*models.CheckResultTask, error) {
 	task := CheckResultTask{
-		MatchID:       checkResultTask.MatchID,
-		Name:          checkResultTask.Name,
-		AttemptNumber: checkResultTask.AttemptNumber,
-		ExecuteAt:     checkResultTask.ExecuteAt,
+		MatchID:         checkResultTask.MatchID,
+		ProviderMatchID: checkResultTask.ProviderMatchID,
+		Name:            checkResultTask.Name,
+		AttemptNumber:   checkResultTask.AttemptNumber,
+		ExecuteAt:       checkResultTask.ExecuteAt,
 	}
+
+	// Both match_id and provider_match_id are unique during the migration - see todo.md Feature #1.
+	conflictColumn := "match_id"
+	if checkResultTask.ProviderMatchID != nil {
+		conflictColumn = "provider_match_id"
+	}
+
 	result := r.db.WithContext(ctx).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "match_id"}},
+		Columns:   []clause.Column{{Name: conflictColumn}},
 		DoUpdates: clause.AssignmentColumns([]string{"name", "attempt_number", "execute_at"}),
 	}).Create(&task)
 

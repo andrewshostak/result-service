@@ -34,6 +34,10 @@ type TriggerResultCheckRequest struct {
 	MatchID uint `json:"match_id" binding:"required"`
 }
 
+type TriggerProviderResultCheckRequest struct {
+	ProviderMatchID uint `json:"provider_match_id" binding:"required"`
+}
+
 type TriggerSubscriptionNotificationRequest struct {
 	SubscriptionID uint `json:"subscription_id" binding:"required"`
 }

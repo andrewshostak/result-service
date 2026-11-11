@@ -44,6 +44,30 @@ func (h *TriggerHandler) CheckResult(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+func (h *TriggerHandler) CheckProviderMatchResult(c *gin.Context) {
+	var params TriggerProviderResultCheckRequest
+	if err := c.ShouldBindJSON(&params); err != nil {
+		c.JSON(http.StatusBadRequest, NewErrorResponse(models.CodeInvalidRequest, err))
+
+		return
+	}
+
+	err := h.checkResultService.CheckProviderMatchResult(c.Request.Context(), params.ProviderMatchID)
+	if errors.As(err, &models.ResourceNotFoundError{}) {
+		c.JSON(http.StatusBadRequest, NewErrorResponse(models.CodeResourceNotFound, err))
+
+		return
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(models.CodeInternalServerError, err))
+
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
 func (h *TriggerHandler) NotifySubscriber(c *gin.Context) {
 	var params TriggerSubscriptionNotificationRequest
 	if err := c.ShouldBindJSON(&params); err != nil {

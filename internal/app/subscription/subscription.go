@@ -126,17 +126,18 @@ func (s *SubscriptionService) Delete(ctx context.Context, request models.DeleteS
 		return nil
 	}
 
-	if match.CheckResultTask == nil {
+	if len(match.CheckResultTasks) == 0 {
 		s.logger.Error().Uint("match_id", match.ID).Msg("match relation check result task does not exist")
 		return nil
 	}
 
-	if err := s.taskClient.DeleteResultCheckTask(ctx, match.CheckResultTask.Name); err != nil {
-		s.logger.Error().Err(err).Uint("match_id", match.ID).Msg("failed to delete result-check task")
-		return nil
+	for _, task := range match.CheckResultTasks {
+		if err := s.taskClient.DeleteResultCheckTask(ctx, task.Name); err != nil {
+			s.logger.Error().Err(err).Uint("match_id", match.ID).Str("task_name", task.Name).Msg("failed to delete result-check task")
+		}
 	}
 
-	s.logger.Debug().Uint("match_id", match.ID).Msg("match & result check task deleted")
+	s.logger.Debug().Uint("match_id", match.ID).Msg("match & result check task(s) deleted")
 
 	return nil
 }

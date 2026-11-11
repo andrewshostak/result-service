@@ -31,6 +31,24 @@ func (_m *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) e
 	return r0
 }
 
+// CheckProviderMatchResult provides a mock function with given fields: ctx, providerMatchID
+func (_m *ResultCheckerService) CheckProviderMatchResult(ctx context.Context, providerMatchID uint) error {
+	ret := _m.Called(ctx, providerMatchID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckProviderMatchResult")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint) error); ok {
+		r0 = rf(ctx, providerMatchID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // NewResultCheckerService creates a new instance of ResultCheckerService. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewResultCheckerService(t interface {

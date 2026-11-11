@@ -61,9 +61,9 @@ type Match struct {
 	CreatedAt    time.Time `gorm:"column:created_at" db:"created_at"`
 	UpdatedAt    time.Time `gorm:"column:updated_at" db:"updated_at"`
 
-	CheckResultTask *CheckResultTask
-	HomeTeam        *Team `gorm:"foreignKey:HomeTeamID"`
-	AwayTeam        *Team `gorm:"foreignKey:AwayTeamID"`
+	CheckResultTasks []CheckResultTask `gorm:"foreignKey:MatchID"`
+	HomeTeam         *Team             `gorm:"foreignKey:HomeTeamID"`
+	AwayTeam         *Team             `gorm:"foreignKey:AwayTeamID"`
 }
 
 type Subscription struct {
@@ -142,11 +142,21 @@ func toDomainProviderMatch(p ProviderMatch) models.ProviderMatch {
 
 func toDomainCheckResultTask(t CheckResultTask) models.CheckResultTask {
 	return models.CheckResultTask{
-		ID:            t.ID,
-		MatchID:       t.MatchID,
-		Name:          t.Name,
-		AttemptNumber: t.AttemptNumber,
+		ID:              t.ID,
+		MatchID:         t.MatchID,
+		ProviderMatchID: t.ProviderMatchID,
+		Name:            t.Name,
+		AttemptNumber:   t.AttemptNumber,
 	}
+}
+
+func toDomainCheckResultTasks(tasks []CheckResultTask) []models.CheckResultTask {
+	mapped := make([]models.CheckResultTask, 0, len(tasks))
+	for _, task := range tasks {
+		mapped = append(mapped, toDomainCheckResultTask(task))
+	}
+
+	return mapped
 }
 
 func toDomainMatch(m Match) models.Match {
@@ -160,9 +170,8 @@ func toDomainMatch(m Match) models.Match {
 		AwayScore:    m.AwayScore,
 	}
 
-	if m.CheckResultTask != nil {
-		checkResultTask := toDomainCheckResultTask(*m.CheckResultTask)
-		match.CheckResultTask = &checkResultTask
+	if m.CheckResultTasks != nil {
+		match.CheckResultTasks = toDomainCheckResultTasks(m.CheckResultTasks)
 	}
 
 	return match
