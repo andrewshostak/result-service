@@ -71,9 +71,9 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	// resolve its own day independently instead of picking index 0.
 	matches, err := s.getMatchesFromProviders(ctx, providerMatches[0].StartsAt)
 	if err != nil {
-		s.logger.Error().Uint("match_id", matchID).Err(err)
+		s.logger.Error().Uint("match_id", matchID).Err(err).Msg("failed to get matches from provider api")
 		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.APIError}); errUpdate != nil {
-			s.logger.Error().Uint("match_id", matchID).Err(errUpdate)
+			s.logger.Error().Uint("match_id", matchID).Err(errUpdate).Msg("failed to update match status to api_error")
 		}
 
 		return fmt.Errorf("failed to get matches from provider api: %w", err)
@@ -142,9 +142,9 @@ func (s *ResultCheckerService) CheckProviderMatchResult(ctx context.Context, pro
 
 	matches, err := s.getMatchesFromProvider(ctx, providerMatch.Provider, providerMatch.StartsAt)
 	if err != nil {
-		s.logger.Error().Uint("match_id", match.ID).Uint("provider_match_id", providerMatchID).Err(err)
+		s.logger.Error().Uint("match_id", match.ID).Uint("provider_match_id", providerMatchID).Err(err).Msg("failed to get matches from provider api")
 		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.APIError}); errUpdate != nil {
-			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate)
+			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate).Msg("failed to update match status to api_error")
 		}
 
 		return fmt.Errorf("failed to get matches from provider api: %w", err)
@@ -219,7 +219,7 @@ func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match mode
 		s.logger.Error().Uint("match_id", match.ID).Msgf("maximum number of attempts %d reached", s.config.MaxRetries)
 
 		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.Cancelled}); errUpdate != nil {
-			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate)
+			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate).Msg("failed to update match status to cancelled")
 			return errUpdate
 		}
 
@@ -230,7 +230,7 @@ func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match mode
 	if err != nil {
 		s.logger.Error().Uint("match_id", match.ID).Uint("attempt_number", attemptNumber).Time("schedule_at", scheduleAt).Err(err).Msg("failed to re-schedule check result task")
 		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.SchedulingError}); errUpdate != nil {
-			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate)
+			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate).Msg("failed to update match status to scheduling_error")
 		}
 
 		return fmt.Errorf("failed to re-schedule result check task: %w", err)
@@ -352,7 +352,7 @@ func (s *ResultCheckerService) handleInPlayProviderMatch(ctx context.Context, ma
 		s.logger.Error().Uint("match_id", match.ID).Msgf("maximum number of attempts %d reached", s.config.MaxRetries)
 
 		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.Cancelled}); errUpdate != nil {
-			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate)
+			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate).Msg("failed to update match status to cancelled")
 			return errUpdate
 		}
 
@@ -364,7 +364,7 @@ func (s *ResultCheckerService) handleInPlayProviderMatch(ctx context.Context, ma
 	if err != nil {
 		s.logger.Error().Uint("match_id", match.ID).Uint("provider_match_id", providerMatchID).Uint("attempt_number", attemptNumber).Time("schedule_at", scheduleAt).Err(err).Msg("failed to re-schedule check result task")
 		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.SchedulingError}); errUpdate != nil {
-			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate)
+			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate).Msg("failed to update match status to scheduling_error")
 		}
 
 		return fmt.Errorf("failed to re-schedule result check task: %w", err)

@@ -18,8 +18,12 @@ non-obvious *why* or a tricky detail, never restate *what* the code already says
 
 ## Test files
 
-One test file per implementation file (`foo.go` → `foo_test.go`), never split a file's tests
-across multiple test files. Add new test functions to the existing `_test.go` file.
+Unit tests: one test file per implementation file (`foo.go` → `foo_test.go`), never split a
+file's tests across multiple test files. Add new test functions to the existing `_test.go` file.
+
+Functional tests (`functionaltests/`): one file per triggered endpoint/scenario, not per
+implementation file - e.g. `trigger_result_check_test.go` and
+`trigger_subscriber_notification_test.go` both test `trigger.go`, split by endpoint.
 
 ## Running tests
 
