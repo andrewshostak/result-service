@@ -70,9 +70,9 @@ func CreateCheckResultTask(t *testing.T, db *sqlx.DB, task repository.CheckResul
 	t.Helper()
 
 	var created repository.CheckResultTask
-	query := "INSERT INTO check_result_tasks (match_id, name, execute_at) VALUES ($1, $2, $3) RETURNING *"
+	query := "INSERT INTO check_result_tasks (match_id, provider_match_id, name, execute_at) VALUES ($1, $2, $3, $4) RETURNING *"
 
-	err := db.Get(&created, query, task.MatchID, task.Name, task.ExecuteAt)
+	err := db.Get(&created, query, task.MatchID, task.ProviderMatchID, task.Name, task.ExecuteAt)
 	require.NoError(t, err)
 
 	return created

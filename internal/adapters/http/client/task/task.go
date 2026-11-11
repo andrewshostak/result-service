@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	checkResultPath      = "/v1/triggers/result_check"
-	notifySubscriberPath = "/v1/triggers/subscriber_notification"
+	checkResultPath         = "/v1/triggers/result_check"
+	providerResultCheckPath = "/v1/triggers/provider_result_check"
+	notifySubscriberPath    = "/v1/triggers/subscriber_notification"
 )
 
 const (
@@ -42,6 +43,20 @@ func (c *TaskClient) GetResultCheckTask(ctx context.Context, matchID uint, attem
 	task, err := c.client.GetTask(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get result-check task: %w", err)
+	}
+
+	return &models.Task{Name: task.Name, ExecuteAt: task.ScheduleTime.AsTime()}, nil
+}
+
+func (c *TaskClient) GetProviderResultCheckTask(ctx context.Context, providerMatchID uint, attempt uint) (*models.Task, error) {
+	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", c.config.ProjectID, c.config.Region, c.config.CheckResultQueueName)
+	name := fmt.Sprintf("%s/tasks/provider-match-%d-attempt-%d", queuePath, providerMatchID, attempt)
+
+	req := &taskspb.GetTaskRequest{Name: name}
+
+	task, err := c.client.GetTask(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get provider result-check task: %w", err)
 	}
 
 	return &models.Task{Name: task.Name, ExecuteAt: task.ScheduleTime.AsTime()}, nil
@@ -90,6 +105,57 @@ func (c *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, atte
 		}
 
 		return nil, fmt.Errorf("failed to create result-check task: %w", err)
+	}
+
+	return &models.Task{
+		Name:      createdTask.Name,
+		ExecuteAt: createdTask.ScheduleTime.AsTime(),
+	}, nil
+}
+
+func (c *TaskClient) ScheduleProviderResultCheck(ctx context.Context, providerMatchID uint, attempt uint, scheduleAt time.Time) (*models.Task, error) {
+	targetURL := fmt.Sprintf("%s%s", c.config.TargetURL, providerResultCheckPath)
+
+	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", c.config.ProjectID, c.config.Region, c.config.CheckResultQueueName)
+
+	payload := map[string]uint{"provider_match_id": providerMatchID}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	req := &taskspb.CreateTaskRequest{
+		Parent: queuePath,
+		Task: &taskspb.Task{
+			Name:             fmt.Sprintf("%s/tasks/provider-match-%d-attempt-%d", queuePath, providerMatchID, attempt),
+			ScheduleTime:     timestamppb.New(scheduleAt),
+			DispatchDeadline: durationpb.New(c.dispatchDeadline),
+			MessageType: &taskspb.Task_HttpRequest{
+				HttpRequest: &taskspb.HttpRequest{
+					HttpMethod: taskspb.HttpMethod_POST,
+					Url:        targetURL,
+					Body:       body,
+					Headers: map[string]string{
+						"Content-Type": "application/json",
+					},
+					AuthorizationHeader: &taskspb.HttpRequest_OidcToken{
+						OidcToken: &taskspb.OidcToken{
+							ServiceAccountEmail: c.config.ServiceAccountEmail,
+							Audience:            c.config.TargetURL,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	createdTask, err := c.client.CreateTask(ctx, req)
+	if err != nil {
+		if c.isTaskAlreadyExistsError(err) {
+			return nil, models.NewResourceAlreadyExistsError(fmt.Errorf("provider result-check task already exists: %w", err))
+		}
+
+		return nil, fmt.Errorf("failed to create provider result-check task: %w", err)
 	}
 
 	return &models.Task{

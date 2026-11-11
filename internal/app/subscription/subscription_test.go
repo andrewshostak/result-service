@@ -439,7 +439,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				matchWithTask := match
-				matchWithTask.CheckResultTask = &checkResultTask
+				matchWithTask.CheckResultTasks = []models.CheckResultTask{checkResultTask}
 				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&matchWithTask, nil).Once()
 				m.On("Delete", ctx, match.ID).Return(nil).Once()
 				return m
@@ -473,7 +473,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
 				matchWithTask := match
-				matchWithTask.CheckResultTask = &checkResultTask
+				matchWithTask.CheckResultTasks = []models.CheckResultTask{checkResultTask}
 				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&matchWithTask, nil).Once()
 				m.On("Delete", ctx, match.ID).Return(nil).Once()
 				return m

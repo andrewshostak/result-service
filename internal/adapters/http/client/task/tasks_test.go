@@ -20,6 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// TODO: when removed (todo.md Feature #1 PR5), replace with equivalent GetProviderResultCheckTask/ScheduleProviderResultCheck coverage - don't just delete.
 func TestTaskClient_GetResultCheckTask(t *testing.T) {
 	ctx := context.Background()
 

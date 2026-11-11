@@ -123,6 +123,55 @@ func (s *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) er
 	}
 }
 
+// Per-provider-match counterpart to CheckResult - see todo.md Feature #1.
+func (s *ResultCheckerService) CheckProviderMatchResult(ctx context.Context, providerMatchID uint) error {
+	providerMatch, err := s.providerMatchRepository.FindByID(ctx, providerMatchID)
+	if err != nil {
+		return fmt.Errorf("failed to get provider match by id: %w", err)
+	}
+
+	match, err := s.matchRepository.One(ctx, models.Match{ID: providerMatch.MatchID})
+	if err != nil {
+		return fmt.Errorf("failed to get match by id: %w", err)
+	}
+
+	if !s.canCheckResult(match) {
+		s.logger.Error().Uint("match_id", match.ID).Uint("provider_match_id", providerMatchID).Msg(fmt.Sprintf("result check skipped: unexpected result status %s", match.ResultStatus))
+		return nil
+	}
+
+	matches, err := s.getMatchesFromProvider(ctx, providerMatch.Provider, providerMatch.StartsAt)
+	if err != nil {
+		s.logger.Error().Uint("match_id", match.ID).Uint("provider_match_id", providerMatchID).Err(err)
+		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.APIError}); errUpdate != nil {
+			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate)
+		}
+
+		return fmt.Errorf("failed to get matches from provider api: %w", err)
+	}
+
+	providerAPIMatch := s.findProviderAPIMatch(*providerMatch, matches)
+	if providerAPIMatch == nil {
+		s.logger.Info().Uint("match_id", match.ID).Str("provider", providerMatch.Provider).Msgf("provider match with id %s is not found", providerMatch.ProviderMatchID)
+		return s.handleNotFoundProviderMatch(ctx, *match, *providerMatch)
+	}
+
+	if _, err := s.providerMatchRepository.Save(ctx, providerAPIMatch.ToProviderMatch(match.ID, providerMatch.Provider)); err != nil {
+		return fmt.Errorf("failed to save provider match with id %d and match id %d: %w", providerAPIMatch.ID, match.ID, err)
+	}
+
+	switch providerAPIMatch.Status {
+	// TODO: add a case for handling not-started matches
+	case models.StatusMatchInProgress:
+		return s.handleInPlayProviderMatch(ctx, *match, *providerMatch, providerAPIMatch.Time)
+	case models.StatusMatchFinished:
+		return s.handleFinishedMatch(ctx, match.ID, providerAPIMatch.HomeScore, providerAPIMatch.AwayScore)
+	// if we receive here any other status - that is not expected, we should cancel the result check.
+	default:
+		return s.handleMatchWithUnexpectedStatus(ctx, match.ID, providerAPIMatch.Status, providerAPIMatch.ProviderStatus, providerAPIMatch.ProviderStatusDetails)
+	}
+}
+
 func (s *ResultCheckerService) findProviderAPIMatch(providerMatch models.ProviderMatch, apiMatches []models.ProviderAPIMatch) *models.ProviderAPIMatch {
 	for _, apiMatch := range apiMatches {
 		if fmt.Sprintf("%d", apiMatch.ID) == providerMatch.ProviderMatchID {
@@ -154,16 +203,17 @@ func (s *ResultCheckerService) handleMatchWithUnexpectedStatus(ctx context.Conte
 func (s *ResultCheckerService) handleInPlayMatch(ctx context.Context, match models.Match, providerStartsAt time.Time) error {
 	s.logger.Debug().Uint("match_id", match.ID).Msg("match is in play, re-scheduling result check task")
 
-	if match.CheckResultTask == nil {
+	checkResultTask := legacyCheckResultTask(match.CheckResultTasks)
+	if checkResultTask == nil {
 		return errors.New("match relation result check task doesn't exist")
 	}
 
 	scheduleAt := providerStartsAt.Add(s.config.FirstAttemptDelay)
-	for i := uint(0); i < match.CheckResultTask.AttemptNumber; i++ {
+	for i := uint(0); i < checkResultTask.AttemptNumber; i++ {
 		scheduleAt = scheduleAt.Add(s.config.Interval)
 	}
 
-	attemptNumber := match.CheckResultTask.AttemptNumber + 1
+	attemptNumber := checkResultTask.AttemptNumber + 1
 
 	if attemptNumber > s.config.MaxRetries {
 		s.logger.Error().Uint("match_id", match.ID).Msgf("maximum number of attempts %d reached", s.config.MaxRetries)
@@ -265,4 +315,106 @@ func (s *ResultCheckerService) getMatchesFromProviders(ctx context.Context, star
 
 func (s *ResultCheckerService) canCheckResult(match *models.Match) bool {
 	return match != nil && (match.ResultStatus == models.Scheduled || match.ResultStatus == models.APIError)
+}
+
+// Unlike getMatchesFromProviders, the caller already knows which single provider to check.
+func (s *ResultCheckerService) getMatchesFromProvider(ctx context.Context, providerName string, startsAt time.Time) ([]models.ProviderAPIMatch, error) {
+	for _, provider := range s.providers {
+		if provider.Name() == providerName {
+			matches, err := provider.GetMatches(ctx, startsAt)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get matches from provider %s: %w", providerName, err)
+			}
+
+			return matches, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no registered provider named %s", providerName)
+}
+
+func (s *ResultCheckerService) handleInPlayProviderMatch(ctx context.Context, match models.Match, providerMatch models.ProviderMatch, providerStartsAt time.Time) error {
+	s.logger.Debug().Uint("match_id", match.ID).Uint("provider_match_id", providerMatch.ID).Msg("match is in play, re-scheduling result check task")
+
+	checkResultTask := providerCheckResultTask(match.CheckResultTasks, providerMatch.ID)
+	if checkResultTask == nil {
+		return errors.New("match relation result check task doesn't exist")
+	}
+
+	scheduleAt := providerStartsAt.Add(s.config.FirstAttemptDelay)
+	for i := uint(0); i < checkResultTask.AttemptNumber; i++ {
+		scheduleAt = scheduleAt.Add(s.config.Interval)
+	}
+
+	attemptNumber := checkResultTask.AttemptNumber + 1
+
+	if attemptNumber > s.config.MaxRetries {
+		s.logger.Error().Uint("match_id", match.ID).Msgf("maximum number of attempts %d reached", s.config.MaxRetries)
+
+		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.Cancelled}); errUpdate != nil {
+			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate)
+			return errUpdate
+		}
+
+		return nil
+	}
+
+	providerMatchID := providerMatch.ID
+	task, err := s.taskClient.ScheduleProviderResultCheck(ctx, providerMatchID, attemptNumber, scheduleAt)
+	if err != nil {
+		s.logger.Error().Uint("match_id", match.ID).Uint("provider_match_id", providerMatchID).Uint("attempt_number", attemptNumber).Time("schedule_at", scheduleAt).Err(err).Msg("failed to re-schedule check result task")
+		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.SchedulingError}); errUpdate != nil {
+			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate)
+		}
+
+		return fmt.Errorf("failed to re-schedule result check task: %w", err)
+	}
+
+	if _, err := s.checkResultTaskRepository.Save(ctx, models.CheckResultTask{
+		MatchID:         match.ID,
+		ProviderMatchID: &providerMatchID,
+		Name:            task.Name,
+		AttemptNumber:   attemptNumber,
+		ExecuteAt:       task.ExecuteAt,
+	}); err != nil {
+		return fmt.Errorf("failed to update result check task: %w", err)
+	}
+
+	return nil
+}
+
+// Cancels the match right away, unlike CheckResult which waits to hear from every provider match.
+func (s *ResultCheckerService) handleNotFoundProviderMatch(ctx context.Context, match models.Match, providerMatch models.ProviderMatch) error {
+	if err := s.handleNotFoundMatch(ctx, providerMatch); err != nil {
+		return err
+	}
+
+	s.logger.Error().Uint("match_id", match.ID).Msg("result check cancelled: provider match not found")
+
+	if _, err := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.Cancelled}); err != nil {
+		return fmt.Errorf("failed to update match: %w", err)
+	}
+
+	return nil
+}
+
+// ProviderMatchID is nil only on tasks created before the per-provider-match migration.
+func legacyCheckResultTask(tasks []models.CheckResultTask) *models.CheckResultTask {
+	for i := range tasks {
+		if tasks[i].ProviderMatchID == nil {
+			return &tasks[i]
+		}
+	}
+
+	return nil
+}
+
+func providerCheckResultTask(tasks []models.CheckResultTask, providerMatchID uint) *models.CheckResultTask {
+	for i := range tasks {
+		if tasks[i].ProviderMatchID != nil && *tasks[i].ProviderMatchID == providerMatchID {
+			return &tasks[i]
+		}
+	}
+
+	return nil
 }

@@ -69,7 +69,7 @@ type Match struct {
 	HomeScore    *int
 	AwayScore    *int
 
-	CheckResultTask *CheckResultTask
+	CheckResultTasks []CheckResultTask
 }
 
 type Alias struct {
@@ -110,11 +110,12 @@ const (
 )
 
 type CheckResultTask struct {
-	ID            uint
-	MatchID       uint
-	Name          string
-	AttemptNumber uint
-	ExecuteAt     time.Time
+	ID              uint
+	MatchID         uint
+	ProviderMatchID *uint
+	Name            string
+	AttemptNumber   uint
+	ExecuteAt       time.Time
 }
 
 type League struct {
