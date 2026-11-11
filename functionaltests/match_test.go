@@ -89,16 +89,18 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 		},
 	}, matches)
 
+	providerMatchID := uint(1)
 	checkResultTasks := testutils.ListCheckResultTasks(s.T(), s.db)
 	s.Equal([]repository.CheckResultTask{
 		{
-			ID:            1,
-			MatchID:       response.MatchID,
-			Name:          fmt.Sprintf("projects/test-project/locations/europe-west3/queues/%s/tasks/match-%d-attempt-%d", "check-result", response.MatchID, 1),
-			AttemptNumber: 1,
-			ExecuteAt:     requestStartsAt.Add(115 * time.Minute),
-			CreatedAt:     checkResultTasks[0].CreatedAt,
-			UpdatedAt:     checkResultTasks[0].UpdatedAt,
+			ID:              1,
+			MatchID:         response.MatchID,
+			ProviderMatchID: &providerMatchID,
+			Name:            fmt.Sprintf("projects/test-project/locations/europe-west3/queues/%s/tasks/provider-match-%d-attempt-%d", "check-result", providerMatchID, 1),
+			AttemptNumber:   1,
+			ExecuteAt:       requestStartsAt.Add(115 * time.Minute),
+			CreatedAt:       checkResultTasks[0].CreatedAt,
+			UpdatedAt:       checkResultTasks[0].UpdatedAt,
 		},
 	}, checkResultTasks)
 
