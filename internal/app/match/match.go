@@ -115,19 +115,19 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 		return 0, fmt.Errorf("failed to save match with team ids %d and %d starting at %s: %w", aliasHome.TeamID, aliasAway.TeamID, request.StartsAt, err)
 	}
 
-	_, err = s.providerMatchRepository.Save(ctx, providerAPIMatch.ToProviderMatch(match.ID, *providerName))
+	savedProviderMatch, err := s.providerMatchRepository.Save(ctx, providerAPIMatch.ToProviderMatch(match.ID, *providerName))
 	if err != nil {
 		return 0, fmt.Errorf("failed to save provider match with id %d and match id %d: %w", providerAPIMatch.ID, match.ID, err)
 	}
 
 	firstCheckBaseTime := earliestOf(request.StartsAt, providerAPIMatch.Time)
-	task, err := s.taskClient.ScheduleResultCheck(ctx, match.ID, 1, firstCheckBaseTime.Add(s.config.FirstAttemptDelay))
+	task, err := s.taskClient.ScheduleProviderResultCheck(ctx, savedProviderMatch.ID, 1, firstCheckBaseTime.Add(s.config.FirstAttemptDelay))
 	if err != nil && !errors.As(err, &models.ResourceAlreadyExistsError{}) {
 		return 0, fmt.Errorf("failed to schedule result check task: %w", err)
 	}
 
 	if errors.As(err, &models.ResourceAlreadyExistsError{}) {
-		foundTask, errGetTask := s.taskClient.GetResultCheckTask(ctx, match.ID, 1)
+		foundTask, errGetTask := s.taskClient.GetProviderResultCheckTask(ctx, savedProviderMatch.ID, 1)
 		if errGetTask != nil {
 			return 0, fmt.Errorf("failed to get result check task: %w", errGetTask)
 		}
@@ -135,10 +135,11 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 	}
 
 	_, err = s.checkResultTaskRepository.Save(ctx, models.CheckResultTask{
-		MatchID:       match.ID,
-		Name:          task.Name,
-		AttemptNumber: 1,
-		ExecuteAt:     task.ExecuteAt,
+		MatchID:         match.ID,
+		ProviderMatchID: &savedProviderMatch.ID,
+		Name:            task.Name,
+		AttemptNumber:   1,
+		ExecuteAt:       task.ExecuteAt,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to save result-check task: %w", err)
