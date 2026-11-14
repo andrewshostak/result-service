@@ -59,19 +59,3 @@ func (r *ProviderMatchRepository) FindByID(ctx context.Context, id uint) (*model
 	domain := toDomainProviderMatch(providerMatch)
 	return &domain, nil
 }
-
-func (r *ProviderMatchRepository) ListByMatchID(ctx context.Context, matchID uint) ([]models.ProviderMatch, error) {
-	var providerMatches []ProviderMatch
-
-	result := r.db.WithContext(ctx).Where(&ProviderMatch{MatchID: matchID}).Find(&providerMatches)
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to list provider matches: %w", result.Error)
-	}
-
-	domain := make([]models.ProviderMatch, 0, len(providerMatches))
-	for _, providerMatch := range providerMatches {
-		domain = append(domain, toDomainProviderMatch(providerMatch))
-	}
-
-	return domain, nil
-}

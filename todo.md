@@ -18,16 +18,17 @@
 - [ ] check the context cancellation proper usage (defer cancel must be present)
 - [ ] handle half-time status during the result check specially - next check more than +5 minutes
 - [ ] add recover middleware
+- [ ] configure connection pool 
 
 ## Known issues
 - [ ] matches postponed to tomorrow disappear from the search and become cancelled
 - [ ] when result status fails then subscription status should be set to cancelled as well (not remain 'pending')
 
-## Features
-
-### 1) Check result task per provider match instead of per match
-One `check_result_task` per provider per match instead of a single task per match that fans out to all providers in `ResultCheckerService.CheckResult` — needed once a second result provider is onboarded, to properly arbitrate providers disagreeing on a match's status instead of picking the first one found. Approach: `MatchService.Create` schedules a separate task for each provider that returned the match; 
-`CheckResult` then receives a provider-scoped task, queries only that provider's API, and updates only that provider's `provider_match` row. 
-This avoids the `ListByMatchID` + fan-out loop in `CheckResult`, keeps each task independently retryable per provider, and makes it trivial to add/remove a provider without changing the check logic. 
-Trade-off: task scheduling becomes more complex in `Create` (one `ScheduleResultCheck` call per provider), and `check_result_tasks` needs a `provider_id` column to carry provider context into the task handler. 
-Until this lands, `CheckResult` resolves disagreement between providers by picking the first provider match it finds a result for; with a single provider (fotmob) this is deterministic.
+- [ ] failed check result re-scheduling, log:
+  - 23:45 500 to /v1/triggers/result_check
+  - 23:45 failed to create result-check task: rpc error: code = Unavailable desc = error reading from server: read tcp [fddf:3978:feb1:d745::c001]:23461->[2001:4860:4847:400::]:443: read: connection reset by peer
+  - 23:46 result check skipped: unexpected result status scheduling_error
+Issues:  
+ - why does re-scheduling failed
+ - failed rescheduling should retry
+ - provider_match should not be frozen with in_progress

@@ -17,36 +17,6 @@ type TaskClient struct {
 	mock.Mock
 }
 
-// GetResultCheckTask provides a mock function with given fields: ctx, matchID, attempt
-func (_m *TaskClient) GetResultCheckTask(ctx context.Context, matchID uint, attempt uint) (*models.Task, error) {
-	ret := _m.Called(ctx, matchID, attempt)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetResultCheckTask")
-	}
-
-	var r0 *models.Task
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint, uint) (*models.Task, error)); ok {
-		return rf(ctx, matchID, attempt)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint, uint) *models.Task); ok {
-		r0 = rf(ctx, matchID, attempt)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*models.Task)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, uint, uint) error); ok {
-		r1 = rf(ctx, matchID, attempt)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // GetProviderResultCheckTask provides a mock function with given fields: ctx, providerMatchID, attempt
 func (_m *TaskClient) GetProviderResultCheckTask(ctx context.Context, providerMatchID uint, attempt uint) (*models.Task, error) {
 	ret := _m.Called(ctx, providerMatchID, attempt)
@@ -100,36 +70,6 @@ func (_m *TaskClient) ScheduleProviderResultCheck(ctx context.Context, providerM
 
 	if rf, ok := ret.Get(1).(func(context.Context, uint, uint, time.Time) error); ok {
 		r1 = rf(ctx, providerMatchID, attempt, scheduleAt)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// ScheduleResultCheck provides a mock function with given fields: ctx, matchID, attempt, scheduleAt
-func (_m *TaskClient) ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*models.Task, error) {
-	ret := _m.Called(ctx, matchID, attempt, scheduleAt)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ScheduleResultCheck")
-	}
-
-	var r0 *models.Task
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, time.Time) (*models.Task, error)); ok {
-		return rf(ctx, matchID, attempt, scheduleAt)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, time.Time) *models.Task); ok {
-		r0 = rf(ctx, matchID, attempt, scheduleAt)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*models.Task)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, uint, uint, time.Time) error); ok {
-		r1 = rf(ctx, matchID, attempt, scheduleAt)
 	} else {
 		r1 = ret.Error(1)
 	}

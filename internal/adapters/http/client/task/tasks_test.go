@@ -20,8 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// TODO: when removed (todo.md Feature #1 PR5), replace with equivalent GetProviderResultCheckTask/ScheduleProviderResultCheck coverage - don't just delete.
-func TestTaskClient_GetResultCheckTask(t *testing.T) {
+func TestTaskClient_GetProviderResultCheckTask(t *testing.T) {
 	ctx := context.Background()
 
 	cfg := config.GoogleCloud{
@@ -30,11 +29,11 @@ func TestTaskClient_GetResultCheckTask(t *testing.T) {
 		CheckResultQueueName: gofakeit.Word(),
 	}
 
-	matchID := uint(gofakeit.Uint16())
+	providerMatchID := uint(gofakeit.Uint16())
 	attempt := uint(gofakeit.Uint8())
 
 	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", cfg.ProjectID, cfg.Region, cfg.CheckResultQueueName)
-	taskName := fmt.Sprintf("%s/tasks/match-%d-attempt-%d", queuePath, matchID, attempt)
+	taskName := fmt.Sprintf("%s/tasks/provider-match-%d-attempt-%d", queuePath, providerMatchID, attempt)
 
 	scheduleTime := gofakeit.Date().UTC().Truncate(time.Second)
 
@@ -72,7 +71,7 @@ func TestTaskClient_GetResultCheckTask(t *testing.T) {
 					Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to get result-check task: %w", errors.New("some error")),
+			expectedErr: fmt.Errorf("failed to get provider result-check task: %w", errors.New("some error")),
 		},
 	}
 
@@ -80,7 +79,7 @@ func TestTaskClient_GetResultCheckTask(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := task.NewClient(cfg, time.Minute, tt.cloudTasksClient(t))
 
-			result, err := client.GetResultCheckTask(ctx, matchID, attempt)
+			result, err := client.GetProviderResultCheckTask(ctx, providerMatchID, attempt)
 
 			if tt.expectedErr != nil {
 				assert.EqualError(t, err, tt.expectedErr.Error())
@@ -92,7 +91,7 @@ func TestTaskClient_GetResultCheckTask(t *testing.T) {
 	}
 }
 
-func TestTaskClient_ScheduleResultCheck(t *testing.T) {
+func TestTaskClient_ScheduleProviderResultCheck(t *testing.T) {
 	ctx := context.Background()
 
 	cfg := config.GoogleCloud{
@@ -105,15 +104,15 @@ func TestTaskClient_ScheduleResultCheck(t *testing.T) {
 
 	dispatchDeadline := time.Minute
 
-	matchID := uint(gofakeit.Uint16())
+	providerMatchID := uint(gofakeit.Uint16())
 	attempt := uint(gofakeit.Uint8())
 	scheduleAt := gofakeit.Date().UTC().Truncate(time.Second)
 
 	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", cfg.ProjectID, cfg.Region, cfg.CheckResultQueueName)
-	taskName := fmt.Sprintf("%s/tasks/match-%d-attempt-%d", queuePath, matchID, attempt)
-	targetURL := fmt.Sprintf("%s/v1/triggers/result_check", cfg.TargetURL)
+	taskName := fmt.Sprintf("%s/tasks/provider-match-%d-attempt-%d", queuePath, providerMatchID, attempt)
+	targetURL := fmt.Sprintf("%s/v1/triggers/provider_result_check", cfg.TargetURL)
 
-	payload, err := json.Marshal(map[string]uint{"match_id": matchID})
+	payload, err := json.Marshal(map[string]uint{"provider_match_id": providerMatchID})
 	require.NoError(t, err)
 
 	expectedReq := &taskspb.CreateTaskRequest{
@@ -173,7 +172,7 @@ func TestTaskClient_ScheduleResultCheck(t *testing.T) {
 					Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to create result-check task: %w", errors.New("some error")),
+			expectedErr: fmt.Errorf("failed to create provider result-check task: %w", errors.New("some error")),
 		},
 		{
 			name: "it returns a resource already exists error when the task already exists",
@@ -185,7 +184,7 @@ func TestTaskClient_ScheduleResultCheck(t *testing.T) {
 					Once()
 				return m
 			},
-			expectedErr: models.NewResourceAlreadyExistsError(fmt.Errorf("result-check task already exists: %w", errors.New("AlreadyExists"))),
+			expectedErr: models.NewResourceAlreadyExistsError(fmt.Errorf("provider result-check task already exists: %w", errors.New("AlreadyExists"))),
 		},
 	}
 
@@ -193,7 +192,7 @@ func TestTaskClient_ScheduleResultCheck(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := task.NewClient(cfg, dispatchDeadline, tt.cloudTasksClient(t))
 
-			result, err := client.ScheduleResultCheck(ctx, matchID, attempt, scheduleAt)
+			result, err := client.ScheduleProviderResultCheck(ctx, providerMatchID, attempt, scheduleAt)
 
 			if tt.expectedErr != nil {
 				assert.EqualError(t, err, tt.expectedErr.Error())

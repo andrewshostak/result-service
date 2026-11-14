@@ -82,7 +82,7 @@ type Subscription struct {
 
 type CheckResultTask struct {
 	ID              uint      `gorm:"column:id;primaryKey" db:"id"`
-	MatchID         uint      `gorm:"column:match_id;unique" db:"match_id"`
+	MatchID         uint      `gorm:"column:match_id" db:"match_id"`
 	ProviderMatchID *uint     `gorm:"column:provider_match_id" db:"provider_match_id"`
 	Name            string    `gorm:"column:name;unique" db:"name"`
 	AttemptNumber   uint      `gorm:"column:attempt_number;default:1" db:"attempt_number"`

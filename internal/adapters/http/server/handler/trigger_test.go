@@ -18,8 +18,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTriggerHandler_CheckResult(t *testing.T) {
-	validRequestBody := handler.TriggerResultCheckRequest{MatchID: uint(gofakeit.Uint16())}
+func TestTriggerHandler_CheckProviderMatchResult(t *testing.T) {
+	validRequestBody := handler.TriggerProviderResultCheckRequest{ProviderMatchID: uint(gofakeit.Uint16())}
 
 	validRequestBodyBytes, err := json.Marshal(validRequestBody)
 	require.NoError(t, err)
@@ -42,7 +42,7 @@ func TestTriggerHandler_CheckResult(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 			expectedResponseBody: handler.ErrorResponse{
 				Code:  string(models.CodeInvalidRequest),
-				Error: "Key: 'TriggerResultCheckRequest.MatchID' Error:Field validation for 'MatchID' failed on the 'required' tag",
+				Error: "Key: 'TriggerProviderResultCheckRequest.ProviderMatchID' Error:Field validation for 'ProviderMatchID' failed on the 'required' tag",
 			},
 		},
 		{
@@ -51,7 +51,7 @@ func TestTriggerHandler_CheckResult(t *testing.T) {
 			resultCheckerService: func(t *testing.T) *mocks.ResultCheckerService {
 				t.Helper()
 				m := mocks.NewResultCheckerService(t)
-				m.On("CheckResult", mock.AnythingOfType("context.backgroundCtx"), validRequestBody.MatchID).
+				m.On("CheckProviderMatchResult", mock.AnythingOfType("context.backgroundCtx"), validRequestBody.ProviderMatchID).
 					Return(models.NewResourceNotFoundError(errors.New("match not found"))).
 					Once()
 				return m
@@ -68,7 +68,7 @@ func TestTriggerHandler_CheckResult(t *testing.T) {
 			resultCheckerService: func(t *testing.T) *mocks.ResultCheckerService {
 				t.Helper()
 				m := mocks.NewResultCheckerService(t)
-				m.On("CheckResult", mock.AnythingOfType("context.backgroundCtx"), validRequestBody.MatchID).
+				m.On("CheckProviderMatchResult", mock.AnythingOfType("context.backgroundCtx"), validRequestBody.ProviderMatchID).
 					Return(errors.New("unexpected error")).
 					Once()
 				return m
@@ -85,7 +85,7 @@ func TestTriggerHandler_CheckResult(t *testing.T) {
 			resultCheckerService: func(t *testing.T) *mocks.ResultCheckerService {
 				t.Helper()
 				m := mocks.NewResultCheckerService(t)
-				m.On("CheckResult", mock.AnythingOfType("context.backgroundCtx"), validRequestBody.MatchID).
+				m.On("CheckProviderMatchResult", mock.AnythingOfType("context.backgroundCtx"), validRequestBody.ProviderMatchID).
 					Return(nil).
 					Once()
 				return m
@@ -103,7 +103,7 @@ func TestTriggerHandler_CheckResult(t *testing.T) {
 			subscriberNotifier := mocks.NewSubscriberNotifierService(t)
 
 			h := handler.NewTriggerHandler(tt.resultCheckerService(t), subscriberNotifier)
-			h.CheckResult(c)
+			h.CheckProviderMatchResult(c)
 			c.Writer.Flush()
 
 			require.Equal(t, tt.expectedStatus, w.Code)

@@ -30,10 +30,6 @@ type SearchAliasRequest struct {
 	Search string `form:"search" binding:"required"`
 }
 
-type TriggerResultCheckRequest struct {
-	MatchID uint `json:"match_id" binding:"required"`
-}
-
 type TriggerProviderResultCheckRequest struct {
 	ProviderMatchID uint `json:"provider_match_id" binding:"required"`
 }

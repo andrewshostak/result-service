@@ -26,14 +26,8 @@ func (r *CheckResultTaskRepository) Save(ctx context.Context, checkResultTask mo
 		ExecuteAt:       checkResultTask.ExecuteAt,
 	}
 
-	// Both match_id and provider_match_id are unique during the migration - see todo.md Feature #1.
-	conflictColumn := "match_id"
-	if checkResultTask.ProviderMatchID != nil {
-		conflictColumn = "provider_match_id"
-	}
-
 	result := r.db.WithContext(ctx).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: conflictColumn}},
+		Columns:   []clause.Column{{Name: "provider_match_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"name", "attempt_number", "execute_at"}),
 	}).Create(&task)
 

@@ -37,7 +37,6 @@ func registerRoutes(r *gin.Engine, cfg config.Server, handlers Handlers) {
 	apiKey.DELETE("/subscriptions", handlers.SubscriptionHandler.Delete)
 	apiKey.GET("/aliases", handlers.AliasHandler.Search)
 
-	googleAuth.POST("/triggers/result_check", handlers.TriggerHandler.CheckResult)
 	googleAuth.POST("/triggers/provider_result_check", handlers.TriggerHandler.CheckProviderMatchResult)
 	googleAuth.POST("/triggers/subscriber_notification", handlers.TriggerHandler.NotifySubscriber)
 }

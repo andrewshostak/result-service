@@ -18,7 +18,616 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 )
 
-// TODO: port the remaining cases from trigger_result_check_test.go here (todo.md Feature #1).
+func (s *FunctionalTestSuite) TestTriggerProviderResultCheck_InvalidPayload() {
+	requestPayload := handler.TriggerProviderResultCheckRequest{}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/triggers/provider_result_check"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", "Bearer anything")
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Contains(response.Error, "required")
+	s.Equal(string(models.CodeInvalidRequest), response.Code)
+}
+
+func (s *FunctionalTestSuite) TestTriggerProviderResultCheck_ProviderMatchNotFound() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	match := testutils.CreateMatch(s.T(), s.db, repository.Match{
+		StartsAt:     testutils.RandomFutureDate(s.T()),
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
+		ResultStatus: string(models.Scheduled),
+	})
+	providerMatch := testutils.CreateProviderMatch(s.T(), s.db, testutils.FakeRepositoryProviderMatch(func(pm *repository.ProviderMatch) {
+		pm.MatchID = match.ID
+		pm.StartsAt = match.StartsAt
+	}))
+
+	requestPayload := handler.TriggerProviderResultCheckRequest{ProviderMatchID: providerMatch.ID + 1}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/triggers/provider_result_check"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", "Bearer anything")
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Equal("failed to get provider match by id: provider match not found: record not found", response.Error)
+	s.Equal(string(models.CodeResourceNotFound), response.Code)
+}
+
+func (s *FunctionalTestSuite) TestTriggerProviderResultCheck_MatchNotScheduled() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	match := testutils.CreateMatch(s.T(), s.db, repository.Match{
+		StartsAt:     testutils.RandomFutureDate(s.T()),
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
+		ResultStatus: string(models.Cancelled),
+	})
+	providerMatch := testutils.CreateProviderMatch(s.T(), s.db, testutils.FakeRepositoryProviderMatch(func(pm *repository.ProviderMatch) {
+		pm.MatchID = match.ID
+		pm.StartsAt = match.StartsAt
+	}))
+
+	requestPayload := handler.TriggerProviderResultCheckRequest{ProviderMatchID: providerMatch.ID}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/triggers/provider_result_check"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", "Bearer anything")
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
+}
+
+func (s *FunctionalTestSuite) TestTriggerProviderResultCheck_ProviderAPIReturnsError() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	matchToCreate := repository.Match{
+		StartsAt:     testutils.RandomFutureDate(s.T()),
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
+		ResultStatus: string(models.Scheduled),
+	}
+	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
+	providerMatch := testutils.CreateProviderMatch(s.T(), s.db, testutils.FakeRepositoryProviderMatch(func(pm *repository.ProviderMatch) {
+		pm.MatchID = match.ID
+		pm.StartsAt = match.StartsAt
+		pm.Status = string(models.StatusMatchNotStarted)
+	}))
+
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
+		testutils.WithStatusCode(http.StatusInternalServerError),
+		testutils.WithQueryParams(queryParams),
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
+		testutils.WithResponseBody(`internal server error`),
+	)
+
+	requestPayload := handler.TriggerProviderResultCheckRequest{ProviderMatchID: providerMatch.ID}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/triggers/provider_result_check"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", "Bearer anything")
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Require().Equal(http.StatusInternalServerError, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Equal("failed to get matches from provider api: failed to get matches from provider fotmob: failed to fetch matches by date: failed to get matches by date, status code 500", response.Error)
+	s.Equal(string(models.CodeInternalServerError), response.Code)
+
+	matches := testutils.ListMatches(s.T(), s.db)
+	s.Equal([]repository.Match{
+		{
+			ID:           match.ID,
+			HomeTeamID:   match.HomeTeamID,
+			AwayTeamID:   match.AwayTeamID,
+			StartsAt:     match.StartsAt,
+			ResultStatus: string(models.APIError),
+			CreatedAt:    match.CreatedAt,
+			UpdatedAt:    matches[0].UpdatedAt,
+		},
+	}, matches)
+}
+
+func (s *FunctionalTestSuite) TestTriggerProviderResultCheck_ProviderAPIReturnsInvalidResponseBody() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	matchToCreate := repository.Match{
+		StartsAt:     testutils.RandomFutureDate(s.T()),
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
+		ResultStatus: string(models.Scheduled),
+	}
+	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
+	providerMatch := testutils.CreateProviderMatch(s.T(), s.db, testutils.FakeRepositoryProviderMatch(func(pm *repository.ProviderMatch) {
+		pm.MatchID = match.ID
+		pm.StartsAt = match.StartsAt
+		pm.Status = string(models.StatusMatchNotStarted)
+	}))
+
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
+		testutils.WithQueryParams(queryParams),
+		testutils.WithResponseBody(`!@#!@#`),
+	)
+
+	requestPayload := handler.TriggerProviderResultCheckRequest{ProviderMatchID: providerMatch.ID}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/triggers/provider_result_check"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", "Bearer anything")
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Require().Equal(http.StatusInternalServerError, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Equal("failed to get matches from provider api: failed to get matches from provider fotmob: failed to fetch matches by date: failed to decode get matches by date response body: invalid character '!' looking for beginning of value", response.Error)
+	s.Equal(string(models.CodeInternalServerError), response.Code)
+
+	matches := testutils.ListMatches(s.T(), s.db)
+	s.Equal([]repository.Match{
+		{
+			ID:           match.ID,
+			HomeTeamID:   match.HomeTeamID,
+			AwayTeamID:   match.AwayTeamID,
+			StartsAt:     match.StartsAt,
+			ResultStatus: string(models.APIError),
+			CreatedAt:    match.CreatedAt,
+			UpdatedAt:    matches[0].UpdatedAt,
+		},
+	}, matches)
+}
+
+func (s *FunctionalTestSuite) TestTriggerProviderResultCheck_MatchNotFoundInProviderAPI() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	matchToCreate := repository.Match{
+		StartsAt:     testutils.RandomFutureDate(s.T()),
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
+		ResultStatus: string(models.Scheduled),
+	}
+	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
+	providerMatch := testutils.CreateProviderMatch(s.T(), s.db, testutils.FakeRepositoryProviderMatch(func(pm *repository.ProviderMatch) {
+		pm.MatchID = match.ID
+		pm.StartsAt = match.StartsAt
+		pm.Status = string(models.StatusMatchNotStarted)
+	}))
+
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
+		testutils.WithQueryParams(queryParams),
+		testutils.WithResponseBody(`{"leagues": [{"matches": []}]}`),
+	)
+
+	requestPayload := handler.TriggerProviderResultCheckRequest{ProviderMatchID: providerMatch.ID}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/triggers/provider_result_check"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", "Bearer anything")
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
+
+	matches := testutils.ListMatches(s.T(), s.db)
+	s.Equal([]repository.Match{
+		{
+			ID:           match.ID,
+			HomeTeamID:   match.HomeTeamID,
+			AwayTeamID:   match.AwayTeamID,
+			StartsAt:     match.StartsAt,
+			ResultStatus: string(models.Cancelled),
+			CreatedAt:    match.CreatedAt,
+			UpdatedAt:    matches[0].UpdatedAt,
+		},
+	}, matches)
+
+	providerMatches := testutils.ListProviderMatches(s.T(), s.db)
+	s.Equal([]repository.ProviderMatch{
+		{
+			ID:              providerMatch.ID,
+			MatchID:         match.ID,
+			Provider:        "fotmob",
+			ProviderMatchID: providerMatch.ProviderMatchID,
+			StartsAt:        providerMatch.StartsAt,
+			HomeScore:       providerMatch.HomeScore,
+			AwayScore:       providerMatch.AwayScore,
+			Status:          string(models.StatusMatchUnknown),
+			ProviderStatus:  providerMatch.ProviderStatus,
+			CreatedAt:       providerMatch.CreatedAt,
+			UpdatedAt:       providerMatches[0].UpdatedAt,
+		},
+	}, providerMatches)
+}
+
+func (s *FunctionalTestSuite) TestTriggerProviderResultCheck_MatchFoundWithUnexpectedStatus() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	matchToCreate := repository.Match{
+		StartsAt:     testutils.RandomFutureDate(s.T()),
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
+		ResultStatus: string(models.Scheduled),
+	}
+	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
+	providerMatchID := uint(gofakeit.Uint32())
+	providerMatch := testutils.CreateProviderMatch(s.T(), s.db, testutils.FakeRepositoryProviderMatch(func(pm *repository.ProviderMatch) {
+		pm.MatchID = match.ID
+		pm.ProviderMatchID = fmt.Sprintf("%d", providerMatchID)
+		pm.StartsAt = match.StartsAt
+		pm.Status = string(models.StatusMatchNotStarted)
+	}))
+
+	matchesResponse := testutils.FakeMatchesResponse()
+	matchesResponse.Leagues[0].Matches[0].ID = providerMatchID
+	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ProviderTeamID)
+	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ProviderTeamID)
+	matchesResponse.Leagues[0].Matches[0].StatusID = 11111
+	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = match.StartsAt.UTC().Format(time.RFC3339)
+	jsonResponse, err := json.Marshal(matchesResponse)
+	s.Require().NoError(err)
+
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
+		testutils.WithQueryParams(queryParams),
+		testutils.WithResponseBody(string(jsonResponse)),
+	)
+
+	requestPayload := handler.TriggerProviderResultCheckRequest{ProviderMatchID: providerMatch.ID}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/triggers/provider_result_check"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", "Bearer anything")
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
+
+	matches := testutils.ListMatches(s.T(), s.db)
+	s.Equal([]repository.Match{
+		{
+			ID:           match.ID,
+			HomeTeamID:   match.HomeTeamID,
+			AwayTeamID:   match.AwayTeamID,
+			StartsAt:     match.StartsAt,
+			ResultStatus: string(models.Cancelled),
+			CreatedAt:    match.CreatedAt,
+			UpdatedAt:    matches[0].UpdatedAt,
+		},
+	}, matches)
+
+	providerMatches := testutils.ListProviderMatches(s.T(), s.db)
+	providerStatus := "11111"
+	s.Equal([]repository.ProviderMatch{
+		{
+			ID:              providerMatch.ID,
+			MatchID:         match.ID,
+			Provider:        "fotmob",
+			ProviderMatchID: fmt.Sprintf("%d", providerMatchID),
+			StartsAt:        match.StartsAt.Truncate(time.Second),
+			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,
+			AwayScore:       matchesResponse.Leagues[0].Matches[0].Away.Score,
+			Status:          string(models.StatusMatchUnknown),
+			ProviderStatus:  &providerStatus,
+			CreatedAt:       providerMatch.CreatedAt,
+			UpdatedAt:       providerMatches[0].UpdatedAt,
+		},
+	}, providerMatches)
+}
+
+func (s *FunctionalTestSuite) TestTriggerProviderResultCheck_MatchNotFinished() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	matchToCreate := repository.Match{
+		StartsAt:     testutils.RandomFutureDate(s.T()),
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
+		ResultStatus: string(models.Scheduled),
+	}
+	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
+
+	providerMatchID := uint(gofakeit.Uint32())
+	providerMatch := testutils.CreateProviderMatch(s.T(), s.db, testutils.FakeRepositoryProviderMatch(func(pm *repository.ProviderMatch) {
+		pm.MatchID = match.ID
+		pm.ProviderMatchID = fmt.Sprintf("%d", providerMatchID)
+		pm.StartsAt = match.StartsAt
+		pm.Status = string(models.StatusMatchNotStarted)
+	}))
+
+	_ = testutils.CreateSubscription(s.T(), s.db, testutils.FakeRepositorySubscription(func(sub *repository.Subscription) {
+		sub.MatchID = match.ID
+		sub.Url = gofakeit.URL()
+		sub.Key = gofakeit.UUID()
+	}))
+
+	checkResultTask := testutils.CreateCheckResultTask(s.T(), s.db, repository.CheckResultTask{
+		MatchID:         match.ID,
+		ProviderMatchID: &providerMatch.ID,
+		ExecuteAt:       match.StartsAt.Add(115 * time.Minute),
+	})
+
+	matchesResponse := testutils.FakeMatchesResponse()
+	matchesResponse.Leagues[0].Matches[0].ID = providerMatchID
+	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ProviderTeamID)
+	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ProviderTeamID)
+	matchesResponse.Leagues[0].Matches[0].StatusID = 3 // live 2nd half
+	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = match.StartsAt.UTC().Format(time.RFC3339)
+	jsonResponse, err := json.Marshal(matchesResponse)
+	s.Require().NoError(err)
+
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
+		testutils.WithQueryParams(queryParams),
+		testutils.WithResponseBody(string(jsonResponse)),
+	)
+
+	requestPayload := handler.TriggerProviderResultCheckRequest{ProviderMatchID: providerMatch.ID}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/triggers/provider_result_check"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", "Bearer anything")
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
+
+	matches := testutils.ListMatches(s.T(), s.db)
+	s.Equal([]repository.Match{
+		{
+			ID:           match.ID,
+			HomeTeamID:   match.HomeTeamID,
+			AwayTeamID:   match.AwayTeamID,
+			StartsAt:     match.StartsAt,
+			ResultStatus: string(models.Scheduled),
+			CreatedAt:    match.CreatedAt,
+			UpdatedAt:    match.UpdatedAt,
+		},
+	}, matches)
+
+	providerMatches := testutils.ListProviderMatches(s.T(), s.db)
+	providerStatus := "3"
+
+	checkResultTasks := testutils.ListCheckResultTasks(s.T(), s.db)
+	s.Equal([]repository.CheckResultTask{
+		{
+			ID:              checkResultTask.ID,
+			MatchID:         match.ID,
+			ProviderMatchID: &providerMatch.ID,
+			Name:            fmt.Sprintf("projects/test-project/locations/europe-west3/queues/check-result/tasks/provider-match-%d-attempt-2", providerMatch.ID),
+			AttemptNumber:   checkResultTask.AttemptNumber + 1,
+			ExecuteAt:       providerMatches[0].StartsAt.Add(115 * time.Minute).Add(5 * time.Minute),
+			CreatedAt:       checkResultTask.CreatedAt,
+			UpdatedAt:       checkResultTasks[0].UpdatedAt,
+		},
+	}, checkResultTasks)
+
+	s.Equal([]repository.ProviderMatch{
+		{
+			ID:              providerMatch.ID,
+			MatchID:         match.ID,
+			Provider:        "fotmob",
+			ProviderMatchID: fmt.Sprintf("%d", providerMatchID),
+			StartsAt:        match.StartsAt.Truncate(time.Second),
+			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,
+			AwayScore:       matchesResponse.Leagues[0].Matches[0].Away.Score,
+			Status:          string(models.StatusMatchInProgress),
+			ProviderStatus:  &providerStatus,
+			CreatedAt:       providerMatch.CreatedAt,
+			UpdatedAt:       providerMatches[0].UpdatedAt,
+		},
+	}, providerMatches)
+}
+
+func (s *FunctionalTestSuite) TestTriggerProviderResultCheck_MatchNotFinishedAndCheckResultTaskNotFound() {
+	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
+
+	matchToCreate := repository.Match{
+		StartsAt:     testutils.RandomFutureDate(s.T()),
+		HomeTeamID:   uint(teamSeeds[0].TeamID),
+		AwayTeamID:   uint(teamSeeds[1].TeamID),
+		ResultStatus: string(models.Scheduled),
+	}
+	match := testutils.CreateMatch(s.T(), s.db, matchToCreate)
+
+	providerMatchID := uint(gofakeit.Uint32())
+	providerMatch := testutils.CreateProviderMatch(s.T(), s.db, testutils.FakeRepositoryProviderMatch(func(pm *repository.ProviderMatch) {
+		pm.MatchID = match.ID
+		pm.ProviderMatchID = fmt.Sprintf("%d", providerMatchID)
+		pm.StartsAt = match.StartsAt
+		pm.Status = string(models.StatusMatchNotStarted)
+	}))
+
+	_ = testutils.CreateSubscription(s.T(), s.db, testutils.FakeRepositorySubscription(func(sub *repository.Subscription) {
+		sub.MatchID = match.ID
+		sub.Url = gofakeit.URL()
+		sub.Key = gofakeit.UUID()
+	}))
+
+	matchesResponse := testutils.FakeMatchesResponse()
+	matchesResponse.Leagues[0].Matches[0].ID = providerMatchID
+	matchesResponse.Leagues[0].Matches[0].Home.ID = int(teamSeeds[0].ProviderTeamID)
+	matchesResponse.Leagues[0].Matches[0].Away.ID = int(teamSeeds[1].ProviderTeamID)
+	matchesResponse.Leagues[0].Matches[0].StatusID = 3 // live 2nd half
+	matchesResponse.Leagues[0].Matches[0].Status.UTCTime = match.StartsAt.UTC().Format(time.RFC3339)
+	jsonResponse, err := json.Marshal(matchesResponse)
+	s.Require().NoError(err)
+
+	queryParams := map[string][]string{"date": {match.StartsAt.Format(fotmob.DateFormat)}, "timezone": {"UTC"}}
+	testutils.MockHTTPRequest(s.T(), s.smockerAdminURL, "/api/data/matches",
+		testutils.WithRequestHeaders(http.Header{"User-Agent": {"golang-app"}}),
+		testutils.WithQueryParams(queryParams),
+		testutils.WithResponseBody(string(jsonResponse)),
+	)
+
+	requestPayload := handler.TriggerProviderResultCheckRequest{ProviderMatchID: providerMatch.ID}
+
+	requestBody, err := json.Marshal(&requestPayload)
+	s.Require().NoError(err)
+
+	url := s.apiBaseURL + "/v1/triggers/provider_result_check"
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	s.Require().NoError(err)
+	req.Header.Add("Authorization", "Bearer anything")
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err)
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	s.Require().Equal(http.StatusInternalServerError, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	var response handler.ErrorResponse
+	err = json.Unmarshal(body, &response)
+	s.Require().NoError(err)
+	s.Equal("match relation result check task doesn't exist", response.Error)
+	s.Equal(string(models.CodeInternalServerError), response.Code)
+
+	matches := testutils.ListMatches(s.T(), s.db)
+	s.Equal([]repository.Match{
+		{
+			ID:           match.ID,
+			HomeTeamID:   match.HomeTeamID,
+			AwayTeamID:   match.AwayTeamID,
+			StartsAt:     match.StartsAt,
+			ResultStatus: string(models.Scheduled),
+			CreatedAt:    match.CreatedAt,
+			UpdatedAt:    match.UpdatedAt,
+		},
+	}, matches)
+
+	providerMatches := testutils.ListProviderMatches(s.T(), s.db)
+	providerStatus := "3"
+	s.Equal([]repository.ProviderMatch{
+		{
+			ID:              providerMatch.ID,
+			MatchID:         match.ID,
+			Provider:        "fotmob",
+			ProviderMatchID: fmt.Sprintf("%d", providerMatchID),
+			StartsAt:        match.StartsAt.Truncate(time.Second),
+			HomeScore:       matchesResponse.Leagues[0].Matches[0].Home.Score,
+			AwayScore:       matchesResponse.Leagues[0].Matches[0].Away.Score,
+			Status:          string(models.StatusMatchInProgress),
+			ProviderStatus:  &providerStatus,
+			CreatedAt:       providerMatch.CreatedAt,
+			UpdatedAt:       providerMatches[0].UpdatedAt,
+		},
+	}, providerMatches)
+}
+
 func (s *FunctionalTestSuite) TestTriggerProviderResultCheck_MatchFinished() {
 	teamSeeds := testutils.SetupTeamsWithRelations(s.T(), s.db)
 
