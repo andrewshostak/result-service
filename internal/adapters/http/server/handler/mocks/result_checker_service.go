@@ -13,24 +13,6 @@ type ResultCheckerService struct {
 	mock.Mock
 }
 
-// CheckResult provides a mock function with given fields: ctx, matchID
-func (_m *ResultCheckerService) CheckResult(ctx context.Context, matchID uint) error {
-	ret := _m.Called(ctx, matchID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CheckResult")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint) error); ok {
-		r0 = rf(ctx, matchID)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // CheckProviderMatchResult provides a mock function with given fields: ctx, providerMatchID
 func (_m *ResultCheckerService) CheckProviderMatchResult(ctx context.Context, providerMatchID uint) error {
 	ret := _m.Called(ctx, providerMatchID)

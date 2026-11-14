@@ -24,7 +24,6 @@ type ProviderTeamRepository interface {
 
 type ProviderMatchRepository interface {
 	Save(ctx context.Context, providerMatch models.ProviderMatch) (*models.ProviderMatch, error)
-	ListByMatchID(ctx context.Context, matchID uint) ([]models.ProviderMatch, error)
 	FindByID(ctx context.Context, id uint) (*models.ProviderMatch, error)
 }
 
@@ -43,8 +42,6 @@ type ResultProvider interface {
 }
 
 type TaskClient interface {
-	GetResultCheckTask(ctx context.Context, matchID uint, attempt uint) (*models.Task, error)
-	ScheduleResultCheck(ctx context.Context, matchID uint, attempt uint, scheduleAt time.Time) (*models.Task, error)
 	GetProviderResultCheckTask(ctx context.Context, providerMatchID uint, attempt uint) (*models.Task, error)
 	ScheduleProviderResultCheck(ctx context.Context, providerMatchID uint, attempt uint, scheduleAt time.Time) (*models.Task, error)
 	ScheduleSubscriberNotification(ctx context.Context, subscriptionID uint) error

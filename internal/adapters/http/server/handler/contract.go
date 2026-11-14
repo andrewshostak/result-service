@@ -20,7 +20,6 @@ type SubscriptionService interface {
 }
 
 type ResultCheckerService interface {
-	CheckResult(ctx context.Context, matchID uint) error
 	CheckProviderMatchResult(ctx context.Context, providerMatchID uint) error
 }
 
