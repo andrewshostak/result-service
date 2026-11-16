@@ -1,0 +1,5 @@
+BEGIN;
+
+ALTER TABLE check_result_tasks ALTER COLUMN match_id DROP NOT NULL;
+
+COMMIT;
