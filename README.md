@@ -87,7 +87,7 @@ erDiagram
     
     CheckResultTask {
         Int id PK
-        Int match_id FK
+        Int provider_match_id FK
         String name UK
         Int attempt_number
         Date execute_at
@@ -100,7 +100,7 @@ erDiagram
     Match ||--o{ ProviderMatch : has
     Match ||--o{ Subscription : has
     Team ||--o{ ProviderTeam : has
-    Match ||--|| CheckResultTask : has
+    ProviderMatch ||--|| CheckResultTask : has
 ```
 
 Table names are pluralized. The tables `teams`, `aliases`, `provider-teams` are pre-filled with the data of `fotmob-api`.
