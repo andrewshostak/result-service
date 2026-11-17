@@ -18,7 +18,9 @@
 - [ ] check the context cancellation proper usage (defer cancel must be present)
 - [ ] handle half-time status during the result check specially - next check more than +5 minutes
 - [ ] add recover middleware
-- [ ] configure connection pool 
+- [ ] add error middleware (+remove logs from app layers)
+- [ ] configure connection pool
+- [ ] add healthcheck to docker compose (DB)
 
 ## Known issues
 - [ ] matches postponed to tomorrow disappear from the search and become cancelled

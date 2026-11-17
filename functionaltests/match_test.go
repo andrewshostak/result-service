@@ -94,7 +94,6 @@ func (s *FunctionalTestSuite) TestCreateMatch_Success() {
 	s.Equal([]repository.CheckResultTask{
 		{
 			ID:              1,
-			MatchID:         response.MatchID,
 			ProviderMatchID: &providerMatchID,
 			Name:            fmt.Sprintf("projects/test-project/locations/europe-west3/queues/%s/tasks/provider-match-%d-attempt-%d", "check-result", providerMatchID, 1),
 			AttemptNumber:   1,

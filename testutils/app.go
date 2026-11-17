@@ -112,7 +112,6 @@ func FakeTask(options ...Option[models.Task]) models.Task {
 func FakeCheckResultTask(options ...Option[models.CheckResultTask]) models.CheckResultTask {
 	task := models.CheckResultTask{
 		ID:            uint(gofakeit.Uint8()),
-		MatchID:       uint(gofakeit.Uint8()),
 		Name:          gofakeit.Name(),
 		AttemptNumber: uint(gofakeit.IntRange(1, 9)),
 		ExecuteAt:     gofakeit.Date(),

@@ -45,6 +45,36 @@ func (_m *CheckResultTaskRepository) Save(ctx context.Context, checkResultTask m
 	return r0, r1
 }
 
+// FindByProviderMatchID provides a mock function with given fields: ctx, providerMatchID
+func (_m *CheckResultTaskRepository) FindByProviderMatchID(ctx context.Context, providerMatchID uint) (*models.CheckResultTask, error) {
+	ret := _m.Called(ctx, providerMatchID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindByProviderMatchID")
+	}
+
+	var r0 *models.CheckResultTask
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint) (*models.CheckResultTask, error)); ok {
+		return rf(ctx, providerMatchID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint) *models.CheckResultTask); ok {
+		r0 = rf(ctx, providerMatchID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.CheckResultTask)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint) error); ok {
+		r1 = rf(ctx, providerMatchID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // NewCheckResultTaskRepository creates a new instance of CheckResultTaskRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewCheckResultTaskRepository(t interface {

@@ -61,9 +61,8 @@ type Match struct {
 	CreatedAt    time.Time `gorm:"column:created_at" db:"created_at"`
 	UpdatedAt    time.Time `gorm:"column:updated_at" db:"updated_at"`
 
-	CheckResultTasks []CheckResultTask `gorm:"foreignKey:MatchID"`
-	HomeTeam         *Team             `gorm:"foreignKey:HomeTeamID"`
-	AwayTeam         *Team             `gorm:"foreignKey:AwayTeamID"`
+	HomeTeam *Team `gorm:"foreignKey:HomeTeamID"`
+	AwayTeam *Team `gorm:"foreignKey:AwayTeamID"`
 }
 
 type Subscription struct {
@@ -82,7 +81,6 @@ type Subscription struct {
 
 type CheckResultTask struct {
 	ID              uint      `gorm:"column:id;primaryKey" db:"id"`
-	MatchID         uint      `gorm:"column:match_id" db:"match_id"`
 	ProviderMatchID *uint     `gorm:"column:provider_match_id" db:"provider_match_id"`
 	Name            string    `gorm:"column:name;unique" db:"name"`
 	AttemptNumber   uint      `gorm:"column:attempt_number;default:1" db:"attempt_number"`
@@ -90,7 +88,8 @@ type CheckResultTask struct {
 	CreatedAt       time.Time `gorm:"column:created_at" db:"created_at"`
 	UpdatedAt       time.Time `gorm:"column:updated_at" db:"updated_at"`
 
-	Match *Match `gorm:"foreignKey:MatchID"`
+	// Scan-only until the column is dropped in the next migration - gorm:"-" keeps GORM from writing it.
+	MatchID *uint `gorm:"-" db:"match_id"`
 }
 
 func toDomainProviderTeam(pt ProviderTeam) models.ProviderTeam {
@@ -143,24 +142,14 @@ func toDomainProviderMatch(p ProviderMatch) models.ProviderMatch {
 func toDomainCheckResultTask(t CheckResultTask) models.CheckResultTask {
 	return models.CheckResultTask{
 		ID:              t.ID,
-		MatchID:         t.MatchID,
 		ProviderMatchID: t.ProviderMatchID,
 		Name:            t.Name,
 		AttemptNumber:   t.AttemptNumber,
 	}
 }
 
-func toDomainCheckResultTasks(tasks []CheckResultTask) []models.CheckResultTask {
-	mapped := make([]models.CheckResultTask, 0, len(tasks))
-	for _, task := range tasks {
-		mapped = append(mapped, toDomainCheckResultTask(task))
-	}
-
-	return mapped
-}
-
 func toDomainMatch(m Match) models.Match {
-	match := models.Match{
+	return models.Match{
 		ID:           m.ID,
 		StartsAt:     m.StartsAt,
 		HomeTeamID:   m.HomeTeamID,
@@ -169,12 +158,6 @@ func toDomainMatch(m Match) models.Match {
 		HomeScore:    m.HomeScore,
 		AwayScore:    m.AwayScore,
 	}
-
-	if m.CheckResultTasks != nil {
-		match.CheckResultTasks = toDomainCheckResultTasks(m.CheckResultTasks)
-	}
-
-	return match
 }
 
 func toDomainSubscription(s Subscription) models.Subscription {

@@ -76,7 +76,7 @@ func startServer(_ *cobra.Command, _ []string) {
 		taskClient,
 		logger,
 	)
-	subscriptionService := subscription.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, taskClient, logger)
+	subscriptionService := subscription.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, checkResultTaskRepository, taskClient, logger)
 	aliasService := alias.NewAliasService(aliasRepository, logger)
 	resultCheckerService := match.NewResultCheckerService(
 		cfg.Result,

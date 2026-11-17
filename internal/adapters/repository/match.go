@@ -34,8 +34,7 @@ func (r *MatchRepository) Delete(ctx context.Context, id uint) error {
 func (r *MatchRepository) One(ctx context.Context, search models.Match) (*models.Match, error) {
 	var match Match
 
-	query := r.db.WithContext(ctx).
-		Preload("CheckResultTasks")
+	query := r.db.WithContext(ctx)
 
 	if search.ID != 0 {
 		query = query.Where(&Match{ID: search.ID})
