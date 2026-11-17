@@ -440,7 +440,6 @@ func (s *FunctionalTestSuite) TestTriggerProviderResultCheck_MatchNotFinished() 
 	}))
 
 	checkResultTask := testutils.CreateCheckResultTask(s.T(), s.db, repository.CheckResultTask{
-		MatchID:         match.ID,
 		ProviderMatchID: &providerMatch.ID,
 		ExecuteAt:       match.StartsAt.Add(115 * time.Minute),
 	})
@@ -500,7 +499,6 @@ func (s *FunctionalTestSuite) TestTriggerProviderResultCheck_MatchNotFinished() 
 	s.Equal([]repository.CheckResultTask{
 		{
 			ID:              checkResultTask.ID,
-			MatchID:         match.ID,
 			ProviderMatchID: &providerMatch.ID,
 			Name:            fmt.Sprintf("projects/test-project/locations/europe-west3/queues/check-result/tasks/provider-match-%d-attempt-2", providerMatch.ID),
 			AttemptNumber:   checkResultTask.AttemptNumber + 1,
@@ -654,7 +652,6 @@ func (s *FunctionalTestSuite) TestTriggerProviderResultCheck_MatchFinished() {
 	}))
 
 	checkResultTask := testutils.CreateCheckResultTask(s.T(), s.db, repository.CheckResultTask{
-		MatchID:         match.ID,
 		ProviderMatchID: &providerMatch.ID,
 		ExecuteAt:       match.StartsAt.Add(115 * time.Minute),
 	})
@@ -713,7 +710,6 @@ func (s *FunctionalTestSuite) TestTriggerProviderResultCheck_MatchFinished() {
 	s.Equal([]repository.CheckResultTask{
 		{
 			ID:              checkResultTask.ID,
-			MatchID:         checkResultTask.MatchID,
 			ProviderMatchID: checkResultTask.ProviderMatchID,
 			Name:            checkResultTask.Name,
 			AttemptNumber:   checkResultTask.AttemptNumber,

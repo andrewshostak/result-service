@@ -152,9 +152,10 @@ func TestSubscriptionService_Create(t *testing.T) {
 
 			logger := loggerinternal.SetupLogger()
 			aliasRepository := mocks.NewAliasRepository(t)
+			checkResultTaskRepository := mocks.NewCheckResultTaskRepository(t)
 			taskClient := mocks.NewTaskClient(t)
 
-			ss := subscription.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, taskClient, logger)
+			ss := subscription.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, checkResultTaskRepository, taskClient, logger)
 
 			err := ss.Create(ctx, tt.input)
 			if tt.expectedErr != nil {
@@ -196,18 +197,17 @@ func TestSubscriptionService_Delete(t *testing.T) {
 		s.Url = fmt.Sprintf("%s/asd/zxc", input.BaseURL)
 		s.Status = models.PendingSub
 	})
-	checkResultTask := testutils.FakeCheckResultTask(func(t *models.CheckResultTask) {
-		t.MatchID = match.ID
-	})
+	checkResultTask := testutils.FakeCheckResultTask()
 
 	tests := []struct {
-		name                   string
-		input                  models.DeleteSubscriptionRequest
-		matchRepository        func(t *testing.T) *mocks.MatchRepository
-		subscriptionRepository func(t *testing.T) *mocks.SubscriptionRepository
-		aliasRepository        func(t *testing.T) *mocks.AliasRepository
-		taskClient             func(t *testing.T) *mocks.TaskClient
-		expectedErr            error
+		name                      string
+		input                     models.DeleteSubscriptionRequest
+		matchRepository           func(t *testing.T) *mocks.MatchRepository
+		subscriptionRepository    func(t *testing.T) *mocks.SubscriptionRepository
+		aliasRepository           func(t *testing.T) *mocks.AliasRepository
+		checkResultTaskRepository func(t *testing.T) *mocks.CheckResultTaskRepository
+		taskClient                func(t *testing.T) *mocks.TaskClient
+		expectedErr               error
 	}{
 		{
 			name:  "it returns an error when home alias finding fails",
@@ -424,6 +424,12 @@ func TestSubscriptionService_Delete(t *testing.T) {
 				m.On("List", ctx, match.ID).Return([]models.Subscription{}, nil).Once()
 				return m
 			},
+			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
+				t.Helper()
+				m := mocks.NewCheckResultTaskRepository(t)
+				m.On("ListByMatchID", ctx, match.ID).Return([]models.CheckResultTask{}, nil).Once()
+				return m
+			},
 		},
 		{
 			name:  "it returns nil when subscription deleted and check result task deletion fails",
@@ -438,9 +444,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
-				matchWithTask := match
-				matchWithTask.CheckResultTasks = []models.CheckResultTask{checkResultTask}
-				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&matchWithTask, nil).Once()
+				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&match, nil).Once()
 				m.On("Delete", ctx, match.ID).Return(nil).Once()
 				return m
 			},
@@ -450,6 +454,12 @@ func TestSubscriptionService_Delete(t *testing.T) {
 				m.On("One", ctx, match.ID, input.SecretKey, input.BaseURL).Return(&subscription, nil).Once()
 				m.On("Delete", ctx, subscription.ID).Return(nil).Once()
 				m.On("List", ctx, match.ID).Return([]models.Subscription{}, nil).Once()
+				return m
+			},
+			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
+				t.Helper()
+				m := mocks.NewCheckResultTaskRepository(t)
+				m.On("ListByMatchID", ctx, match.ID).Return([]models.CheckResultTask{checkResultTask}, nil).Once()
 				return m
 			},
 			taskClient: func(t *testing.T) *mocks.TaskClient {
@@ -472,9 +482,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
-				matchWithTask := match
-				matchWithTask.CheckResultTasks = []models.CheckResultTask{checkResultTask}
-				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&matchWithTask, nil).Once()
+				m.On("One", ctx, models.Match{StartsAt: input.StartsAt.UTC(), HomeTeamID: aliasHome.TeamID, AwayTeamID: aliasAway.TeamID}).Return(&match, nil).Once()
 				m.On("Delete", ctx, match.ID).Return(nil).Once()
 				return m
 			},
@@ -484,6 +492,12 @@ func TestSubscriptionService_Delete(t *testing.T) {
 				m.On("One", ctx, match.ID, input.SecretKey, input.BaseURL).Return(&subscription, nil).Once()
 				m.On("Delete", ctx, subscription.ID).Return(nil).Once()
 				m.On("List", ctx, match.ID).Return([]models.Subscription{}, nil).Once()
+				return m
+			},
+			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
+				t.Helper()
+				m := mocks.NewCheckResultTaskRepository(t)
+				m.On("ListByMatchID", ctx, match.ID).Return([]models.CheckResultTask{checkResultTask}, nil).Once()
 				return m
 			},
 			taskClient: func(t *testing.T) *mocks.TaskClient {
@@ -512,6 +526,11 @@ func TestSubscriptionService_Delete(t *testing.T) {
 				aliasRepository = tt.aliasRepository(t)
 			}
 
+			var checkResultTaskRepository *mocks.CheckResultTaskRepository
+			if tt.checkResultTaskRepository != nil {
+				checkResultTaskRepository = tt.checkResultTaskRepository(t)
+			}
+
 			var taskClient *mocks.TaskClient
 			if tt.taskClient != nil {
 				taskClient = tt.taskClient(t)
@@ -519,7 +538,7 @@ func TestSubscriptionService_Delete(t *testing.T) {
 
 			logger := loggerinternal.SetupLogger()
 
-			ss := sub.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, taskClient, logger)
+			ss := sub.NewSubscriptionService(subscriptionRepository, matchRepository, aliasRepository, checkResultTaskRepository, taskClient, logger)
 
 			err := ss.Delete(ctx, tt.input)
 			if tt.expectedErr != nil {

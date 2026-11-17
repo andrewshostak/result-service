@@ -29,6 +29,7 @@ type ProviderMatchRepository interface {
 
 type CheckResultTaskRepository interface {
 	Save(ctx context.Context, checkResultTask models.CheckResultTask) (*models.CheckResultTask, error)
+	FindByProviderMatchID(ctx context.Context, providerMatchID uint) (*models.CheckResultTask, error)
 }
 
 type SubscriptionRepository interface {

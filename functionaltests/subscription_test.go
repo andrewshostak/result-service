@@ -238,7 +238,12 @@ func (s *FunctionalTestSuite) TestDeleteSubscription_Success() {
 		Status:  string(models.PendingSub),
 	})
 
-	_ = testutils.CreateCheckResultTask(s.T(), s.db, repository.CheckResultTask{MatchID: createdMatch.ID, Name: "hello/task/1", ExecuteAt: gofakeit.Date()})
+	providerMatch := testutils.CreateProviderMatch(s.T(), s.db, testutils.FakeRepositoryProviderMatch(func(pm *repository.ProviderMatch) {
+		pm.MatchID = createdMatch.ID
+		pm.StartsAt = createdMatch.StartsAt
+	}))
+
+	_ = testutils.CreateCheckResultTask(s.T(), s.db, repository.CheckResultTask{ProviderMatchID: &providerMatch.ID, Name: "hello/task/1", ExecuteAt: gofakeit.Date()})
 
 	url := s.apiBaseURL + "/v1/subscriptions"
 	req, err := http.NewRequest(http.MethodDelete, url, nil)

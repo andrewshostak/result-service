@@ -186,9 +186,13 @@ func (s *ResultCheckerService) getMatchesFromProvider(ctx context.Context, provi
 func (s *ResultCheckerService) handleInPlayProviderMatch(ctx context.Context, match models.Match, providerMatch models.ProviderMatch, providerStartsAt time.Time) error {
 	s.logger.Debug().Uint("match_id", match.ID).Uint("provider_match_id", providerMatch.ID).Msg("match is in play, re-scheduling result check task")
 
-	checkResultTask := providerCheckResultTask(match.CheckResultTasks, providerMatch.ID)
-	if checkResultTask == nil {
-		return errors.New("match relation result check task doesn't exist")
+	checkResultTask, err := s.checkResultTaskRepository.FindByProviderMatchID(ctx, providerMatch.ID)
+	if err != nil {
+		if errors.As(err, &models.ResourceNotFoundError{}) {
+			return errors.New("match relation result check task doesn't exist")
+		}
+
+		return fmt.Errorf("failed to get check result task: %w", err)
 	}
 
 	scheduleAt := providerStartsAt.Add(s.config.FirstAttemptDelay)
@@ -221,7 +225,6 @@ func (s *ResultCheckerService) handleInPlayProviderMatch(ctx context.Context, ma
 	}
 
 	if _, err := s.checkResultTaskRepository.Save(ctx, models.CheckResultTask{
-		MatchID:         match.ID,
 		ProviderMatchID: &providerMatchID,
 		Name:            task.Name,
 		AttemptNumber:   attemptNumber,
@@ -242,16 +245,6 @@ func (s *ResultCheckerService) handleNotFoundProviderMatch(ctx context.Context, 
 
 	if _, err := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.Cancelled}); err != nil {
 		return fmt.Errorf("failed to update match: %w", err)
-	}
-
-	return nil
-}
-
-func providerCheckResultTask(tasks []models.CheckResultTask, providerMatchID uint) *models.CheckResultTask {
-	for i := range tasks {
-		if tasks[i].ProviderMatchID != nil && *tasks[i].ProviderMatchID == providerMatchID {
-			return &tasks[i]
-		}
 	}
 
 	return nil

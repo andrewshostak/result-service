@@ -135,7 +135,6 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 	}
 
 	_, err = s.checkResultTaskRepository.Save(ctx, models.CheckResultTask{
-		MatchID:         match.ID,
 		ProviderMatchID: &savedProviderMatch.ID,
 		Name:            task.Name,
 		AttemptNumber:   1,

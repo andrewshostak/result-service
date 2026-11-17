@@ -9,26 +9,29 @@ import (
 )
 
 type SubscriptionService struct {
-	subscriptionRepository SubscriptionRepository
-	matchRepository        MatchRepository
-	aliasRepository        AliasRepository
-	taskClient             TaskClient
-	logger                 Logger
+	subscriptionRepository    SubscriptionRepository
+	matchRepository           MatchRepository
+	aliasRepository           AliasRepository
+	checkResultTaskRepository CheckResultTaskRepository
+	taskClient                TaskClient
+	logger                    Logger
 }
 
 func NewSubscriptionService(
 	subscriptionRepository SubscriptionRepository,
 	matchRepository MatchRepository,
 	aliasRepository AliasRepository,
+	checkResultTaskRepository CheckResultTaskRepository,
 	taskClient TaskClient,
 	logger Logger,
 ) *SubscriptionService {
 	return &SubscriptionService{
-		subscriptionRepository: subscriptionRepository,
-		matchRepository:        matchRepository,
-		aliasRepository:        aliasRepository,
-		taskClient:             taskClient,
-		logger:                 logger,
+		subscriptionRepository:    subscriptionRepository,
+		matchRepository:           matchRepository,
+		aliasRepository:           aliasRepository,
+		checkResultTaskRepository: checkResultTaskRepository,
+		taskClient:                taskClient,
+		logger:                    logger,
 	}
 }
 
@@ -126,12 +129,18 @@ func (s *SubscriptionService) Delete(ctx context.Context, request models.DeleteS
 		return nil
 	}
 
-	if len(match.CheckResultTasks) == 0 {
+	checkResultTasks, err := s.checkResultTaskRepository.ListByMatchID(ctx, match.ID)
+	if err != nil {
+		s.logger.Error().Err(err).Uint("match_id", match.ID).Msg("failed to list check result tasks")
+		return nil
+	}
+
+	if len(checkResultTasks) == 0 {
 		s.logger.Error().Uint("match_id", match.ID).Msg("match relation check result task does not exist")
 		return nil
 	}
 
-	for _, task := range match.CheckResultTasks {
+	for _, task := range checkResultTasks {
 		if err := s.taskClient.DeleteResultCheckTask(ctx, task.Name); err != nil {
 			s.logger.Error().Err(err).Uint("match_id", match.ID).Str("task_name", task.Name).Msg("failed to delete result-check task")
 		}

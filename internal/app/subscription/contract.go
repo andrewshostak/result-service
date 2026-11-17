@@ -25,6 +25,10 @@ type MatchRepository interface {
 	Delete(ctx context.Context, id uint) error
 }
 
+type CheckResultTaskRepository interface {
+	ListByMatchID(ctx context.Context, matchID uint) ([]models.CheckResultTask, error)
+}
+
 type NotifierClient interface {
 	Notify(ctx context.Context, notification models.SubscriberNotification) error
 }

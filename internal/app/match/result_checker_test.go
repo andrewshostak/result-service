@@ -40,10 +40,10 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 		r.ID = matchID
 		r.ResultStatus = models.Scheduled
 		r.StartsAt = startsAt
-		r.CheckResultTasks = []models.CheckResultTask{
-			{ProviderMatchID: &providerMatchID, AttemptNumber: 1},
-		}
 	})
+
+	checkResultTask := models.CheckResultTask{ProviderMatchID: &providerMatchID, AttemptNumber: 1}
+	maxRetriesCheckResultTask := models.CheckResultTask{ProviderMatchID: &providerMatchID, AttemptNumber: 100}
 
 	providerAPIMatch := testutils.FakeProviderAPIMatch(func(r *models.ProviderAPIMatch) {
 		r.ID = providerAPIMatchID
@@ -355,9 +355,7 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
-				noCheckResultMatch := scheduledMatch
-				noCheckResultMatch.CheckResultTasks = nil
-				m.On("One", ctx, models.Match{ID: matchID}).Return(&noCheckResultMatch, nil).Once()
+				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
 				return m
 			},
 			resultProvider: func(t *testing.T) *mocks.ResultProvider {
@@ -365,6 +363,12 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 				m := mocks.NewResultProvider(t)
 				m.On("Name").Return("fotmob").Once()
 				m.On("GetMatches", ctx, startsAt).Return([]models.ProviderAPIMatch{providerAPIMatchInProgress}, nil).Once()
+				return m
+			},
+			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
+				t.Helper()
+				m := mocks.NewCheckResultTaskRepository(t)
+				m.On("FindByProviderMatchID", ctx, providerMatchID).Return(nil, models.NewResourceNotFoundError(errors.New("not found"))).Once()
 				return m
 			},
 			expectedErr: errors.New("match relation result check task doesn't exist"),
@@ -382,9 +386,7 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
-				checkResultMatch := scheduledMatch
-				checkResultMatch.CheckResultTasks = []models.CheckResultTask{{ProviderMatchID: &providerMatchID, AttemptNumber: 100}}
-				m.On("One", ctx, models.Match{ID: matchID}).Return(&checkResultMatch, nil).Once()
+				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
 				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Cancelled}).Return(nil, unexpectedErr).Once()
 				return m
 			},
@@ -393,6 +395,12 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 				m := mocks.NewResultProvider(t)
 				m.On("Name").Return("fotmob").Once()
 				m.On("GetMatches", ctx, startsAt).Return([]models.ProviderAPIMatch{providerAPIMatchInProgress}, nil).Once()
+				return m
+			},
+			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
+				t.Helper()
+				m := mocks.NewCheckResultTaskRepository(t)
+				m.On("FindByProviderMatchID", ctx, providerMatchID).Return(&maxRetriesCheckResultTask, nil).Once()
 				return m
 			},
 			expectedErr: unexpectedErr,
@@ -410,9 +418,7 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 			matchRepository: func(t *testing.T) *mocks.MatchRepository {
 				t.Helper()
 				m := mocks.NewMatchRepository(t)
-				checkResultMatch := scheduledMatch
-				checkResultMatch.CheckResultTasks = []models.CheckResultTask{{ProviderMatchID: &providerMatchID, AttemptNumber: 100}}
-				m.On("One", ctx, models.Match{ID: matchID}).Return(&checkResultMatch, nil).Once()
+				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
 				m.On("Update", ctx, matchID, models.Match{ResultStatus: models.Cancelled}).Return(&models.Match{}, nil).Once()
 				return m
 			},
@@ -421,6 +427,12 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 				m := mocks.NewResultProvider(t)
 				m.On("Name").Return("fotmob").Once()
 				m.On("GetMatches", ctx, startsAt).Return([]models.ProviderAPIMatch{providerAPIMatchInProgress}, nil).Once()
+				return m
+			},
+			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
+				t.Helper()
+				m := mocks.NewCheckResultTaskRepository(t)
+				m.On("FindByProviderMatchID", ctx, providerMatchID).Return(&maxRetriesCheckResultTask, nil).Once()
 				return m
 			},
 		},
@@ -451,9 +463,15 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 			taskClient: func(t *testing.T) *mocks.TaskClient {
 				t.Helper()
 				m := mocks.NewTaskClient(t)
-				m.On("ScheduleProviderResultCheck", ctx, providerMatchID, scheduledMatch.CheckResultTasks[0].AttemptNumber+1, providerAPIMatchInProgress.Time.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
+				m.On("ScheduleProviderResultCheck", ctx, providerMatchID, checkResultTask.AttemptNumber+1, providerAPIMatchInProgress.Time.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
 					Return(nil, unexpectedErr).
 					Once()
+				return m
+			},
+			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
+				t.Helper()
+				m := mocks.NewCheckResultTaskRepository(t)
+				m.On("FindByProviderMatchID", ctx, providerMatchID).Return(&checkResultTask, nil).Once()
 				return m
 			},
 			expectedErr: fmt.Errorf("failed to re-schedule result check task: %w", unexpectedErr),
@@ -485,9 +503,15 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 			taskClient: func(t *testing.T) *mocks.TaskClient {
 				t.Helper()
 				m := mocks.NewTaskClient(t)
-				m.On("ScheduleProviderResultCheck", ctx, providerMatchID, scheduledMatch.CheckResultTasks[0].AttemptNumber+1, providerAPIMatchInProgress.Time.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
+				m.On("ScheduleProviderResultCheck", ctx, providerMatchID, checkResultTask.AttemptNumber+1, providerAPIMatchInProgress.Time.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
 					Return(nil, unexpectedErr).
 					Once()
+				return m
+			},
+			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
+				t.Helper()
+				m := mocks.NewCheckResultTaskRepository(t)
+				m.On("FindByProviderMatchID", ctx, providerMatchID).Return(&checkResultTask, nil).Once()
 				return m
 			},
 			expectedErr: fmt.Errorf("failed to re-schedule result check task: %w", unexpectedErr),
@@ -518,7 +542,7 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 			taskClient: func(t *testing.T) *mocks.TaskClient {
 				t.Helper()
 				m := mocks.NewTaskClient(t)
-				m.On("ScheduleProviderResultCheck", ctx, providerMatchID, scheduledMatch.CheckResultTasks[0].AttemptNumber+1, providerAPIMatchInProgress.Time.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
+				m.On("ScheduleProviderResultCheck", ctx, providerMatchID, checkResultTask.AttemptNumber+1, providerAPIMatchInProgress.Time.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
 					Return(&clientTask, nil).
 					Once()
 				return m
@@ -526,11 +550,11 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
 				t.Helper()
 				m := mocks.NewCheckResultTaskRepository(t)
+				m.On("FindByProviderMatchID", ctx, providerMatchID).Return(&checkResultTask, nil).Once()
 				m.On("Save", ctx, models.CheckResultTask{
-					MatchID:         matchID,
 					ProviderMatchID: &providerMatchID,
 					Name:            clientTask.Name,
-					AttemptNumber:   scheduledMatch.CheckResultTasks[0].AttemptNumber + 1,
+					AttemptNumber:   checkResultTask.AttemptNumber + 1,
 					ExecuteAt:       clientTask.ExecuteAt,
 				}).Return(nil, unexpectedErr).Once()
 				return m
@@ -571,8 +595,8 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
 				t.Helper()
 				m := mocks.NewCheckResultTaskRepository(t)
+				m.On("FindByProviderMatchID", ctx, providerMatchID).Return(&checkResultTask, nil).Once()
 				m.On("Save", ctx, models.CheckResultTask{
-					MatchID:         matchID,
 					ProviderMatchID: &providerMatchID,
 					Name:            clientTask.Name,
 					AttemptNumber:   2,

@@ -659,7 +659,6 @@ func TestMatchService_Create(t *testing.T) {
 				t.Helper()
 				m := mocks.NewCheckResultTaskRepository(t)
 				m.On("Save", ctx, models.CheckResultTask{
-					MatchID:         matchID,
 					ProviderMatchID: &providerMatchID,
 					Name:            createdTaskName,
 					AttemptNumber:   1,
@@ -733,7 +732,6 @@ func TestMatchService_Create(t *testing.T) {
 				t.Helper()
 				m := mocks.NewCheckResultTaskRepository(t)
 				m.On("Save", ctx, models.CheckResultTask{
-					MatchID:         matchID,
 					ProviderMatchID: &providerMatchID,
 					Name:            createdTaskName,
 					AttemptNumber:   1,
@@ -813,7 +811,6 @@ func TestMatchService_Create(t *testing.T) {
 				t.Helper()
 				m := mocks.NewCheckResultTaskRepository(t)
 				m.On("Save", ctx, models.CheckResultTask{
-					MatchID:         matchID,
 					ProviderMatchID: &providerMatchID,
 					Name:            createdTaskName,
 					AttemptNumber:   1,
@@ -893,7 +890,6 @@ func TestMatchService_Create(t *testing.T) {
 				t.Helper()
 				m := mocks.NewCheckResultTaskRepository(t)
 				m.On("Save", ctx, models.CheckResultTask{
-					MatchID:         matchID,
 					ProviderMatchID: &providerMatchID,
 					Name:            createdTaskName,
 					AttemptNumber:   1,
@@ -970,7 +966,6 @@ func TestMatchService_Create(t *testing.T) {
 				t.Helper()
 				m := mocks.NewCheckResultTaskRepository(t)
 				m.On("Save", ctx, models.CheckResultTask{
-					MatchID:         matchID,
 					ProviderMatchID: &providerMatchID,
 					Name:            createdTaskName,
 					AttemptNumber:   1,
