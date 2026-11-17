@@ -87,9 +87,6 @@ type CheckResultTask struct {
 	ExecuteAt       time.Time `gorm:"column:execute_at" db:"execute_at"`
 	CreatedAt       time.Time `gorm:"column:created_at" db:"created_at"`
 	UpdatedAt       time.Time `gorm:"column:updated_at" db:"updated_at"`
-
-	// Scan-only until the column is dropped in the next migration - gorm:"-" keeps GORM from writing it.
-	MatchID *uint `gorm:"-" db:"match_id"`
 }
 
 func toDomainProviderTeam(pt ProviderTeam) models.ProviderTeam {
