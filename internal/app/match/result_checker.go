@@ -165,7 +165,7 @@ func (s *ResultCheckerService) handleNotFoundMatch(ctx context.Context, provider
 }
 
 func (s *ResultCheckerService) canCheckResult(match *models.Match) bool {
-	return match != nil && (match.ResultStatus == models.Scheduled || match.ResultStatus == models.APIError)
+	return match != nil && (match.ResultStatus == models.Scheduled || match.ResultStatus == models.APIError || match.ResultStatus == models.SchedulingError)
 }
 
 func (s *ResultCheckerService) getMatchesFromProvider(ctx context.Context, providerName string, startsAt time.Time) ([]models.ProviderAPIMatch, error) {
@@ -215,13 +215,21 @@ func (s *ResultCheckerService) handleInPlayProviderMatch(ctx context.Context, ma
 
 	providerMatchID := providerMatch.ID
 	task, err := s.taskClient.ScheduleProviderResultCheck(ctx, providerMatchID, attemptNumber, scheduleAt)
-	if err != nil {
+	if err != nil && !errors.As(err, &models.ResourceAlreadyExistsError{}) {
 		s.logger.Error().Uint("match_id", match.ID).Uint("provider_match_id", providerMatchID).Uint("attempt_number", attemptNumber).Time("schedule_at", scheduleAt).Err(err).Msg("failed to re-schedule check result task")
 		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.SchedulingError}); errUpdate != nil {
 			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate).Msg("failed to update match status to scheduling_error")
 		}
 
 		return fmt.Errorf("failed to re-schedule result check task: %w", err)
+	}
+
+	if errors.As(err, &models.ResourceAlreadyExistsError{}) {
+		foundTask, errGetTask := s.taskClient.GetProviderResultCheckTask(ctx, providerMatchID, attemptNumber)
+		if errGetTask != nil {
+			return fmt.Errorf("failed to get check result task: %w", errGetTask)
+		}
+		task = foundTask
 	}
 
 	if _, err := s.checkResultTaskRepository.Save(ctx, models.CheckResultTask{

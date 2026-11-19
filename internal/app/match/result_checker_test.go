@@ -606,6 +606,97 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 			},
 		},
 		{
+			name:  "success - it reschedules the task when match status is scheduling_error",
+			input: providerMatchID,
+			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
+				t.Helper()
+				m := mocks.NewProviderMatchRepository(t)
+				m.On("FindByID", ctx, providerMatchID).Return(&providerMatch, nil).Once()
+				m.On("Save", ctx, expectedProviderMatchInProgress).Return(&models.ProviderMatch{}, nil).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				schedulingErrorMatch := scheduledMatch
+				schedulingErrorMatch.ResultStatus = models.SchedulingError
+				m.On("One", ctx, models.Match{ID: matchID}).Return(&schedulingErrorMatch, nil).Once()
+				return m
+			},
+			resultProvider: func(t *testing.T) *mocks.ResultProvider {
+				t.Helper()
+				m := mocks.NewResultProvider(t)
+				m.On("Name").Return("fotmob").Once()
+				m.On("GetMatches", ctx, startsAt).Return([]models.ProviderAPIMatch{providerAPIMatchInProgress}, nil).Once()
+				return m
+			},
+			taskClient: func(t *testing.T) *mocks.TaskClient {
+				t.Helper()
+				m := mocks.NewTaskClient(t)
+				m.On("ScheduleProviderResultCheck", ctx, providerMatchID, uint(2), providerAPIMatchInProgress.Time.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
+					Return(&clientTask, nil).
+					Once()
+				return m
+			},
+			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
+				t.Helper()
+				m := mocks.NewCheckResultTaskRepository(t)
+				m.On("FindByProviderMatchID", ctx, providerMatchID).Return(&checkResultTask, nil).Once()
+				m.On("Save", ctx, models.CheckResultTask{
+					ProviderMatchID: &providerMatchID,
+					Name:            clientTask.Name,
+					AttemptNumber:   2,
+					ExecuteAt:       clientTask.ExecuteAt,
+				}).Return(&models.CheckResultTask{}, nil).Once()
+				return m
+			},
+		},
+		{
+			name:  "success - it recovers when the re-scheduled task already exists",
+			input: providerMatchID,
+			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
+				t.Helper()
+				m := mocks.NewProviderMatchRepository(t)
+				m.On("FindByID", ctx, providerMatchID).Return(&providerMatch, nil).Once()
+				m.On("Save", ctx, expectedProviderMatchInProgress).Return(&models.ProviderMatch{}, nil).Once()
+				return m
+			},
+			matchRepository: func(t *testing.T) *mocks.MatchRepository {
+				t.Helper()
+				m := mocks.NewMatchRepository(t)
+				m.On("One", ctx, models.Match{ID: matchID}).Return(&scheduledMatch, nil).Once()
+				return m
+			},
+			resultProvider: func(t *testing.T) *mocks.ResultProvider {
+				t.Helper()
+				m := mocks.NewResultProvider(t)
+				m.On("Name").Return("fotmob").Once()
+				m.On("GetMatches", ctx, startsAt).Return([]models.ProviderAPIMatch{providerAPIMatchInProgress}, nil).Once()
+				return m
+			},
+			taskClient: func(t *testing.T) *mocks.TaskClient {
+				t.Helper()
+				m := mocks.NewTaskClient(t)
+				m.On("ScheduleProviderResultCheck", ctx, providerMatchID, uint(2), providerAPIMatchInProgress.Time.Add(pollingFirstAttemptDelay).Add(pollingInterval)).
+					Return(nil, fmt.Errorf("already exists: %w", models.NewResourceAlreadyExistsError(errors.New("task exists")))).
+					Once()
+				m.On("GetProviderResultCheckTask", ctx, providerMatchID, uint(2)).Return(&clientTask, nil).Once()
+				return m
+			},
+			checkResultTaskRepository: func(t *testing.T) *mocks.CheckResultTaskRepository {
+				t.Helper()
+				m := mocks.NewCheckResultTaskRepository(t)
+				m.On("FindByProviderMatchID", ctx, providerMatchID).Return(&checkResultTask, nil).Once()
+				m.On("Save", ctx, models.CheckResultTask{
+					ProviderMatchID: &providerMatchID,
+					Name:            clientTask.Name,
+					AttemptNumber:   2,
+					ExecuteAt:       clientTask.ExecuteAt,
+				}).Return(&models.CheckResultTask{}, nil).Once()
+				return m
+			},
+		},
+		{
 			name:  "it returns an error when provider match status is finished and subscriptions retrieval fails",
 			input: providerMatchID,
 			providerMatchRepository: func(t *testing.T) *mocks.ProviderMatchRepository {
