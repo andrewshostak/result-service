@@ -165,7 +165,7 @@ func (s *ResultCheckerService) handleNotFoundMatch(ctx context.Context, provider
 }
 
 func (s *ResultCheckerService) canCheckResult(match *models.Match) bool {
-	return match != nil && (match.ResultStatus == models.Scheduled || match.ResultStatus == models.APIError)
+	return match != nil && (match.ResultStatus == models.Scheduled || match.ResultStatus == models.APIError || match.ResultStatus == models.SchedulingError)
 }
 
 func (s *ResultCheckerService) getMatchesFromProvider(ctx context.Context, providerName string, startsAt time.Time) ([]models.ProviderAPIMatch, error) {
@@ -214,7 +214,7 @@ func (s *ResultCheckerService) handleInPlayProviderMatch(ctx context.Context, ma
 	}
 
 	providerMatchID := providerMatch.ID
-	task, err := s.taskClient.ScheduleProviderResultCheck(ctx, providerMatchID, attemptNumber, scheduleAt)
+	task, err := s.taskClient.EnsureProviderResultCheckScheduled(ctx, providerMatchID, attemptNumber, scheduleAt)
 	if err != nil {
 		s.logger.Error().Uint("match_id", match.ID).Uint("provider_match_id", providerMatchID).Uint("attempt_number", attemptNumber).Time("schedule_at", scheduleAt).Err(err).Msg("failed to re-schedule check result task")
 		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.SchedulingError}); errUpdate != nil {

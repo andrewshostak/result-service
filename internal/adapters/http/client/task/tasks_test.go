@@ -20,78 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func TestTaskClient_GetProviderResultCheckTask(t *testing.T) {
-	ctx := context.Background()
-
-	cfg := config.GoogleCloud{
-		ProjectID:            gofakeit.Word(),
-		Region:               gofakeit.Word(),
-		CheckResultQueueName: gofakeit.Word(),
-	}
-
-	providerMatchID := uint(gofakeit.Uint16())
-	attempt := uint(gofakeit.Uint8())
-
-	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", cfg.ProjectID, cfg.Region, cfg.CheckResultQueueName)
-	taskName := fmt.Sprintf("%s/tasks/provider-match-%d-attempt-%d", queuePath, providerMatchID, attempt)
-
-	scheduleTime := gofakeit.Date().UTC().Truncate(time.Second)
-
-	tests := []struct {
-		name             string
-		cloudTasksClient func(t *testing.T) *mocks.CloudTasksClient
-		expectedResult   *models.Task
-		expectedErr      error
-	}{
-		{
-			name: "success - it returns a task when the cloud tasks client call succeeds",
-			cloudTasksClient: func(t *testing.T) *mocks.CloudTasksClient {
-				t.Helper()
-				m := mocks.NewCloudTasksClient(t)
-				m.On("GetTask", ctx, &taskspb.GetTaskRequest{Name: taskName}).
-					Return(&taskspb.Task{
-						Name:         taskName,
-						ScheduleTime: timestamppb.New(scheduleTime),
-					}, nil).
-					Once()
-				return m
-			},
-			expectedResult: &models.Task{
-				Name:      taskName,
-				ExecuteAt: scheduleTime,
-			},
-		},
-		{
-			name: "it returns an error when the cloud tasks client call fails",
-			cloudTasksClient: func(t *testing.T) *mocks.CloudTasksClient {
-				t.Helper()
-				m := mocks.NewCloudTasksClient(t)
-				m.On("GetTask", ctx, &taskspb.GetTaskRequest{Name: taskName}).
-					Return(nil, errors.New("some error")).
-					Once()
-				return m
-			},
-			expectedErr: fmt.Errorf("failed to get provider result-check task: %w", errors.New("some error")),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			client := task.NewClient(cfg, time.Minute, tt.cloudTasksClient(t))
-
-			result, err := client.GetProviderResultCheckTask(ctx, providerMatchID, attempt)
-
-			if tt.expectedErr != nil {
-				assert.EqualError(t, err, tt.expectedErr.Error())
-			} else {
-				assert.NoError(t, err)
-			}
-			assert.Equal(t, tt.expectedResult, result)
-		})
-	}
-}
-
-func TestTaskClient_ScheduleProviderResultCheck(t *testing.T) {
+func TestTaskClient_EnsureProviderResultCheckScheduled(t *testing.T) {
 	ctx := context.Background()
 
 	cfg := config.GoogleCloud{
@@ -107,6 +36,7 @@ func TestTaskClient_ScheduleProviderResultCheck(t *testing.T) {
 	providerMatchID := uint(gofakeit.Uint16())
 	attempt := uint(gofakeit.Uint8())
 	scheduleAt := gofakeit.Date().UTC().Truncate(time.Second)
+	existingTaskScheduleAt := gofakeit.Date().UTC().Truncate(time.Second)
 
 	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", cfg.ProjectID, cfg.Region, cfg.CheckResultQueueName)
 	taskName := fmt.Sprintf("%s/tasks/provider-match-%d-attempt-%d", queuePath, providerMatchID, attempt)
@@ -175,16 +105,40 @@ func TestTaskClient_ScheduleProviderResultCheck(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to create provider result-check task: %w", errors.New("some error")),
 		},
 		{
-			name: "it returns a resource already exists error when the task already exists",
+			name: "success - it returns the existing task when the task already exists",
 			cloudTasksClient: func(t *testing.T) *mocks.CloudTasksClient {
 				t.Helper()
 				m := mocks.NewCloudTasksClient(t)
 				m.On("CreateTask", ctx, expectedReq).
 					Return(nil, errors.New("AlreadyExists")).
 					Once()
+				m.On("GetTask", ctx, &taskspb.GetTaskRequest{Name: taskName}).
+					Return(&taskspb.Task{
+						Name:         taskName,
+						ScheduleTime: timestamppb.New(existingTaskScheduleAt),
+					}, nil).
+					Once()
 				return m
 			},
-			expectedErr: models.NewResourceAlreadyExistsError(fmt.Errorf("provider result-check task already exists: %w", errors.New("AlreadyExists"))),
+			expectedResult: &models.Task{
+				Name:      taskName,
+				ExecuteAt: existingTaskScheduleAt,
+			},
+		},
+		{
+			name: "it returns an error when the task already exists and getting the existing task fails",
+			cloudTasksClient: func(t *testing.T) *mocks.CloudTasksClient {
+				t.Helper()
+				m := mocks.NewCloudTasksClient(t)
+				m.On("CreateTask", ctx, expectedReq).
+					Return(nil, errors.New("AlreadyExists")).
+					Once()
+				m.On("GetTask", ctx, &taskspb.GetTaskRequest{Name: taskName}).
+					Return(nil, errors.New("some error")).
+					Once()
+				return m
+			},
+			expectedErr: fmt.Errorf("failed to get existing provider result-check task: %w", errors.New("some error")),
 		},
 	}
 
@@ -192,7 +146,7 @@ func TestTaskClient_ScheduleProviderResultCheck(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := task.NewClient(cfg, dispatchDeadline, tt.cloudTasksClient(t))
 
-			result, err := client.ScheduleProviderResultCheck(ctx, providerMatchID, attempt, scheduleAt)
+			result, err := client.EnsureProviderResultCheckScheduled(ctx, providerMatchID, attempt, scheduleAt)
 
 			if tt.expectedErr != nil {
 				assert.EqualError(t, err, tt.expectedErr.Error())

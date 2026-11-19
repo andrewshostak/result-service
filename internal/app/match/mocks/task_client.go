@@ -17,42 +17,12 @@ type TaskClient struct {
 	mock.Mock
 }
 
-// GetProviderResultCheckTask provides a mock function with given fields: ctx, providerMatchID, attempt
-func (_m *TaskClient) GetProviderResultCheckTask(ctx context.Context, providerMatchID uint, attempt uint) (*models.Task, error) {
-	ret := _m.Called(ctx, providerMatchID, attempt)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetProviderResultCheckTask")
-	}
-
-	var r0 *models.Task
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint, uint) (*models.Task, error)); ok {
-		return rf(ctx, providerMatchID, attempt)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint, uint) *models.Task); ok {
-		r0 = rf(ctx, providerMatchID, attempt)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*models.Task)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, uint, uint) error); ok {
-		r1 = rf(ctx, providerMatchID, attempt)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// ScheduleProviderResultCheck provides a mock function with given fields: ctx, providerMatchID, attempt, scheduleAt
-func (_m *TaskClient) ScheduleProviderResultCheck(ctx context.Context, providerMatchID uint, attempt uint, scheduleAt time.Time) (*models.Task, error) {
+// EnsureProviderResultCheckScheduled provides a mock function with given fields: ctx, providerMatchID, attempt, scheduleAt
+func (_m *TaskClient) EnsureProviderResultCheckScheduled(ctx context.Context, providerMatchID uint, attempt uint, scheduleAt time.Time) (*models.Task, error) {
 	ret := _m.Called(ctx, providerMatchID, attempt, scheduleAt)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ScheduleProviderResultCheck")
+		panic("no return value specified for EnsureProviderResultCheckScheduled")
 	}
 
 	var r0 *models.Task
