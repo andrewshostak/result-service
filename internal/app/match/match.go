@@ -121,17 +121,9 @@ func (s *MatchService) Create(ctx context.Context, request models.CreateMatchReq
 	}
 
 	firstCheckBaseTime := earliestOf(request.StartsAt, providerAPIMatch.Time)
-	task, err := s.taskClient.ScheduleProviderResultCheck(ctx, savedProviderMatch.ID, 1, firstCheckBaseTime.Add(s.config.FirstAttemptDelay))
-	if err != nil && !errors.As(err, &models.ResourceAlreadyExistsError{}) {
+	task, err := s.taskClient.EnsureProviderResultCheckScheduled(ctx, savedProviderMatch.ID, 1, firstCheckBaseTime.Add(s.config.FirstAttemptDelay))
+	if err != nil {
 		return 0, fmt.Errorf("failed to schedule result check task: %w", err)
-	}
-
-	if errors.As(err, &models.ResourceAlreadyExistsError{}) {
-		foundTask, errGetTask := s.taskClient.GetProviderResultCheckTask(ctx, savedProviderMatch.ID, 1)
-		if errGetTask != nil {
-			return 0, fmt.Errorf("failed to get result check task: %w", errGetTask)
-		}
-		task = foundTask
 	}
 
 	_, err = s.checkResultTaskRepository.Save(ctx, models.CheckResultTask{

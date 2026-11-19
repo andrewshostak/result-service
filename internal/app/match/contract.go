@@ -43,8 +43,7 @@ type ResultProvider interface {
 }
 
 type TaskClient interface {
-	GetProviderResultCheckTask(ctx context.Context, providerMatchID uint, attempt uint) (*models.Task, error)
-	ScheduleProviderResultCheck(ctx context.Context, providerMatchID uint, attempt uint, scheduleAt time.Time) (*models.Task, error)
+	EnsureProviderResultCheckScheduled(ctx context.Context, providerMatchID uint, attempt uint, scheduleAt time.Time) (*models.Task, error)
 	ScheduleSubscriberNotification(ctx context.Context, subscriptionID uint) error
 }
 

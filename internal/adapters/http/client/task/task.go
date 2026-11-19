@@ -33,21 +33,7 @@ func NewClient(config config.GoogleCloud, dispatchDeadline time.Duration, client
 	return &TaskClient{config: config, dispatchDeadline: dispatchDeadline, client: client}
 }
 
-func (c *TaskClient) GetProviderResultCheckTask(ctx context.Context, providerMatchID uint, attempt uint) (*models.Task, error) {
-	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", c.config.ProjectID, c.config.Region, c.config.CheckResultQueueName)
-	name := fmt.Sprintf("%s/tasks/provider-match-%d-attempt-%d", queuePath, providerMatchID, attempt)
-
-	req := &taskspb.GetTaskRequest{Name: name}
-
-	task, err := c.client.GetTask(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get provider result-check task: %w", err)
-	}
-
-	return &models.Task{Name: task.Name, ExecuteAt: task.ScheduleTime.AsTime()}, nil
-}
-
-func (c *TaskClient) ScheduleProviderResultCheck(ctx context.Context, providerMatchID uint, attempt uint, scheduleAt time.Time) (*models.Task, error) {
+func (c *TaskClient) EnsureProviderResultCheckScheduled(ctx context.Context, providerMatchID uint, attempt uint, scheduleAt time.Time) (*models.Task, error) {
 	targetURL := fmt.Sprintf("%s%s", c.config.TargetURL, providerResultCheckPath)
 
 	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", c.config.ProjectID, c.config.Region, c.config.CheckResultQueueName)
@@ -86,7 +72,12 @@ func (c *TaskClient) ScheduleProviderResultCheck(ctx context.Context, providerMa
 	createdTask, err := c.client.CreateTask(ctx, req)
 	if err != nil {
 		if c.isTaskAlreadyExistsError(err) {
-			return nil, models.NewResourceAlreadyExistsError(fmt.Errorf("provider result-check task already exists: %w", err))
+			existingTask, errGet := c.client.GetTask(ctx, &taskspb.GetTaskRequest{Name: req.Task.Name})
+			if errGet != nil {
+				return nil, fmt.Errorf("failed to get existing provider result-check task: %w", errGet)
+			}
+
+			return &models.Task{Name: existingTask.Name, ExecuteAt: existingTask.ScheduleTime.AsTime()}, nil
 		}
 
 		return nil, fmt.Errorf("failed to create provider result-check task: %w", err)
