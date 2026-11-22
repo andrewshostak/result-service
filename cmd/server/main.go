@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/andrewshostak/result-service/config"
@@ -44,7 +46,9 @@ func startServer(_ *cobra.Command, _ []string) {
 	db := postgres.EstablishDatabaseConnection(cfg.PG)
 	httpClient := http.Client{Timeout: cfg.App.TriggersTimeout - (2 * time.Second)}
 
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
+
 	cloudTasksClient, err := cloudtasks.NewClient(ctx, gin.Mode(), cfg.GoogleCloud)
 	if err != nil {
 		panic(err)
@@ -100,5 +104,15 @@ func startServer(_ *cobra.Command, _ []string) {
 		panic(fmt.Errorf("failed to configure server: %w", err))
 	}
 
-	_ = r.Run(fmt.Sprintf(":%s", cfg.App.Port))
+	logger.Info().Msg("starting server")
+
+	if err := server.Serve(ctx, r, fmt.Sprintf(":%s", cfg.App.Port), cfg.App.ShutdownTimeout, logger); err != nil {
+		logger.Error().Err(err).Msg("server stopped unexpectedly")
+	}
+
+	if err := postgres.CloseDatabaseConnection(db); err != nil {
+		logger.Error().Err(err).Msg("failed to close database connection")
+	}
+
+	logger.Info().Msg("shutdown complete")
 }

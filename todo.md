@@ -12,7 +12,7 @@
 - [ ] configure CI in github
   - [ ] linter
   - [ ] deploy
-- [ ] implement graceful shutdown
+- [X] implement graceful shutdown
 - [ ] investigate possible replacement zerolog with slog (if not - make gin and zerolog friends)
 - [ ] find a proper way of handling secrets (remove secrets from `service.yaml`)
 - [ ] check the context cancellation proper usage (defer cancel must be present)

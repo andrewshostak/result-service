@@ -47,3 +47,12 @@ func EstablishDatabaseConnection(cfg config.PG) *gorm.DB {
 
 	return db
 }
+
+func CloseDatabaseConnection(db *gorm.DB) error {
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+
+	return sqlDB.Close()
+}

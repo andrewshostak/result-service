@@ -29,6 +29,7 @@ type App struct {
 	SecretKey       string        `env:"SECRET_KEY,required"`
 	Timeout         time.Duration `env:"TIMEOUT" envDefault:"10s"`
 	TriggersTimeout time.Duration `env:"TRIGGERS_TIMEOUT" envDefault:"20s"`
+	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"8s"` // 20% safety margin under Cloud Run's fixed ~10s SIGTERM-to-SIGKILL window
 }
 
 type Fotmob struct {
