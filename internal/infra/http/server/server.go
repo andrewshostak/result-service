@@ -1,10 +1,16 @@
 package server
 
 import (
+	"context"
+	"errors"
+	"net/http"
+	"time"
+
 	"github.com/andrewshostak/result-service/config"
 	"github.com/andrewshostak/result-service/internal/adapters/http/server/handler"
 	"github.com/andrewshostak/result-service/internal/infra/http/server/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 )
 
 type Handlers struct {
@@ -20,6 +26,39 @@ func NewServer(cfg config.Server, handlers Handlers) (*gin.Engine, error) {
 	registerRoutes(r, cfg, handlers)
 
 	return r, nil
+}
+
+// Serve blocks until ctx is cancelled, then forces remaining connections closed if they outlast shutdownTimeout.
+func Serve(ctx context.Context, engine *gin.Engine, addr string, shutdownTimeout time.Duration, logger *zerolog.Logger) error {
+	httpServer := &http.Server{
+		Addr:    addr,
+		Handler: engine,
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+			return
+		}
+		errCh <- nil
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		logger.Error().Err(err).Msg("graceful shutdown deadline exceeded, forcing close")
+		return httpServer.Close()
+	}
+
+	return nil
 }
 
 func registerRoutes(r *gin.Engine, cfg config.Server, handlers Handlers) {
