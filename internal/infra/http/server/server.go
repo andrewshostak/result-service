@@ -28,7 +28,7 @@ func NewServer(cfg config.Server, handlers Handlers) (*gin.Engine, error) {
 	return r, nil
 }
 
-// Serve blocks until ctx is cancelled, then forces remaining connections closed if they outlast shutdownTimeout.
+// Serve derives shutdownCtx from context.Background(), not ctx, since ctx is already cancelled by the time Shutdown runs.
 func Serve(ctx context.Context, engine *gin.Engine, addr string, shutdownTimeout time.Duration, logger *zerolog.Logger) error {
 	httpServer := &http.Server{
 		Addr:    addr,
@@ -50,7 +50,9 @@ func Serve(ctx context.Context, engine *gin.Engine, addr string, shutdownTimeout
 	case <-ctx.Done():
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	logger.Info().Msg("received shutdown signal") // TODO: temporary diagnostic log to measure actual shutdown duration in prod, remove once confirmed
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout) // shutdownTimeout should leave margin under the platform's SIGTERM-to-SIGKILL grace period
 	defer cancel()
 
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
