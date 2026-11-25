@@ -68,6 +68,9 @@ const (
 	// It won't be played today, but it's not yet clear when it will be played.
 	postponed fotmobMatchStatus = 5
 	// A real case: match was interrupted, rescheduled to the next day, but didn't start the next day because of another unexpected reason, and the new date is not yet clear.
+	// A known fotmob bug: for a match with multiple interruptions (e.g. air raid alarms), fotmob can return this status with
+	// status.finished=true and a score even though the match actually continued and finished normally. We don't try to detect
+	// and recover from this case, because the score reported alongside an "abandoned" status isn't guaranteed to be the final one.
 	abandoned fotmobMatchStatus = 17
 	// Canceled forever.
 	cancelled fotmobMatchStatus = 106

@@ -170,7 +170,7 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 				m.On("Notify", ctx, notification).Return(unexpectedErr).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to notify subscriber: %w", unexpectedErr),
+			expectedErr: fmt.Errorf("failed to notify subscriber %d: %w", subscriptionID, unexpectedErr),
 		},
 		{
 			name:  "it returns an error when notifier fails and subscription update succeeds",
@@ -197,7 +197,7 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 				m.On("Notify", ctx, notification).Return(unexpectedErr).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to notify subscriber: %w", unexpectedErr),
+			expectedErr: fmt.Errorf("failed to notify subscriber %d: %w", subscriptionID, unexpectedErr),
 		},
 		{
 			name:  "it returns an error when notifier succeeds but subscription update fails",
@@ -221,7 +221,7 @@ func TestSubscriberNotifierService_NotifySubscriber(t *testing.T) {
 				m.On("Notify", ctx, notification).Return(nil).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to update subscription status to %s: %w", string(models.SuccessfulSub), unexpectedErr),
+			expectedErr: fmt.Errorf("failed to update subscription %d status to %s: %w", subscriptionID, string(models.SuccessfulSub), unexpectedErr),
 		},
 	}
 

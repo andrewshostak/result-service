@@ -19,26 +19,26 @@ func NewMatchHandler(matchService MatchService) *MatchHandler {
 func (h *MatchHandler) Create(c *gin.Context) {
 	var params CreateMatchRequest
 	if err := c.ShouldBindJSON(&params); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": models.CodeInvalidRequest})
+		RespondError(c, http.StatusBadRequest, models.CodeInvalidRequest, err)
 
 		return
 	}
 
 	result, err := h.matchService.Create(c.Request.Context(), params.ToDomain())
 	if errors.As(err, &models.UnprocessableContentError{}) {
-		c.JSON(http.StatusUnprocessableEntity, NewErrorResponse(models.CodeUnprocessableContent, err))
+		RespondError(c, http.StatusUnprocessableEntity, models.CodeUnprocessableContent, err)
 
 		return
 	}
 
 	if errors.As(err, &models.ResourceNotFoundError{}) {
-		c.JSON(http.StatusBadRequest, NewErrorResponse(models.CodeResourceNotFound, err))
+		RespondError(c, http.StatusBadRequest, models.CodeResourceNotFound, err)
 
 		return
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, NewErrorResponse(models.CodeInternalServerError, err))
+		RespondError(c, http.StatusInternalServerError, models.CodeInternalServerError, err)
 
 		return
 	}

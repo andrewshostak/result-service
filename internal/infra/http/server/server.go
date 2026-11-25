@@ -20,8 +20,10 @@ type Handlers struct {
 	TriggerHandler      *handler.TriggerHandler
 }
 
-func NewServer(cfg config.Server, handlers Handlers) (*gin.Engine, error) {
-	r := gin.Default()
+func NewServer(cfg config.Server, handlers Handlers, logger *zerolog.Logger) (*gin.Engine, error) {
+	r := gin.New()
+	r.Use(middleware.ErrorLogger(logger))
+	r.Use(middleware.Recovery())
 
 	registerRoutes(r, cfg, handlers)
 
@@ -49,8 +51,6 @@ func Serve(ctx context.Context, engine *gin.Engine, addr string, shutdownTimeout
 		return err
 	case <-ctx.Done():
 	}
-
-	logger.Info().Msg("received shutdown signal") // TODO: temporary diagnostic log to measure actual shutdown duration in prod, remove once confirmed
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout) // shutdownTimeout should leave margin under the platform's SIGTERM-to-SIGKILL grace period
 	defer cancel()

@@ -232,7 +232,7 @@ func (s *FunctionalTestSuite) TestTriggerSubscriberNotification_SubscriberReturn
 	var response handler.ErrorResponse
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
-	s.Equal(fmt.Sprintf("failed to notify subscriber: failed to notify subscribers, status code %d", http.StatusInternalServerError), response.Error)
+	s.Equal(fmt.Sprintf("failed to notify subscriber %d: failed to notify subscribers, status code %d", subscription.ID, http.StatusInternalServerError), response.Error)
 	s.Equal(string(models.CodeInternalServerError), response.Code)
 
 	subscriptions := testutils.ListSubscriptionsByMatch(s.T(), s.db, match.ID)

@@ -56,8 +56,6 @@ func (s *SubscriberNotifierService) NotifySubscriber(ctx context.Context, subscr
 		Away: uint(*m.AwayScore),
 	})
 	if err != nil {
-		s.logger.Error().Err(err).Uint("subscription_id", sub.ID).Msg("failed to notify subscriber")
-
 		errMessage := err.Error()
 		errUpdate := s.subscriptionRepository.Update(ctx, sub.ID, models.Subscription{
 			Status:          models.SubscriberErrorSub,
@@ -67,7 +65,7 @@ func (s *SubscriberNotifierService) NotifySubscriber(ctx context.Context, subscr
 			s.logger.Error().Err(errUpdate).Uint("subscription_id", sub.ID).Msg(fmt.Sprintf("failed to update subscription status to: %s", string(models.SubscriberErrorSub)))
 		}
 
-		return fmt.Errorf("failed to notify subscriber: %w", err)
+		return fmt.Errorf("failed to notify subscriber %d: %w", sub.ID, err)
 	}
 
 	notifiedAt := time.Now()
@@ -76,8 +74,7 @@ func (s *SubscriberNotifierService) NotifySubscriber(ctx context.Context, subscr
 		NotifiedAt: &notifiedAt,
 	})
 	if errUpdate != nil {
-		s.logger.Error().Err(errUpdate).Uint("subscription_id", sub.ID).Msg(fmt.Sprintf("failed to update subscription status to: %s", string(models.SuccessfulSub)))
-		return fmt.Errorf("failed to update subscription status to %s: %w", string(models.SuccessfulSub), errUpdate)
+		return fmt.Errorf("failed to update subscription %d status to %s: %w", sub.ID, string(models.SuccessfulSub), errUpdate)
 	}
 
 	s.logger.Debug().Uint("subscription_id", sub.ID).Msg("subscriber notified")

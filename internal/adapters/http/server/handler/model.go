@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/andrewshostak/result-service/internal/app/models"
+	"github.com/gin-gonic/gin"
 )
 
 type CreateMatchRequest struct {
@@ -48,6 +49,11 @@ func NewErrorResponse(code models.Code, error error) ErrorResponse {
 		Code:  string(code),
 		Error: error.Error(),
 	}
+}
+
+func RespondError(c *gin.Context, status int, code models.Code, err error) {
+	_ = c.Error(err)
+	c.JSON(status, NewErrorResponse(code, err))
 }
 
 func (cmr *CreateMatchRequest) ToDomain() models.CreateMatchRequest {

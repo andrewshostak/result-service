@@ -23,20 +23,20 @@ func NewTriggerHandler(checkResultService ResultCheckerService, subscriberNotifi
 func (h *TriggerHandler) CheckProviderMatchResult(c *gin.Context) {
 	var params TriggerProviderResultCheckRequest
 	if err := c.ShouldBindJSON(&params); err != nil {
-		c.JSON(http.StatusBadRequest, NewErrorResponse(models.CodeInvalidRequest, err))
+		RespondError(c, http.StatusBadRequest, models.CodeInvalidRequest, err)
 
 		return
 	}
 
 	err := h.checkResultService.CheckProviderMatchResult(c.Request.Context(), params.ProviderMatchID)
 	if errors.As(err, &models.ResourceNotFoundError{}) {
-		c.JSON(http.StatusBadRequest, NewErrorResponse(models.CodeResourceNotFound, err))
+		RespondError(c, http.StatusBadRequest, models.CodeResourceNotFound, err)
 
 		return
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, NewErrorResponse(models.CodeInternalServerError, err))
+		RespondError(c, http.StatusInternalServerError, models.CodeInternalServerError, err)
 
 		return
 	}
@@ -47,19 +47,19 @@ func (h *TriggerHandler) CheckProviderMatchResult(c *gin.Context) {
 func (h *TriggerHandler) NotifySubscriber(c *gin.Context) {
 	var params TriggerSubscriptionNotificationRequest
 	if err := c.ShouldBindJSON(&params); err != nil {
-		c.JSON(http.StatusBadRequest, NewErrorResponse(models.CodeInvalidRequest, err))
+		RespondError(c, http.StatusBadRequest, models.CodeInvalidRequest, err)
 		return
 	}
 
 	err := h.subscriberNotifierService.NotifySubscriber(c.Request.Context(), params.SubscriptionID)
 	if errors.As(err, &models.ResourceNotFoundError{}) {
-		c.JSON(http.StatusBadRequest, NewErrorResponse(models.CodeResourceNotFound, err))
+		RespondError(c, http.StatusBadRequest, models.CodeResourceNotFound, err)
 
 		return
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, NewErrorResponse(models.CodeInternalServerError, err))
+		RespondError(c, http.StatusInternalServerError, models.CodeInternalServerError, err)
 
 		return
 	}

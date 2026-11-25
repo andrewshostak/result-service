@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/hex"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +17,9 @@ func APIKeyAuth(hashedAPIKeys []string, secret string) gin.HandlerFunc {
 		apiKey := c.GetHeader(authorization)
 
 		if !isValidAPIKey(apiKey, hashedAPIKeys, secret) {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid api key"})
+			err := errors.New("invalid api key")
+			_ = c.Error(err)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			return
 		}
 

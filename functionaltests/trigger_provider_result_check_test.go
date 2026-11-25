@@ -174,7 +174,7 @@ func (s *FunctionalTestSuite) TestTriggerProviderResultCheck_ProviderAPIReturnsE
 	var response handler.ErrorResponse
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
-	s.Equal("failed to get matches from provider api: failed to get matches from provider fotmob: failed to fetch matches by date: failed to get matches by date, status code 500", response.Error)
+	s.Equal(fmt.Sprintf("failed to get matches from provider api for match %d (provider match %d): failed to get matches from provider fotmob: failed to fetch matches by date: failed to get matches by date, status code 500", match.ID, providerMatch.ID), response.Error)
 	s.Equal(string(models.CodeInternalServerError), response.Code)
 
 	matches := testutils.ListMatches(s.T(), s.db)
@@ -239,7 +239,7 @@ func (s *FunctionalTestSuite) TestTriggerProviderResultCheck_ProviderAPIReturnsI
 	var response handler.ErrorResponse
 	err = json.Unmarshal(body, &response)
 	s.Require().NoError(err)
-	s.Equal("failed to get matches from provider api: failed to get matches from provider fotmob: failed to fetch matches by date: failed to decode get matches by date response body: invalid character '!' looking for beginning of value", response.Error)
+	s.Equal(fmt.Sprintf("failed to get matches from provider api for match %d (provider match %d): failed to get matches from provider fotmob: failed to fetch matches by date: failed to decode get matches by date response body: invalid character '!' looking for beginning of value", match.ID, providerMatch.ID), response.Error)
 	s.Equal(string(models.CodeInternalServerError), response.Code)
 
 	matches := testutils.ListMatches(s.T(), s.db)
