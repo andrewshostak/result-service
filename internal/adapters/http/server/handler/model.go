@@ -51,11 +51,6 @@ func NewErrorResponse(code models.Code, error error) ErrorResponse {
 	}
 }
 
-func RespondError(c *gin.Context, status int, code models.Code, err error) {
-	_ = c.Error(err)
-	c.JSON(status, NewErrorResponse(code, err))
-}
-
 func (cmr *CreateMatchRequest) ToDomain() models.CreateMatchRequest {
 	return models.CreateMatchRequest{
 		StartsAt:  cmr.StartsAt.UTC(),
@@ -80,4 +75,9 @@ func (dsr *DeleteSubscriptionRequest) ToDomain() models.DeleteSubscriptionReques
 		BaseURL:   dsr.BaseURL,
 		SecretKey: dsr.SecretKey,
 	}
+}
+
+func RespondError(c *gin.Context, status int, code models.Code, err error) {
+	_ = c.Error(err)
+	c.JSON(status, NewErrorResponse(code, err))
 }

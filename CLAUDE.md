@@ -10,6 +10,10 @@
 Within a Go file, order top-level declarations as: public (exported) methods first, then private
 (unexported) methods, then standalone functions (not methods on a type) last.
 
+This applies to files built around a type with real behavior (service, repository, handler, etc.).
+It doesn't apply to `model.go`-style files, where structs and their own methods (e.g. `ToDomain()`)
+are declared together.
+
 ## Comments
 
 No multi-line comments on functions/methods. Many need no comment at all - a well-named

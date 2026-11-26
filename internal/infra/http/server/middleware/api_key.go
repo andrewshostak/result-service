@@ -17,9 +17,7 @@ func APIKeyAuth(hashedAPIKeys []string, secret string) gin.HandlerFunc {
 		apiKey := c.GetHeader(authorization)
 
 		if !isValidAPIKey(apiKey, hashedAPIKeys, secret) {
-			err := errors.New("invalid api key")
-			_ = c.Error(err)
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			abortWithError(c, http.StatusUnauthorized, errors.New("invalid api key"))
 			return
 		}
 
@@ -39,4 +37,9 @@ func isValidAPIKey(apiKey string, hashedAPIKeys []string, secret string) bool {
 	}
 
 	return false
+}
+
+func abortWithError(c *gin.Context, status int, err error) {
+	_ = c.Error(err)
+	c.AbortWithStatusJSON(status, gin.H{"error": err.Error()})
 }

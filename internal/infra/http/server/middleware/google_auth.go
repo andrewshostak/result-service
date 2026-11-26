@@ -14,17 +14,13 @@ func ValidateGoogleAuth(targetAudience string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader(authorization)
 		if authHeader == "" {
-			err := errors.New("missing authorization header")
-			_ = c.Error(err)
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			abortWithError(c, http.StatusUnauthorized, errors.New("missing authorization header"))
 			return
 		}
 
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 		if token == authHeader {
-			err := errors.New("invalid token format")
-			_ = c.Error(err)
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			abortWithError(c, http.StatusUnauthorized, errors.New("invalid token format"))
 			return
 		}
 
@@ -35,8 +31,7 @@ func ValidateGoogleAuth(targetAudience string) gin.HandlerFunc {
 
 		_, err := idtoken.Validate(c.Request.Context(), token, targetAudience)
 		if err != nil {
-			c.Error(err)
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": fmt.Sprintf("invalid google token: %s", err.Error())})
+			abortWithError(c, http.StatusUnauthorized, fmt.Errorf("invalid google token: %w", err))
 			return
 		}
 

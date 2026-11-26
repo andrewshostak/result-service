@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"errors"
 	"net/http"
 	"time"
 
@@ -18,7 +17,5 @@ func Timeout(t time.Duration) gin.HandlerFunc {
 }
 
 func TimeoutResponse(c *gin.Context) {
-	err := errors.New("timeout")
-	_ = c.Error(err)
-	c.JSON(http.StatusRequestTimeout, gin.H{"error": err.Error(), "code": models.CodeTimeout})
+	c.JSON(http.StatusRequestTimeout, gin.H{"error": "timeout", "code": models.CodeTimeout})
 }
