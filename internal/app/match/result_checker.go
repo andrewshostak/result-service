@@ -63,12 +63,11 @@ func (s *ResultCheckerService) CheckProviderMatchResult(ctx context.Context, pro
 
 	matches, err := s.getMatchesFromProvider(ctx, providerMatch.Provider, providerMatch.StartsAt)
 	if err != nil {
-		s.logger.Error().Uint("match_id", match.ID).Uint("provider_match_id", providerMatchID).Err(err).Msg("failed to get matches from provider api")
 		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.APIError}); errUpdate != nil {
 			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate).Msg("failed to update match status to api_error")
 		}
 
-		return fmt.Errorf("failed to get matches from provider api: %w", err)
+		return fmt.Errorf("failed to get matches from provider api for match %d (provider match %d): %w", match.ID, providerMatchID, err)
 	}
 
 	providerAPIMatch := s.findProviderAPIMatch(*providerMatch, matches)
@@ -136,13 +135,12 @@ func (s *ResultCheckerService) handleFinishedMatch(ctx context.Context, matchID 
 	for _, subscription := range subscriptions {
 		err := s.taskClient.ScheduleSubscriberNotification(ctx, subscription.ID)
 		if err != nil && !errors.As(err, &models.ResourceAlreadyExistsError{}) {
-			s.logger.Error().Uint("subscription_id", subscription.ID).Err(err).Msg("failed to schedule subscriber notification task")
 			errUpdate := s.subscriptionRepository.Update(ctx, subscription.ID, models.Subscription{Status: models.SchedulingErrorSub, SubscriberError: nil})
 			if errUpdate != nil {
 				s.logger.Error().Err(errUpdate).Uint("subscription_id", subscription.ID).Msg(fmt.Sprintf("failed to update subscription status to: %s", string(models.SchedulingErrorSub)))
 			}
 
-			return fmt.Errorf("failed to schedule subscriber notification: %w", err)
+			return fmt.Errorf("failed to schedule subscriber notification for subscription %d: %w", subscription.ID, err)
 		}
 	}
 
@@ -206,8 +204,7 @@ func (s *ResultCheckerService) handleInPlayProviderMatch(ctx context.Context, ma
 		s.logger.Error().Uint("match_id", match.ID).Msgf("maximum number of attempts %d reached", s.config.MaxRetries)
 
 		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.Cancelled}); errUpdate != nil {
-			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate).Msg("failed to update match status to cancelled")
-			return errUpdate
+			return fmt.Errorf("failed to update match %d status to cancelled: %w", match.ID, errUpdate)
 		}
 
 		return nil
@@ -216,12 +213,11 @@ func (s *ResultCheckerService) handleInPlayProviderMatch(ctx context.Context, ma
 	providerMatchID := providerMatch.ID
 	task, err := s.taskClient.EnsureProviderResultCheckScheduled(ctx, providerMatchID, attemptNumber, scheduleAt)
 	if err != nil {
-		s.logger.Error().Uint("match_id", match.ID).Uint("provider_match_id", providerMatchID).Uint("attempt_number", attemptNumber).Time("schedule_at", scheduleAt).Err(err).Msg("failed to re-schedule check result task")
 		if _, errUpdate := s.matchRepository.Update(ctx, match.ID, models.Match{ResultStatus: models.SchedulingError}); errUpdate != nil {
 			s.logger.Error().Uint("match_id", match.ID).Err(errUpdate).Msg("failed to update match status to scheduling_error")
 		}
 
-		return fmt.Errorf("failed to re-schedule result check task: %w", err)
+		return fmt.Errorf("failed to re-schedule result check task for match %d (provider match %d, attempt %d, scheduled at %s): %w", match.ID, providerMatchID, attemptNumber, scheduleAt, err)
 	}
 
 	if _, err := s.checkResultTaskRepository.Save(ctx, models.CheckResultTask{

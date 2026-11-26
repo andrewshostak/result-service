@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/andrewshostak/result-service/internal/app/models"
+	"github.com/gin-gonic/gin"
 )
 
 type CreateMatchRequest struct {
@@ -74,4 +75,9 @@ func (dsr *DeleteSubscriptionRequest) ToDomain() models.DeleteSubscriptionReques
 		BaseURL:   dsr.BaseURL,
 		SecretKey: dsr.SecretKey,
 	}
+}
+
+func RespondError(c *gin.Context, status int, code models.Code, err error) {
+	_ = c.Error(err)
+	c.JSON(status, NewErrorResponse(code, err))
 }

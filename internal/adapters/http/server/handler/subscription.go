@@ -19,26 +19,26 @@ func NewSubscriptionHandler(subscriptionService SubscriptionService) *Subscripti
 func (h *SubscriptionHandler) Create(c *gin.Context) {
 	var params CreateSubscriptionRequest
 	if err := c.ShouldBindJSON(&params); err != nil {
-		c.JSON(http.StatusBadRequest, NewErrorResponse(models.CodeInvalidRequest, err))
+		RespondError(c, http.StatusBadRequest, models.CodeInvalidRequest, err)
 
 		return
 	}
 
 	err := h.subscriptionService.Create(c.Request.Context(), params.ToDomain())
 	if errors.As(err, &models.ResourceNotFoundError{}) {
-		c.JSON(http.StatusBadRequest, NewErrorResponse(models.CodeResourceNotFound, err))
+		RespondError(c, http.StatusBadRequest, models.CodeResourceNotFound, err)
 
 		return
 	}
 
 	if errors.As(err, &models.UnprocessableContentError{}) {
-		c.JSON(http.StatusUnprocessableEntity, NewErrorResponse(models.CodeUnprocessableContent, err))
+		RespondError(c, http.StatusUnprocessableEntity, models.CodeUnprocessableContent, err)
 
 		return
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, NewErrorResponse(models.CodeInternalServerError, err))
+		RespondError(c, http.StatusInternalServerError, models.CodeInternalServerError, err)
 
 		return
 	}
@@ -49,25 +49,25 @@ func (h *SubscriptionHandler) Create(c *gin.Context) {
 func (h *SubscriptionHandler) Delete(c *gin.Context) {
 	var params DeleteSubscriptionRequest
 	if err := c.ShouldBindQuery(&params); err != nil {
-		c.JSON(http.StatusBadRequest, NewErrorResponse(models.CodeInvalidRequest, err))
+		RespondError(c, http.StatusBadRequest, models.CodeInvalidRequest, err)
 		return
 	}
 
 	err := h.subscriptionService.Delete(c.Request.Context(), params.ToDomain())
 	if errors.As(err, &models.ResourceNotFoundError{}) {
-		c.JSON(http.StatusBadRequest, NewErrorResponse(models.CodeResourceNotFound, err))
+		RespondError(c, http.StatusBadRequest, models.CodeResourceNotFound, err)
 
 		return
 	}
 
 	if errors.As(err, &models.UnprocessableContentError{}) {
-		c.JSON(http.StatusUnprocessableEntity, NewErrorResponse(models.CodeUnprocessableContent, err))
+		RespondError(c, http.StatusUnprocessableEntity, models.CodeUnprocessableContent, err)
 
 		return
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, NewErrorResponse(models.CodeInternalServerError, err))
+		RespondError(c, http.StatusInternalServerError, models.CodeInternalServerError, err)
 
 		return
 	}

@@ -99,7 +99,7 @@ func startServer(_ *cobra.Command, _ []string) {
 		SubscriptionHandler: handler.NewSubscriptionHandler(subscriptionService),
 		AliasHandler:        handler.NewAliasHandler(aliasService),
 		TriggerHandler:      handler.NewTriggerHandler(resultCheckerService, subscriberNotifierService),
-	})
+	}, logger)
 	if err != nil {
 		panic(fmt.Errorf("failed to configure server: %w", err))
 	}

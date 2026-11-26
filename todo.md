@@ -17,8 +17,8 @@
 - [ ] find a proper way of handling secrets (remove secrets from `service.yaml`)
 - [ ] check the context cancellation proper usage (defer cancel must be present)
 - [ ] handle half-time status during the result check specially - next check more than +5 minutes
-- [ ] add recover middleware
-- [ ] add error middleware (+remove logs from app layers)
+- [X] add recover middleware
+- [X] add error middleware (+remove logs from app layers)
 - [ ] configure connection pool
 - [ ] add healthcheck to docker compose (DB)
 

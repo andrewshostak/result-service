@@ -137,7 +137,7 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return(nil, unexpectedErr).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to get matches from provider api: %w", fmt.Errorf("failed to get matches from provider fotmob: %w", unexpectedErr)),
+			expectedErr: fmt.Errorf("failed to get matches from provider api for match %d (provider match %d): %w", matchID, providerMatchID, fmt.Errorf("failed to get matches from provider fotmob: %w", unexpectedErr)),
 		},
 		{
 			name:  "it returns an error when matches retrieval from provider api fails and match update succeeds",
@@ -164,7 +164,7 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 				m.On("GetMatches", ctx, startsAt).Return(nil, unexpectedErr).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to get matches from provider api: %w", fmt.Errorf("failed to get matches from provider fotmob: %w", unexpectedErr)),
+			expectedErr: fmt.Errorf("failed to get matches from provider api for match %d (provider match %d): %w", matchID, providerMatchID, fmt.Errorf("failed to get matches from provider fotmob: %w", unexpectedErr)),
 		},
 		{
 			name:  "it returns an error when no provider is registered under the provider match's provider name",
@@ -188,7 +188,7 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 				m.On("Name").Return("other-provider").Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to get matches from provider api: %w", fmt.Errorf("no registered provider named fotmob")),
+			expectedErr: fmt.Errorf("failed to get matches from provider api for match %d (provider match %d): %w", matchID, providerMatchID, fmt.Errorf("no registered provider named fotmob")),
 		},
 		{
 			name:  "it returns an error when provider match saving fails",
@@ -474,7 +474,7 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 				m.On("FindByProviderMatchID", ctx, providerMatchID).Return(&checkResultTask, nil).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to re-schedule result check task: %w", unexpectedErr),
+			expectedErr: fmt.Errorf("failed to re-schedule result check task for match %d (provider match %d, attempt %d, scheduled at %s): %w", matchID, providerMatchID, checkResultTask.AttemptNumber+1, providerAPIMatchInProgress.Time.Add(pollingFirstAttemptDelay).Add(pollingInterval), unexpectedErr),
 		},
 		{
 			name:  "it returns an error when provider match status is in progress and task re-scheduling fails and match status update fails",
@@ -514,7 +514,7 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 				m.On("FindByProviderMatchID", ctx, providerMatchID).Return(&checkResultTask, nil).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to re-schedule result check task: %w", unexpectedErr),
+			expectedErr: fmt.Errorf("failed to re-schedule result check task for match %d (provider match %d, attempt %d, scheduled at %s): %w", matchID, providerMatchID, checkResultTask.AttemptNumber+1, providerAPIMatchInProgress.Time.Add(pollingFirstAttemptDelay).Add(pollingInterval), unexpectedErr),
 		},
 		{
 			name:  "it returns an error when provider match status is in progress and rescheduled task saving fails",
@@ -750,7 +750,7 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 				m.On("ScheduleSubscriberNotification", ctx, repositorySubscription.ID).Return(unexpectedErr).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to schedule subscriber notification: %w", unexpectedErr),
+			expectedErr: fmt.Errorf("failed to schedule subscriber notification for subscription %d: %w", repositorySubscription.ID, unexpectedErr),
 		},
 		{
 			name:  "it returns an error when provider match status is finished and creation of subscriber notifier task fails and subscription update fails",
@@ -788,7 +788,7 @@ func TestResultCheckerService_CheckProviderMatchResult(t *testing.T) {
 				m.On("ScheduleSubscriberNotification", ctx, repositorySubscription.ID).Return(unexpectedErr).Once()
 				return m
 			},
-			expectedErr: fmt.Errorf("failed to schedule subscriber notification: %w", unexpectedErr),
+			expectedErr: fmt.Errorf("failed to schedule subscriber notification for subscription %d: %w", repositorySubscription.ID, unexpectedErr),
 		},
 		{
 			name:  "success - it notifies subscribers and marks the match received when provider match is finished",

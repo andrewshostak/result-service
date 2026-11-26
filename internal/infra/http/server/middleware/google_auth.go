@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -13,13 +14,13 @@ func ValidateGoogleAuth(targetAudience string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader(authorization)
 		if authHeader == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing authorization header"})
+			abortWithError(c, http.StatusUnauthorized, errors.New("missing authorization header"))
 			return
 		}
 
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 		if token == authHeader {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token format"})
+			abortWithError(c, http.StatusUnauthorized, errors.New("invalid token format"))
 			return
 		}
 
@@ -30,7 +31,7 @@ func ValidateGoogleAuth(targetAudience string) gin.HandlerFunc {
 
 		_, err := idtoken.Validate(c.Request.Context(), token, targetAudience)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": fmt.Sprintf("invalid google token: %s", err.Error())})
+			abortWithError(c, http.StatusUnauthorized, fmt.Errorf("invalid google token: %w", err))
 			return
 		}
 
