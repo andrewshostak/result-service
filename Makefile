@@ -30,6 +30,8 @@ update-mocks:
 	mockery --name=SubscriptionService --dir internal/adapters/http/server/handler --output internal/adapters/http/server/handler/mocks --case snake
 	mockery --name=ResultCheckerService --dir internal/adapters/http/server/handler --output internal/adapters/http/server/handler/mocks --case snake
 	mockery --name=SubscriberNotifierService --dir internal/adapters/http/server/handler --output internal/adapters/http/server/handler/mocks --case snake
+	# middleware
+	mockery --name=GoogleTokenValidator --dir internal/infra/http/server/middleware --output internal/infra/http/server/middleware/mocks --case snake
 
 functional-tests:
 	go test -v -count=1 -tags functional ./functionaltests/...

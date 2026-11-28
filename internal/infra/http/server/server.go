@@ -20,12 +20,12 @@ type Handlers struct {
 	TriggerHandler      *handler.TriggerHandler
 }
 
-func NewServer(cfg config.Server, handlers Handlers, logger *zerolog.Logger) (*gin.Engine, error) {
+func NewServer(cfg config.Server, googleTokenValidator middleware.GoogleTokenValidator, handlers Handlers, logger *zerolog.Logger) (*gin.Engine, error) {
 	r := gin.New()
 	r.Use(middleware.ErrorLogger(logger))
 	r.Use(middleware.Recovery())
 
-	registerRoutes(r, cfg, handlers)
+	registerRoutes(r, cfg, googleTokenValidator, handlers)
 
 	return r, nil
 }
@@ -63,14 +63,14 @@ func Serve(ctx context.Context, engine *gin.Engine, addr string, shutdownTimeout
 	return nil
 }
 
-func registerRoutes(r *gin.Engine, cfg config.Server, handlers Handlers) {
+func registerRoutes(r *gin.Engine, cfg config.Server, googleTokenValidator middleware.GoogleTokenValidator, handlers Handlers) {
 	v1 := r.Group("/v1")
 	apiKey := v1.Group("").
 		Use(middleware.APIKeyAuth(cfg.App.HashedAPIKeys, cfg.App.SecretKey)).
 		Use(middleware.Timeout(cfg.App.Timeout))
 
 	googleAuth := v1.Group("").
-		Use(middleware.ValidateGoogleAuth(cfg.GoogleCloud.TargetURL)).
+		Use(middleware.ValidateGoogleAuth(googleTokenValidator, cfg.GoogleCloud.TargetURL)).
 		Use(middleware.Timeout(cfg.App.TriggersTimeout))
 
 	apiKey.POST("/matches", handlers.MatchHandler.Create)
