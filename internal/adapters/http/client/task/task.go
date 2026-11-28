@@ -24,13 +24,12 @@ const (
 )
 
 type TaskClient struct {
-	client           CloudTasksClient
-	config           config.GoogleCloud
-	dispatchDeadline time.Duration
+	client CloudTasksClient
+	config config.GoogleCloud
 }
 
-func NewClient(config config.GoogleCloud, dispatchDeadline time.Duration, client CloudTasksClient) *TaskClient {
-	return &TaskClient{config: config, dispatchDeadline: dispatchDeadline, client: client}
+func NewClient(config config.GoogleCloud, client CloudTasksClient) *TaskClient {
+	return &TaskClient{config: config, client: client}
 }
 
 func (c *TaskClient) EnsureProviderResultCheckScheduled(ctx context.Context, providerMatchID uint, attempt uint, scheduleAt time.Time) (*models.Task, error) {
@@ -49,7 +48,7 @@ func (c *TaskClient) EnsureProviderResultCheckScheduled(ctx context.Context, pro
 		Task: &taskspb.Task{
 			Name:             fmt.Sprintf("%s/tasks/provider-match-%d-attempt-%d", queuePath, providerMatchID, attempt),
 			ScheduleTime:     timestamppb.New(scheduleAt),
-			DispatchDeadline: durationpb.New(c.dispatchDeadline),
+			DispatchDeadline: durationpb.New(c.config.DispatchDeadline),
 			MessageType: &taskspb.Task_HttpRequest{
 				HttpRequest: &taskspb.HttpRequest{
 					HttpMethod: taskspb.HttpMethod_POST,
@@ -115,7 +114,7 @@ func (c *TaskClient) ScheduleSubscriberNotification(ctx context.Context, subscri
 		Parent: queuePath,
 		Task: &taskspb.Task{
 			Name:             fmt.Sprintf("%s/tasks/subscription-%d", queuePath, subscriptionID),
-			DispatchDeadline: durationpb.New(c.dispatchDeadline),
+			DispatchDeadline: durationpb.New(c.config.DispatchDeadline),
 			MessageType: &taskspb.Task_HttpRequest{
 				HttpRequest: &taskspb.HttpRequest{
 					HttpMethod: taskspb.HttpMethod_POST,

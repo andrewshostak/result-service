@@ -65,7 +65,8 @@ func startServer(_ *cobra.Command, _ []string) {
 
 	fotmobClient := fotmob.NewFotmobClient(&httpClient, logger, cfg.Fotmob)
 	notifierClient := notifier.NewNotifierClient(&httpClient, logger)
-	taskClient := task.NewClient(cfg.GoogleCloud, cfg.App.Timeout+(2*time.Second), cloudTasksClient)
+
+	taskClient := task.NewClient(cfg.GoogleCloud, cloudTasksClient)
 
 	aliasRepository := repository.NewAliasRepository(db)
 	matchRepository := repository.NewMatchRepository(db)

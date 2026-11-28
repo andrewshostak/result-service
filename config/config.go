@@ -59,6 +59,8 @@ type GoogleCloud struct {
 	NotifySubscriberQueueName string `env:"GOOGLE_CLOUD_NOTIFY_SUBSCRIBER_QUEUE_NAME,required" envDefault:"notify-subscriber"`
 
 	TasksURL string `env:"GOOGLE_CLOUD_TASKS_URL"` // needed for functional tests only. leave empty for real environments
+
+	DispatchDeadline time.Duration `env:"GOOGLE_CLOUD_DISPATCH_DEADLINE" envDefault:"15s"` // Cloud Tasks requires this to be at least 15s
 }
 
 func Parse[T any]() T {

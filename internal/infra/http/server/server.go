@@ -20,21 +20,21 @@ type Handlers struct {
 	TriggerHandler      *handler.TriggerHandler
 }
 
-func NewServer(cfg config.Server, googleTokenValidator middleware.GoogleTokenValidator, handlers Handlers, logger *zerolog.Logger) (*gin.Engine, error) {
+func NewServer(cfg config.Server, googleTokenValidator middleware.GoogleTokenValidator, handlers Handlers, logger *zerolog.Logger) (http.Handler, error) {
 	r := gin.New()
 	r.Use(middleware.ErrorLogger(logger))
 	r.Use(middleware.Recovery())
 
 	registerRoutes(r, cfg, googleTokenValidator, handlers)
 
-	return r, nil
+	return http.TimeoutHandler(r, cfg.App.Timeout, "timeout"), nil
 }
 
 // Serve derives shutdownCtx from context.Background(), not ctx, since ctx is already cancelled by the time Shutdown runs.
-func Serve(ctx context.Context, engine *gin.Engine, addr string, shutdownTimeout time.Duration, logger *zerolog.Logger) error {
+func Serve(ctx context.Context, handler http.Handler, addr string, shutdownTimeout time.Duration, logger *zerolog.Logger) error {
 	httpServer := &http.Server{
 		Addr:    addr,
-		Handler: engine,
+		Handler: handler,
 	}
 
 	errCh := make(chan error, 1)
@@ -66,12 +66,10 @@ func Serve(ctx context.Context, engine *gin.Engine, addr string, shutdownTimeout
 func registerRoutes(r *gin.Engine, cfg config.Server, googleTokenValidator middleware.GoogleTokenValidator, handlers Handlers) {
 	v1 := r.Group("/v1")
 	apiKey := v1.Group("").
-		Use(middleware.APIKeyAuth(cfg.App.HashedAPIKeys, cfg.App.SecretKey)).
-		Use(middleware.Timeout(cfg.App.Timeout))
+		Use(middleware.APIKeyAuth(cfg.App.HashedAPIKeys, cfg.App.SecretKey))
 
 	googleAuth := v1.Group("").
-		Use(middleware.ValidateGoogleAuth(googleTokenValidator, cfg.GoogleCloud.TargetURL)).
-		Use(middleware.Timeout(cfg.App.Timeout))
+		Use(middleware.ValidateGoogleAuth(googleTokenValidator, cfg.GoogleCloud.TargetURL))
 
 	apiKey.POST("/matches", handlers.MatchHandler.Create)
 	apiKey.POST("/subscriptions", handlers.SubscriptionHandler.Create)
