@@ -18,7 +18,9 @@ import (
 	"github.com/andrewshostak/result-service/internal/app/match"
 	"github.com/andrewshostak/result-service/internal/app/subscription"
 	"github.com/andrewshostak/result-service/internal/infra/cloudtasks"
+	"github.com/andrewshostak/result-service/internal/infra/googleauth"
 	"github.com/andrewshostak/result-service/internal/infra/http/server"
+	"github.com/andrewshostak/result-service/internal/infra/http/server/middleware"
 	loggerinternal "github.com/andrewshostak/result-service/internal/infra/logger"
 	"github.com/andrewshostak/result-service/internal/infra/postgres"
 	"github.com/gin-gonic/gin"
@@ -55,6 +57,11 @@ func startServer(_ *cobra.Command, _ []string) {
 	}
 
 	defer cloudTasksClient.Close()
+
+	var googleTokenValidator middleware.GoogleTokenValidator = googleauth.NewValidator()
+	if gin.Mode() == gin.TestMode {
+		googleTokenValidator = googleauth.NewNoopValidator()
+	}
 
 	fotmobClient := fotmob.NewFotmobClient(&httpClient, logger, cfg.Fotmob)
 	notifierClient := notifier.NewNotifierClient(&httpClient, logger)
@@ -94,7 +101,7 @@ func startServer(_ *cobra.Command, _ []string) {
 	)
 	subscriberNotifierService := subscription.NewSubscriberNotifierService(subscriptionRepository, matchRepository, notifierClient, logger)
 
-	r, err := server.NewServer(cfg, server.Handlers{
+	r, err := server.NewServer(cfg, googleTokenValidator, server.Handlers{
 		MatchHandler:        handler.NewMatchHandler(matchService),
 		SubscriptionHandler: handler.NewSubscriptionHandler(subscriptionService),
 		AliasHandler:        handler.NewAliasHandler(aliasService),

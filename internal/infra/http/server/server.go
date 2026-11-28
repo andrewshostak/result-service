@@ -8,7 +8,6 @@ import (
 
 	"github.com/andrewshostak/result-service/config"
 	"github.com/andrewshostak/result-service/internal/adapters/http/server/handler"
-	"github.com/andrewshostak/result-service/internal/infra/googleauth"
 	"github.com/andrewshostak/result-service/internal/infra/http/server/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -21,12 +20,12 @@ type Handlers struct {
 	TriggerHandler      *handler.TriggerHandler
 }
 
-func NewServer(cfg config.Server, handlers Handlers, logger *zerolog.Logger) (*gin.Engine, error) {
+func NewServer(cfg config.Server, googleTokenValidator middleware.GoogleTokenValidator, handlers Handlers, logger *zerolog.Logger) (*gin.Engine, error) {
 	r := gin.New()
 	r.Use(middleware.ErrorLogger(logger))
 	r.Use(middleware.Recovery())
 
-	registerRoutes(r, cfg, handlers)
+	registerRoutes(r, cfg, googleTokenValidator, handlers)
 
 	return r, nil
 }
@@ -64,16 +63,11 @@ func Serve(ctx context.Context, engine *gin.Engine, addr string, shutdownTimeout
 	return nil
 }
 
-func registerRoutes(r *gin.Engine, cfg config.Server, handlers Handlers) {
+func registerRoutes(r *gin.Engine, cfg config.Server, googleTokenValidator middleware.GoogleTokenValidator, handlers Handlers) {
 	v1 := r.Group("/v1")
 	apiKey := v1.Group("").
 		Use(middleware.APIKeyAuth(cfg.App.HashedAPIKeys, cfg.App.SecretKey)).
 		Use(middleware.Timeout(cfg.App.Timeout))
-
-	var googleTokenValidator middleware.GoogleTokenValidator = googleauth.NewValidator()
-	if gin.Mode() == gin.TestMode {
-		googleTokenValidator = googleauth.NewNoopValidator()
-	}
 
 	googleAuth := v1.Group("").
 		Use(middleware.ValidateGoogleAuth(googleTokenValidator, cfg.GoogleCloud.TargetURL)).

@@ -26,6 +26,7 @@ func TestErrorLogger(t *testing.T) {
 			status:       http.StatusOK,
 			expectLogged: false,
 		},
+		// TODO: rename/rewrite once Timeout middleware moves off gin-contrib/timeout (see timeout.go) - this case only hardcodes status 408 with no recorded error, it doesn't drive the real middleware's copied-context behavior.
 		{
 			name:         "it logs without an error field on a 408 timeout (handlers ran in a copied context, so no error is recorded)",
 			status:       http.StatusRequestTimeout,
