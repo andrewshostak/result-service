@@ -7,8 +7,8 @@
 - [ ] encode secret keys, do not store them in plain text, consider to create a table for subscribers and store the secret there
 - [ ] configure connection pool
 - [ ] tests
-  - [ ] unit tests
-    - [ ] middlewares
+  - [X] unit tests
+    - [X] middlewares
   - [ ] functional tests
     - [ ] improvements
       - [ ] access parsed config values in tests: queue names, first attempt delay, interval
