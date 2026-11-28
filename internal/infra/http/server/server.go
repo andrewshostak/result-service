@@ -71,7 +71,7 @@ func registerRoutes(r *gin.Engine, cfg config.Server, googleTokenValidator middl
 
 	googleAuth := v1.Group("").
 		Use(middleware.ValidateGoogleAuth(googleTokenValidator, cfg.GoogleCloud.TargetURL)).
-		Use(middleware.Timeout(cfg.App.TriggersTimeout))
+		Use(middleware.Timeout(cfg.App.Timeout))
 
 	apiKey.POST("/matches", handlers.MatchHandler.Create)
 	apiKey.POST("/subscriptions", handlers.SubscriptionHandler.Create)
