@@ -1,26 +1,32 @@
 ## List of improvements
-- [ ] functional tests
-  - [ ] improvements
-    - [ ] access parsed config values in tests: queue names, first attempt delay, interval
-    - [ ] verify gcloud was reached
-    - [ ] add cases for error response from gcloud tasks
-    - [ ] Add match_id to subscription notified log
-  - [ ] auth middleware
-  - [ ] google middleware
-- [ ] migrate from gorm to sqlc
-- [ ] encode secret keys, do not store them in plain text
-- [ ] configure CI in github
+- [X] implement graceful shutdown
+- [X] add custom recover middleware
+- [X] add error middleware (+remove logs from app layers)
+- [ ] implement a custom timeout middleware
+- [ ] check the context cancellation proper usage (defer cancel must be present)
+- [ ] encode secret keys, do not store them in plain text, consider to create a table for subscribers and store the secret there
+- [ ] configure connection pool
+- [ ] tests
+  - [ ] unit tests
+    - [ ] middlewares
+  - [ ] functional tests
+    - [ ] improvements
+      - [ ] access parsed config values in tests: queue names, first attempt delay, interval
+      - [ ] verify gcloud was reached
+      - [ ] add cases for error response from gcloud tasks
+      - [ ] Add match_id to subscription notified log
+    - [ ] auth middleware
+    - [ ] google middleware
+- [ ] configure CI/CD in github
   - [ ] linter
   - [ ] deploy
-- [X] implement graceful shutdown
-- [ ] investigate possible replacement zerolog with slog (if not - make gin and zerolog friends)
 - [ ] find a proper way of handling secrets (remove secrets from `service.yaml`)
-- [ ] check the context cancellation proper usage (defer cancel must be present)
-- [ ] handle half-time status during the result check specially - next check more than +5 minutes
-- [X] add recover middleware
-- [X] add error middleware (+remove logs from app layers)
-- [ ] configure connection pool
+- [ ] improve result check scheduling
+  - [ ] handle half-time status during the result check specially - next check more than +5 minutes
+  - [ ] schedule next check depending on match time (not +5 minutes since last check)
 - [ ] add healthcheck to docker compose (DB)
+- [ ] investigate possible replacement zerolog with slog (if not - make gin and zerolog friends)
+- [ ] migrate from gorm to sqlc
 
 ## Known issues
 - [ ] matches postponed to tomorrow disappear from the search and become cancelled

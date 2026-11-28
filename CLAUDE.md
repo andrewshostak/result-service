@@ -5,6 +5,19 @@
 
 # Working conventions
 
+## Go toolchain
+
+The `go` resolved via `PATH` may be a newer Homebrew install (e.g. `/opt/homebrew/bin/go`) than
+the official Go install at `/usr/local/go/bin/go`, which matches the version pinned in `go.mod`'s
+`go` directive. Go's toolchain auto-switching (`GOTOOLCHAIN=auto`) doesn't fix this - it only
+switches to a *newer* toolchain when the resolved one is too old, never down to match a lower
+pinned version. Tools that read Go's export data (e.g. `mockery`) can fail with confusing internal
+errors when run under a too-new toolchain.
+
+Run `go`, `mockery`, or similar Go-version-sensitive commands via `/usr/local/go/bin/go` /
+`PATH="/usr/local/go/bin:$PATH" mockery ...` directly, rather than relying on whatever `go` is
+first on `PATH`.
+
 ## Code organization
 
 Within a Go file, order top-level declarations as: public (exported) methods first, then private
@@ -28,6 +41,11 @@ file's tests across multiple test files. Add new test functions to the existing 
 Functional tests (`functionaltests/`): one file per triggered endpoint/scenario, not per
 implementation file - e.g. `trigger_result_check_test.go` and
 `trigger_subscriber_notification_test.go` both test `trigger.go`, split by endpoint.
+
+When unit testing a gin handler or middleware, prefer `gin.CreateTestContext` and call the
+`gin.HandlerFunc` directly over spinning up a real `gin.Engine`/router. Only reach for a real
+engine (`gin.New()` + `r.Use()`/`r.GET()` + `r.ServeHTTP()`) when the behavior under test genuinely
+requires a real handler chain (e.g. panic recovery, goroutine-based timeout middleware).
 
 ## Running tests
 

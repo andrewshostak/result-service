@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,7 +11,11 @@ import (
 	"google.golang.org/api/idtoken"
 )
 
-func ValidateGoogleAuth(targetAudience string) gin.HandlerFunc {
+type GoogleTokenValidator interface {
+	Validate(ctx context.Context, idToken, audience string) (*idtoken.Payload, error)
+}
+
+func ValidateGoogleAuth(validator GoogleTokenValidator, targetAudience string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader(authorization)
 		if authHeader == "" {
@@ -24,13 +29,7 @@ func ValidateGoogleAuth(targetAudience string) gin.HandlerFunc {
 			return
 		}
 
-		if gin.Mode() == gin.TestMode {
-			c.Next()
-			return
-		}
-
-		_, err := idtoken.Validate(c.Request.Context(), token, targetAudience)
-		if err != nil {
+		if _, err := validator.Validate(c.Request.Context(), token, targetAudience); err != nil {
 			abortWithError(c, http.StatusUnauthorized, fmt.Errorf("invalid google token: %w", err))
 			return
 		}

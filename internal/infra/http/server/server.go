@@ -8,6 +8,7 @@ import (
 
 	"github.com/andrewshostak/result-service/config"
 	"github.com/andrewshostak/result-service/internal/adapters/http/server/handler"
+	"github.com/andrewshostak/result-service/internal/infra/googleauth"
 	"github.com/andrewshostak/result-service/internal/infra/http/server/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -69,8 +70,13 @@ func registerRoutes(r *gin.Engine, cfg config.Server, handlers Handlers) {
 		Use(middleware.APIKeyAuth(cfg.App.HashedAPIKeys, cfg.App.SecretKey)).
 		Use(middleware.Timeout(cfg.App.Timeout))
 
+	var googleTokenValidator middleware.GoogleTokenValidator = googleauth.NewValidator()
+	if gin.Mode() == gin.TestMode {
+		googleTokenValidator = googleauth.NewNoopValidator()
+	}
+
 	googleAuth := v1.Group("").
-		Use(middleware.ValidateGoogleAuth(cfg.GoogleCloud.TargetURL)).
+		Use(middleware.ValidateGoogleAuth(googleTokenValidator, cfg.GoogleCloud.TargetURL)).
 		Use(middleware.Timeout(cfg.App.TriggersTimeout))
 
 	apiKey.POST("/matches", handlers.MatchHandler.Create)
