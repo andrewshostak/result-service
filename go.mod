@@ -6,7 +6,6 @@ require (
 	cloud.google.com/go/cloudtasks v1.13.4-0.20250103163850-8a68e456d089
 	github.com/brianvoe/gofakeit/v6 v6.26.3
 	github.com/caarlos0/env/v9 v9.0.0
-	github.com/gin-contrib/timeout v1.1.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/googleapis/gax-go/v2 v2.14.0

@@ -46,7 +46,7 @@ func startServer(_ *cobra.Command, _ []string) {
 	logger := loggerinternal.SetupLogger()
 
 	db := postgres.EstablishDatabaseConnection(cfg.PG)
-	httpClient := http.Client{Timeout: cfg.App.TriggersTimeout - (2 * time.Second)}
+	httpClient := http.Client{Timeout: cfg.App.Timeout - (2 * time.Second)}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
@@ -65,7 +65,7 @@ func startServer(_ *cobra.Command, _ []string) {
 
 	fotmobClient := fotmob.NewFotmobClient(&httpClient, logger, cfg.Fotmob)
 	notifierClient := notifier.NewNotifierClient(&httpClient, logger)
-	taskClient := task.NewClient(cfg.GoogleCloud, cfg.App.TriggersTimeout+(2*time.Second), cloudTasksClient)
+	taskClient := task.NewClient(cfg.GoogleCloud, cloudTasksClient)
 
 	aliasRepository := repository.NewAliasRepository(db)
 	matchRepository := repository.NewMatchRepository(db)

@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"context"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,6 +12,10 @@ import (
 func ErrorLogger(logger *zerolog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
+
+		if errors.Is(c.Request.Context().Err(), context.DeadlineExceeded) { // the timeout wrapper already answered the client; this status/error reflects a handler that kept running after that, not what the client received
+			return
+		}
 
 		status := c.Writer.Status()
 		if status < http.StatusBadRequest {

@@ -23,15 +23,16 @@ import (
 func TestTaskClient_EnsureProviderResultCheckScheduled(t *testing.T) {
 	ctx := context.Background()
 
+	dispatchDeadline := time.Minute
+
 	cfg := config.GoogleCloud{
 		ProjectID:            gofakeit.Word(),
 		Region:               gofakeit.Word(),
 		CheckResultQueueName: gofakeit.Word(),
 		TargetURL:            gofakeit.URL(),
 		ServiceAccountEmail:  gofakeit.Email(),
+		DispatchDeadline:     dispatchDeadline,
 	}
-
-	dispatchDeadline := time.Minute
 
 	providerMatchID := uint(gofakeit.Uint16())
 	attempt := uint(gofakeit.Uint8())
@@ -144,7 +145,7 @@ func TestTaskClient_EnsureProviderResultCheckScheduled(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := task.NewClient(cfg, dispatchDeadline, tt.cloudTasksClient(t))
+			client := task.NewClient(cfg, tt.cloudTasksClient(t))
 
 			result, err := client.EnsureProviderResultCheckScheduled(ctx, providerMatchID, attempt, scheduleAt)
 
@@ -196,7 +197,7 @@ func TestTaskClient_DeleteResultCheckTask(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := task.NewClient(cfg, time.Minute, tt.cloudTasksClient(t))
+			client := task.NewClient(cfg, tt.cloudTasksClient(t))
 
 			err := client.DeleteResultCheckTask(ctx, taskName)
 
@@ -212,15 +213,16 @@ func TestTaskClient_DeleteResultCheckTask(t *testing.T) {
 func TestTaskClient_ScheduleSubscriberNotification(t *testing.T) {
 	ctx := context.Background()
 
+	dispatchDeadline := time.Minute
+
 	cfg := config.GoogleCloud{
 		ProjectID:                 gofakeit.Word(),
 		Region:                    gofakeit.Word(),
 		NotifySubscriberQueueName: gofakeit.Word(),
 		TargetURL:                 gofakeit.URL(),
 		ServiceAccountEmail:       gofakeit.Email(),
+		DispatchDeadline:          dispatchDeadline,
 	}
-
-	dispatchDeadline := time.Minute
 
 	subscriptionID := uint(gofakeit.Uint16())
 
@@ -297,7 +299,7 @@ func TestTaskClient_ScheduleSubscriberNotification(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := task.NewClient(cfg, dispatchDeadline, tt.cloudTasksClient(t))
+			client := task.NewClient(cfg, tt.cloudTasksClient(t))
 
 			err := client.ScheduleSubscriberNotification(ctx, subscriptionID)
 

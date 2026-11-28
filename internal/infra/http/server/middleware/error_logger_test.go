@@ -2,11 +2,13 @@ package middleware_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/andrewshostak/result-service/internal/infra/http/server/middleware"
 	"github.com/gin-gonic/gin"
@@ -16,20 +18,20 @@ import (
 
 func TestErrorLogger(t *testing.T) {
 	tests := []struct {
-		name         string
-		status       int
-		err          error
-		expectLogged bool
+		name                string
+		status              int
+		err                 error
+		ctxDeadlineExceeded bool
+		expectLogged        bool
 	}{
 		{
 			name:         "it does not log when status is below 400",
 			status:       http.StatusOK,
 			expectLogged: false,
 		},
-		// TODO: rename/rewrite once Timeout middleware moves off gin-contrib/timeout (see timeout.go) - this case only hardcodes status 408 with no recorded error, it doesn't drive the real middleware's copied-context behavior.
 		{
-			name:         "it logs without an error field on a 408 timeout (handlers ran in a copied context, so no error is recorded)",
-			status:       http.StatusRequestTimeout,
+			name:         "it logs without an error field when no error was recorded",
+			status:       http.StatusInternalServerError,
 			expectLogged: true,
 		},
 		{
@@ -37,6 +39,13 @@ func TestErrorLogger(t *testing.T) {
 			status:       http.StatusBadRequest,
 			err:          errors.New("invalid request"),
 			expectLogged: true,
+		},
+		{
+			name:                "it does not log when the request's context deadline was exceeded (the timeout wrapper already answered the client)",
+			status:              http.StatusInternalServerError,
+			err:                 errors.New("slow handler failed after waking up"),
+			ctxDeadlineExceeded: true,
+			expectLogged:        false,
 		},
 	}
 
@@ -48,6 +57,13 @@ func TestErrorLogger(t *testing.T) {
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
 			c.Request = httptest.NewRequest(http.MethodGet, "/path", nil)
+
+			if tt.ctxDeadlineExceeded {
+				ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Millisecond))
+				defer cancel()
+				c.Request = c.Request.WithContext(ctx)
+			}
+
 			c.Status(tt.status)
 			if tt.err != nil {
 				_ = c.Error(tt.err)

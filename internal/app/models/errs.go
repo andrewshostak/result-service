@@ -8,7 +8,6 @@ const (
 	CodeUnprocessableContent  Code = "unprocessable_content"
 	CodeInternalServerError   Code = "internal_server_error"
 	CodeInvalidRequest        Code = "invalid_request"
-	CodeTimeout               Code = "timeout"
 )
 
 func NewResourceNotFoundError(error error) ResourceNotFoundError {
